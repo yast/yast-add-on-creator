@@ -1,0 +1,86 @@
+/* ------------------------------------------------------------------------------
+ * Copyright (c) 2006 Novell, Inc. All Rights Reserved.
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify it under
+ * the terms of version 2 of the GNU General Public License as published by the
+ * Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, contact Novell, Inc.
+ *
+ * To contact Novell about this file by physical or electronic mail, you may find
+ * current contact information at www.novell.com.
+ * ------------------------------------------------------------------------------
+ */
+
+/**
+ * File:	include/add-on-creator/helps.ycp
+ * Package:	Configuration of add-on-creator
+ * Summary:	Help texts of all the dialogs
+ * Authors:	Jiri Suchomel <jsuchome@suse.cz>
+ *
+ * $Id$
+ */
+
+{
+
+textdomain "add-on-creator";
+
+/**
+ * All helps are here
+ */
+map HELPS = $[
+
+    /* Write dialog help 1/2 */
+    "write" : _("<p><b><big>Creating Add-On</big></b><br>
+Please wait...<br></p>
+") +
+
+    /* Write dialog help 2/2 */
+_("<p><b><big>Aborting Saving:</big></b><br>
+Abort the save procedure by pressing <b>Abort</b>.
+An additional dialog informs whether it is safe to do so.
+</p>
+"),
+    // help text
+    "content"	: _("Enter mandatory information to identify your new add-on. Uncheck <b>Show only Mandatory Keywords</b> to see more attributes of the <tt>content</tt> file.") +
+
+	"<p><b>TODO</b></p>
+<p>- editor for REQUIRES: read patterns available on target...
+<p>- input validation",
+
+    // help text
+    "sources"	: _("Enter the sources of data used for creating an Add-On.") +
+
+	"<p></p>",
+
+    "output"	: _("Use <b>Optional Files</b> to set optional values (licence texts, <tt>README</tt> etc."),
+
+    // help text
+    "overview"	: _("Pressing <b>Finish</b> will create Add-On in the output directory."),
+
+    "patterns"	: _("<p>Editor of patterns</p>") +
+    _("Add is only for .lang keys"),
+
+    // help text
+    "packages"	: _("<p>Editor of <tt>packages.lang</tt> files</p>") +
+        // help text
+	_("<p>Use <b>Add Language</b> to add a description file for new language. The list of available languages is read from <b>LINGUAS</b> value of <tt>content</tt> file. Delete the description file with <b>Delete</b> button.</p>") +
+
+        // help text
+	_("<p>Add new description entry for selected package with <b>Add</b> or edit the existing one with <b>Edit</b></p>"),
+
+    "expert"	: _("info.txt and licences are for media.1 directory, READMEs are in root dir"),
+
+    "expert2"	: _("COPYRIGHT and COPYING are in root dir of media"),
+
+    "signing"	: _("Passphrase is needed to unlock the secret key"),
+];
+
+/* EOF */
+}

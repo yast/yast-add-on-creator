@@ -1,0 +1,32 @@
+@HEADER-COMMENT@
+
+@HEADER@
+Requires:	yast2 autoyast2-utils
+BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite
+
+BuildArchitectures:	noarch
+
+Summary:	YaST module for creating Add-On product
+
+%description
+-
+
+@PREP@
+
+@BUILD@
+
+@INSTALL@
+
+@CLEAN@
+
+%files
+%defattr(-,root,root)
+%dir @yncludedir@/add-on-creator
+@yncludedir@/add-on-creator/*
+@clientdir@/add-on-creator.ycp
+@moduledir@/AddOnCreator.*
+@desktopdir@/add-on-creator.desktop
+#agents:
+@scrconfdir@/*.scr
+@agentdir@/ag_*
+%doc @docdir@

@@ -1,0 +1,175 @@
+#!/usr/bin/perl -w
+
+use lib "/usr/lib/YaST2/agents_non_y2";
+use ycp;
+use strict;
+
+my %description		= ();
+my $version		= "";
+my $err_no		= 0;
+
+# which keys have multiline values
+my %multiple		= (
+    "Des"	=> 1,
+    "Ins"	=> 1,
+    "Del"	=> 1,
+    "Eul"	=> 1
+);
+
+# parse the input file (given as argument) and fill the %description hash
+sub parse_file {
+
+    my $file	= shift;
+    my $i = open PACKAGES, "< $file";
+    if (!defined $i) {
+	y2error ("$file cannot be opened for reading!");
+	$err_no		= 1;
+        return 0;
+    }
+    my $pkg_name	= "___global___"; # global values, before first Pkg
+    my $multiline_key	= "";
+    my $multiline_val	= "";
+    %description	= ();
+
+    foreach my $line (<PACKAGES>) {
+	chomp $line;
+	if ($line =~ /^=([\w]+):[ \t]*(.*)/) {
+	    my $key	= $1;
+	    my $val	= $2;
+	    if ($key eq "Pkg") {
+		$pkg_name	= $val;
+		($pkg_name)	= ($val =~ /([^ \t]*).*/);
+		$description{$pkg_name}	= {
+		    "Pkg"	=> $val
+		};
+	    }
+	    else {
+		if ($key eq "Ver") {
+		    $version	= $val;
+		}
+		$description{$pkg_name}{$key}	= $val;
+	    }
+	}
+	elsif ($line =~ /^\+([\w]+):.*/) {
+	    $multiline_key	= $1;
+	    $multiline_val	= "";
+	}
+	elsif ($line =~ /^\-([\w]+):.*/) {
+	    if ($multiline_key eq $1) {
+		$description{$pkg_name}{$multiline_key}	= $multiline_val;
+	    }
+	    else {
+		y2error ("ending key is $1, while starting was $multiline_key");
+	    }
+	}
+	elsif ($multiline_key) {
+	    $multiline_val	= $multiline_val."\n" if ($multiline_val);
+	    $multiline_val      = $multiline_val.$line;
+	}
+    }
+    close PACKAGES;
+    return 1;
+}
+
+# write the file; 1st argument is path, 2nd data hash
+sub write_file {
+
+    my $file	= shift;
+    my $descr	= shift;
+
+    if (ref ($descr) ne "HASH" || !%{$descr}) {
+	y2error ("data not hash or empty");
+	$err_no	= 10;
+	return 0;
+    }
+    my $o = open PACKAGES, "> $file";
+    if (!defined $o) {
+	y2error ("$file cannot be opened for writing!");
+	$err_no	= 11;
+        return 0;
+    }
+    # sort order: system items go before local ones
+    foreach my $pkg_name (sort keys %{$descr}) {
+	my $cont	= "";
+	my $data	= $descr->{$pkg_name};
+	next if (ref $data ne "HASH");
+	if ($pkg_name ne "___global___") {
+	    $cont	= $cont."##----------------------------------------\n";
+	    # let the Pkg key is first
+	    if (defined $data->{"Pkg"}) {
+		my $val	= $data->{"Pkg"};
+		$cont	= $cont."=Pkg: $val\n";
+		delete $data->{"Pkg"};
+	    }
+	}
+	while (my ($key, $val) = each %{$data}) {
+	    next if (!$val);
+	    if (defined $multiple{$key}) {
+		$cont	= $cont."+$key:\n$val\n-$key:\n";
+	    }
+	    else {
+		$cont	= $cont."=$key: $val\n";
+	    }
+	}
+	print PACKAGES $cont;
+    }
+    close PACKAGES;
+    return 1;
+}
+
+# --------------------------------------- main -----------------------------
+while (<STDIN>)
+{
+
+    my ($command, $path, $argument) = ycp::ParseCommand ($_);
+
+    y2debug ("command: $command, path: $path");
+    
+    if ($command eq "Read")
+    {
+	y2debug ("argument: $argument");
+
+	if ($path eq '.' && $argument) {
+	    if (parse_file ($argument)) {
+		ycp::Return (\%description);
+	    }
+	    else {
+		ycp::Return ({});
+	    }
+	}
+	elsif ($path eq '.version') {
+	    ycp::Return ($version);
+	}
+	else {
+	    y2error ("wrong path ($path) or argument: ", ref ($argument));
+	    ycp::Return("false");
+	}
+    }
+    elsif ($command eq "Write")
+    {
+	y2debug ("argument: $argument");
+	if ($path eq '.' && ref ($argument) eq "ARRAY") {
+	    if (write_file ($argument->[0], $argument->[1])) {
+		ycp::Return("true");
+	    }
+	    else {
+		ycp::Return("false");
+	    }
+	}
+	else {
+	    y2error ("wrong path ($path) or argument: ", ref ($argument));
+	    ycp::Return("false");
+	}
+    }
+    elsif ($command eq "result")
+    {
+	exit;
+    }
+    else
+    {
+	y2error ("wrong command: $command");
+	ycp::Return("wrong command ($command)");
+    }
+}
+
+# end
