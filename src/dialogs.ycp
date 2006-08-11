@@ -88,8 +88,6 @@ Choose a different one."));
  */
 any ExpertSettingsDialog () {
 
-// FIXME still missing: INDEX.gz, ls-lR.gz, ARCHIVES.gz
-
     // dialog caption
     string caption = _("Expert Settings");
 

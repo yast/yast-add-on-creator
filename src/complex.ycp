@@ -380,8 +380,7 @@ any SourcesDialog() {
 		requires = (string) UI::QueryWidget (`id(`other_val), `Value);
 	    AddOnCreator::content_map["REQUIRES"]	= requires;
 
-//	    if (requires != old_requires || dir != old_dir) FIXME testing
-	    if (false)
+	    if (requires == old_requires && dir == old_dir)
 		ret	= `skip_gen;
 	    break;
 	}

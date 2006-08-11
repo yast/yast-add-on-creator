@@ -486,7 +486,7 @@ global map<string,string> content_map	= $[];
 global map<string,map> patterns	= $[];
 
 // path to directory with RPM's
-global string rpm_path	= "/tmp/addon-rpms";
+global string rpm_path	= "";
 
 // path to directory with existing product
 global string import_path	= "";
@@ -544,7 +544,7 @@ string full_descr_path	= "";
 // full path to data directory
 string full_data_path = "";
 
-global string base_output_path	= "/tmp/addon";
+global string base_output_path	= "";
 
 global string gpg_key	= "";
 
