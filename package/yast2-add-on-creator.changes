@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Aug 16 08:22:31 CEST 2006 - jsuchome@suse.cz
+
+- removed agent for content file (already exists in yast2 package) 
+- 2.13.1
+
+-------------------------------------------------------------------
 Thu Aug 10 16:36:55 2006 - jsuchome@suse.cz
 
 - initial version
