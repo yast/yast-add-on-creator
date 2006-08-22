@@ -96,7 +96,7 @@ map<string,map> content_descr	= $[
 	    "label"	: _("Resolvables that must be installed"),
 	    // help text for content file 'REQUIRES' key
 	    "help"	: _("<p>Resolvables that must be installed on the system to meet the needs of this product.</p>
-<p>This is a space-separated list of names or <tt>kind:name</tt> pairs optionally followed by version constraints. Just a name denotes a dependency to a package, such as <tt>sles-release</tt> or <tt>sles-release-10</tt>. The kind can be package, pattern, or product, such as <tt>pattern:basesystem</tt></p>."),
+<p>This is a space-separated list of names or <tt>kind:name</tt> pairs optionally followed by version constraints. Just a name denotes a dependency to a package, such as <tt>sles-release</tt> or <tt>sles-release-10</tt>. The kind can be package, pattern, or product, such as <tt>pattern:basesystem</tt>.</p>"),
 	    "mandatory"	: true,
 //TODO editor...
     ],
@@ -494,8 +494,11 @@ global string import_path	= "";
 // text with license (in the root dir)
 global string license		= "";
 
-// the contents of products file
-global string products		= "";
+// the contents of products files
+global list<string> products_files	= [];
+
+// the contents of media files
+global list<string> media_files	= [];
 
 // the contents of info.txt file
 global string info		= "";
@@ -828,15 +831,33 @@ global boolean ImportExistingProduct (string dir_path) {
 	copyright_files[name]	= (string) SCR::Read (.target.string, f);
     });
 
-    // read the products file
-    string products_path	= dir_path + "/media.1/products";
-    if (FileUtils::Exists (products_path))
-    {
-	y2milestone ("Importing products file '%1'", products_path);
-	products	= (string) SCR::Read (.target.string, products_path);
-    }
+    // FIXME autorun
 
-    // FIXME media file, autorun
+    // read the content of media.n dirs
+    out = (map) SCR::Execute (.target.bash_output,
+	sformat ("ls -A1 -d %1/media.* 2>/dev/null", dir_path));
+    if (out["stdout"]:"" != "")
+    {
+	foreach (string d, splitstring(out["stdout"]:"", "\n"), {
+	    if (d == "") return;
+	    string products_path	= d + "/products";
+	    if (FileUtils::Exists (products_path))
+	    {
+		y2milestone ("Importing products file '%1'", products_path);
+		products_files	= add (products_files,
+		    (string) SCR::Read (.target.string, products_path));
+	    }
+	    else products_files  = add (products_files, "");
+	    string media_path	= d + "/media";
+	    if (FileUtils::Exists (products_path))
+	    {
+		y2milestone ("Importing media file '%1'", media_path);
+		media_files	= add (media_files,
+		    (string) SCR::Read (.target.string, media_path));
+	    }
+	    else media_files	= add (media_files, "");
+	});
+    }
 
     string archives_path	= dir_path + "/ARCHIVES.gz";
     if (FileUtils::Exists (archives_path))
@@ -1104,18 +1125,50 @@ global boolean WriteLslR (string base_path)
 
 /**
  * Create the products file FIXME should it be generated?
- * @param base_path path to 'media' directory
+ * @param base_path path to base output directory
  * @return success
  */
-global boolean WriteProductsFile (string media_path, string products_contents) {
-    if (products_contents == "")
-    {
-	products_contents = "/\t" +
-	    content_map["DISTPRODUCT"]:"" + " " +
-	    content_map["VERSION"]:"";
-    }
-    string products_path = media_path + "/products";
-    return SCR::Write (.target.string, products_path, products_contents);
+global boolean WriteProductsFiles (string base_path, list<string> p_files)
+{
+    integer i	= 1;
+    foreach (string cont, p_files, {
+	string media_path = base_path + sformat ("/media.%1", i);
+	if (cont == "")
+	{
+	    cont = "/\t" +
+		content_map["DISTPRODUCT"]:"" + " " +
+		content_map["VERSION"]:"";
+	}
+	SCR::Write (.target.string, media_path + "/products", cont);
+	i	= i + 1;
+    });
+    return true;
+}
+
+/**
+ * Write the media.n/media files
+ * @param base_path path to base output directory
+ * @return success
+ */
+global boolean WriteMediaFiles (string base_path, list<string> m_files)
+{
+    integer i	= 1;
+    foreach (string cont, m_files, {
+	string media_path = base_path + sformat ("/media.%1", i);
+	if (cont == "")
+	{
+	    string media_id	= "";
+	    map out = (map) SCR::Execute (.target.bash_output,
+		"date +%Y%m%d%H%M%S");
+	    media_id	= deletechars (out["stdout"]:"", "\n");
+	    cont = content_map["VENDOR"]:"" + "\n" + media_id;
+	    if (i == 1)
+		cont	= cont + "\n" + size (m_files);
+	}
+	SCR::Write (.target.string, media_path + "/media", cont);
+	i	= i + 1;
+    });
+    return true;
 }
 
 // write license.txt files in media.1 dir
@@ -1444,7 +1497,9 @@ global boolean Write() {
 	Report::Error (_("Cannot create output directory structure."));
     }
 
-    WriteProductsFile (full_media_paths[0]:"", products);
+    WriteProductsFiles (base_output_path, products_files);
+
+    WriteMediaFiles (base_output_path, media_files);
 
     WriteLicensesFiles (full_media_paths[0]:"", license_files);
 

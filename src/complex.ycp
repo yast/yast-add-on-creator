@@ -728,7 +728,7 @@ any EditValue (map entry, string table_type) {
     symbol w_id		= `main;
     integer height	= 5;
 
-    string help		= type == "content" ?
+    string help		= table_type == "content" ?
 	sformat ("<p><b>%1</b></p>%2",
 	    entry["helplabel"]:entry["key"]:"",
 	    entry["help"]:"")
@@ -849,7 +849,7 @@ any EditValue (map entry, string table_type) {
 	if (result == `help)
 	{
 	    // Heading for help popup window
-	    Popup::LongText (_("Help"), `RichText (help), 50, 8);
+	    Popup::LongText (_("Help"), `RichText (help), 50, 9);
 	}
 	if (result == `all)
 	{
@@ -1331,10 +1331,7 @@ any OutputDialog() {
 		UI::ChangeWidget (`id(`output_path), `Value, dir);
 	    }
 	}
-	else if (ret == `workflow) {
-	    Popup::Message ("FIXME: not implemented yet");
-	}
-	else if (ret == `expert) {
+	else if (ret == `expert || ret == `workflow) {
 	    AddOnCreator::base_output_path	= dir;
 	    AddOnCreator::iso			= iso;
 	    AddOnCreator::bootable		= bootable;

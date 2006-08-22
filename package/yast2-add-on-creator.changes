@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Aug 22 11:18:29 CEST 2006 - jsuchome@suse.cz
+
+- added reading (importing) of media files (in media.n directories)
+- 2.13.2 
+
+-------------------------------------------------------------------
 Wed Aug 16 08:22:31 CEST 2006 - jsuchome@suse.cz
 
 - removed agent for content file (already exists in yast2 package) 

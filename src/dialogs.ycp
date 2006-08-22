@@ -543,5 +543,60 @@ any ExpertSettingsDialog2 () {
     return ret;
 }
 
+// FIXME
+any WorkflowConfigurationDialog () {
+
+
+    // dialog caption
+    string caption = _("Workflow Configuration");
+    string xml_path	= "";
+
+    term contents = `HBox (`HSpacing (), `VBox (
+	`HBox (
+	    // textentry label
+	    `TextEntry (`id (`xml),_("Location of installation.xml"), xml_path),
+	    `VBox (
+		`Label (""),
+		`PushButton (`id(`browse), Label::BrowseButton ())
+	    )
+	),
+	`VSpacing (0.7)
+    ), `HSpacing ());
+
+
+    Wizard::SetContentsButtons(caption, contents, HELPS["workflow"]:"",
+	    Label::BackButton(), Label::NextButton());
+    Wizard::HideAbortButton();
+
+    any ret = nil;
+    while(true) {
+	ret		= UI::UserInput();
+	if (ret == `browse)
+	{
+	    string file = UI::AskForExistingFile (
+		AddOnCreator::rpm_path, "installation.xml",
+		// popup for file selection dialog
+		_("Choose the installation.xml file")
+	    );
+	    if (file != nil)
+	    {
+		xml_path	= file;
+		UI::ChangeWidget (`id(`xml), `Value, xml_path);
+	    }
+	}
+        else if (ret == `next) {
+	    break;
+	}
+	else if (ret == `abort || ret == `cancel) {
+	    if(ReallyAbort()) break;
+	    else continue;
+	}
+	else if (ret == `back) {
+            break;
+        }
+    }
+    Wizard::RestoreAbortButton();
+    return ret;
+}
 /* EOF */
 }
