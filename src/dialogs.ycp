@@ -543,23 +543,68 @@ any ExpertSettingsDialog2 () {
     return ret;
 }
 
-// FIXME
+/**
+ * Dialog for configuration of an installation workflow
+ */
 any WorkflowConfigurationDialog () {
 
 
     // dialog caption
     string caption = _("Workflow Configuration");
-    string xml_path	= "";
+    string workflow_path	= AddOnCreator::workflow_path;
+    string y2update_path	= AddOnCreator::y2update_path;
+    list<string> y2update_packages	= AddOnCreator::y2update_packages;
+    // helper for updating table contents
+    void update_table () {
+	UI::ChangeWidget (`id(`y2update_packages), `Items,
+	    maplist (string p, y2update_packages, ``(`item (`id(p), p))));
+    }
 
     term contents = `HBox (`HSpacing (), `VBox (
 	`HBox (
-	    // textentry label
-	    `TextEntry (`id (`xml),_("Location of installation.xml"), xml_path),
+	    `TextEntry (`id (`workflow_path),
+		// textentry label
+		_("&Location of file with workflow description"),workflow_path),
 	    `VBox (
 		`Label (""),
 		`PushButton (`id(`browse), Label::BrowseButton ())
 	    )
 	),
+	`VSpacing (),
+	`RadioButtonGroup (`id(`rbg), `VBox (
+	    `Left (`RadioButton (`id (`no_additional), `opt (`notify),
+	        // radiobutton label
+	        _("&No Additional YaST Modules"),
+	        y2update_path == "" && y2update_packages ==[]
+	    )),
+	    `Left (`RadioButton (`id(`y2update_rb), `opt (`notify),
+	        // radiobutton label
+	        _("&Path to y2update.tgz"),
+	        y2update_path != ""
+	    )),
+	    `HBox (
+	        `HSpacing (2),
+	        `TextEntry (`id (`y2update_path), "", y2update_path),
+	        // pushbutton label
+	        `PushButton (`id(`br_y2update), _("&Browse"))
+	    ),
+	    `Left (`RadioButton (`id(`import), `opt (`notify),
+	        // radiobutton label
+	        _("&Import the packages"),
+	        y2update_packages != [] && y2update_path == ""
+	    )),
+	    `HBox (`HSpacing (2), `VBox (
+	        `Table (`id(`y2update_packages),
+		   // table header
+		   `header (_("YaST module package")), []
+	        ),
+	        `HBox (
+		   `PushButton (`id(`add), Label::AddButton ()),
+		   `PushButton (`id(`delete), Label::DeleteButton ()),
+		   `HStretch ()
+	        )
+	    ))
+	)),
 	`VSpacing (0.7)
     ), `HSpacing ());
 
@@ -568,23 +613,84 @@ any WorkflowConfigurationDialog () {
 	    Label::BackButton(), Label::NextButton());
     Wizard::HideAbortButton();
 
+    update_table ();
+    foreach (symbol w_id, [ `y2update_path, `br_y2update ], {
+	UI::ChangeWidget (`id(w_id), `Enabled,
+	    UI::QueryWidget (`id (`rbg), `Value) == `y2update_rb);
+    });
+    foreach (symbol w_id, [ `y2update_packages, `add, `delete ], {
+	UI::ChangeWidget (`id(w_id), `Enabled,
+	    UI::QueryWidget (`id (`rbg), `Value) == `import);
+    });
+    UI::ChangeWidget (`id(`delete), `Enabled, y2update_packages != []);
+
     any ret = nil;
     while(true) {
 	ret		= UI::UserInput();
 	if (ret == `browse)
 	{
 	    string file = UI::AskForExistingFile (
-		AddOnCreator::rpm_path, "installation.xml",
+		AddOnCreator::rpm_path, "*.xml",
 		// popup for file selection dialog
 		_("Choose the installation.xml file")
 	    );
-	    if (file != nil)
+	    if (file != nil) //TODO check for xml format
 	    {
-		xml_path	= file;
-		UI::ChangeWidget (`id(`xml), `Value, xml_path);
+		workflow_path	= file;
+		UI::ChangeWidget (`id(`workflow_path), `Value, file);
 	    }
 	}
+	else if (ret == `import || ret == `y2update_rb || ret == `no_additional)
+	{
+	    foreach (symbol w_id, [ `y2update_packages, `add, `delete ], {
+		UI::ChangeWidget (`id(w_id), `Enabled, ret == `import);
+	    });
+	    foreach (symbol w_id, [ `y2update_path, `br_y2update ], {
+		UI::ChangeWidget (`id(w_id), `Enabled, ret == `y2update_rb);
+	    });
+	}
+	if (ret == `br_y2update)
+	{
+	    string file = UI::AskForExistingFile (
+		AddOnCreator::rpm_path, "y2update.tgz",
+		// popup for file selection dialog
+		_("Choose the path to y2update.tgz file")
+	    );
+	    if (file != nil) //TODO check for tgz format
+	    {
+		y2update_path	= file;
+		UI::ChangeWidget (`id(`y2update_path), `Value, file);
+	    }
+	}
+	else if (ret == `add)
+	{
+	    string file = UI::AskForExistingFile (
+		AddOnCreator::rpm_path, "*.rpm",
+		// popup for file selection dialog
+		_("Choose the YaST module package")
+	    );
+	    if (file != nil && !contains (y2update_packages, file))
+	    //TODO check for rpm
+	    {
+		y2update_packages	= add (y2update_packages, file);
+		update_table ();
+	    }
+	    UI::ChangeWidget (`id(`delete), `Enabled, y2update_packages != []);
+	}
+	else if (ret == `delete)
+	{
+	    string sel = (string)
+		UI::QueryWidget (`id(`y2update_packages),`CurrentItem);
+	    y2update_packages = filter (string p, y2update_packages,``(p!=sel));
+	    update_table ();
+	    UI::ChangeWidget (`id(`delete), `Enabled, y2update_packages != []);
+	}
         else if (ret == `next) {
+	    AddOnCreator::y2update_packages = y2update_packages;
+	    AddOnCreator::y2update_path	=
+		(string)UI::QueryWidget (`id(`y2update_path), `Value);
+	    AddOnCreator::workflow_path	=
+		(string)UI::QueryWidget (`id(`workflow_path), `Value);
 	    break;
 	}
 	else if (ret == `abort || ret == `cancel) {

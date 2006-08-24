@@ -47,39 +47,84 @@ Abort the save procedure by pressing <b>Abort</b>.
 An additional dialog informs whether it is safe to do so.
 </p>
 "),
-    // help text
-    "content"	: _("Enter mandatory information to identify your new add-on. Uncheck <b>Show only Mandatory Keywords</b> to see more attributes of the <tt>content</tt> file.") +
 
-	"<p><b>TODO</b></p>
-<p>- editor for REQUIRES: read patterns available on target...
-<p>- input validation",
+    // help text for start menu
+    "start"	: _("<p>This module offeres a guidance for the creation of Add-On Product.</p>") +
 
-    // help text
-    "sources"	: _("Enter the sources of data used for creating an Add-On.") +
+	// help text for start menu, cont.
+	_("<p>Choose a way for creating new Add-On Product. You can create it from the beginning or you can base it on some already existing product.</p>") +
 
-	"<p></p>",
+	// help text for start menu, cont.
+	_("<p>Check <b>Generate packages descriptions</b> if you want to generate new descriptions of packages of the existing product.</p>"),
 
-    "output"	: _("Use <b>Optional Files</b> to set optional values (licence texts, <tt>README</tt> etc."),
+    // help text for initial data
+    "sources"	: _("<p>Choose a path to the directory with RPM packages that will form your Add-On.</p>") +
 
-    // help text
-    "overview"	: _("Pressing <b>Finish</b> will create Add-On in the output directory."),
+	// help text for initial data, cont.
+	_("<p>Select the product which is required to be installed before the new Add-On Product. This selection forms the <b>REQUIRES</b> value of the <tt>content</tt> file.</p>"),
 
-    "patterns"	: _("<p>Editor of patterns</p>") +
-    _("Add is only for .lang keys"),
+    // help text for content file editor (<tt>content</tt> is a name of file)
+    "content"	: _("<p>Here you can edit the values of the <tt>content</tt> file.</p>") +
 
-    // help text
-    "packages"	: _("<p>Editor of <tt>packages.lang</tt> files</p>") +
-        // help text
-	_("<p>Use <b>Add Language</b> to add a description file for new language. The list of available languages is read from <b>LINGUAS</b> value of <tt>content</tt> file. Delete the description file with <b>Delete</b> button.</p>") +
+	// help text for content file editor, cont.
+	_("<p>Enter mandatory information to identify the Add-On Product. Uncheck <b>Show only Mandatory Keywords</b> to see more attributes of the <tt>content</tt> file.</p>") +
 
-        // help text
-	_("<p>Add new description entry for selected package with <b>Add</b> or edit the existing one with <b>Edit</b></p>"),
+	// help text for content file editor, cont.
+	_("<p>Use <b>Import</b> to import an existing <tt>content</tt> file.</p>"),
 
-    "expert"	: _("info.txt and licences are for media.1 directory, READMEs are in root dir"),
+    // help text for package description files
+    "packages"	: _("<p>Here, edit the language specific descriptions of packages (<tt>packages.lang</tt> files).</p>") +
+	// help text for package description files, cont.
+	_("<p>Use <b>Add Language</b> to add a description file for new language. The list of available languages is read from <b>LINGUAS</b> value of <tt>content</tt> file. Import the existing file with package descriptions with <b>Import</b>. Delete the description file with <b>Delete</b> button.</p>") +
 
-    "expert2"	: _("COPYRIGHT and COPYING are in root dir of media"),
+	// help text for package description files, cont.
+	_("<p>Use <b>Add</b> and <b>Edit</b> in the second table to modify description entries for selected package.</p>"),
 
+    // help text for patterns
+    "patterns"	: _("<p>Here, create and edit the patterns for Add-On Product.</p>") +
+
+	// help text for patterns, cont.
+	_("<p>Use <b>New</b> to create new pattern or <b>Import</b> to import an existing one.</p>") +
+
+	// help text for patterns, cont.
+	_("<p>Use <b>Add</b> and <b>Edit</b> in the second table to modify pattern attributes.</p>"),
+
+
+    // help text for the 'various settings' dialog
+    "output"	: _("<p>Specify the path to directory where the Add-On Product should be created. Check <b>Create ISO image</b> if you want to create ISO image of the product in the output directory.</p>") +
+
+	// help text for the 'various settings' dialog
+	_("<p>Adapt the workflow of Add-On Product with <b>Configure Workflow</b>.</p>") +
+
+	// help text for the 'various settings' dialog
+	_("<p>Use <b>Optional Files</b> to configure texts of <tt>README</tt> files, licences and other optional values.</p>"),
+
+    // workflow help text
+    "workflow"	: _("<p>Here you can enter the files necessary for customization of your Add-On Product workflow.</p>") +
+
+	// workflow help text
+	_("<p>Enter the location of <b>file with workflow description</b>. This file is an alternative to <tt>control.xml</tt> and is saved as <tt>installation.xml</tt> to the Add-On Product base directory.</p>") +
+
+	// workflow help text
+	_("<p>To use custom YaST modules during the installation of Add-On Product, enter the path to the <tt>y2update.tgz</tt> archive where these modules are stored or configure the contents of <tt>y2update.tgz</tt> by specifying the YaST rpm packages in <b>Import the packages</b> table.</p>"),
+
+    // help text for expert dialog 1
+    "expert"	: _("<p>The optional <tt>info.txt</tt> file gives information about the Add-On that should be displayed as a pop-up window with an OK button.</p>") +
+	// help text for expert dialog 1, cont
+	_("<p>The text of the licence will be displayed in a window with Agree and Disagree buttons before the installation starts. The files with the licence texts in different languages will be compressed to <tt>licence.zip</tt> archive and stored in <tt>media.1</tt> directory.</p>"),
+
+    // help text for expert dialog 2
+    "expert2"	: _("<p>The COPYRIGHT and COPYING files can have various language modifications and will be stored in the root directory of Add-On Product.</p>"),
+
+    // help text for signing dialog
     "signing"	: _("Passphrase is needed to unlock the secret key"),
+
+    // help text for overview dialog
+    "overview"	: _("<p>Here, see the overview of already entered data, which will be used to generate Add-On Product.</p>") +
+
+	// help text for overview dialog, cont.
+	_("<p>Press <b>Finish</b> to create the Add-On Product in the output directory.</p>"),
+
 ];
 
 /* EOF */

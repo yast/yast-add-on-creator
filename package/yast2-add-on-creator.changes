@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Thu Aug 24 13:36:00 CEST 2006 - jsuchome@suse.cz
+
+- dialog configuration for workflow
+- simple (=not bootable) ISO creating
+- updated help texts
+- 2.13.3
+
+-------------------------------------------------------------------
 Tue Aug 22 11:18:29 CEST 2006 - jsuchome@suse.cz
 
 - added reading (importing) of media files (in media.n directories)

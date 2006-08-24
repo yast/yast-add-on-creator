@@ -35,6 +35,7 @@ import "AddOnCreator";
 import "FileUtils";
 import "Label";
 import "Message";
+import "Package";
 import "Popup";
 import "Report";
 import "String";
@@ -94,7 +95,7 @@ symbol WriteDialog() {
 any StartDialog () {
 
     // dialog caption
-    string caption = _("Add-On Creator");
+    string caption = _("Add-On Product Creator");
     boolean generate_descriptions	= AddOnCreator::generate_descriptions;
 
     term contents = `HVCenter (`HBox (`HSpacing (), `VBox (
@@ -200,7 +201,7 @@ any SourcesDialog() {
     string old_requires	= requires;
 
     // dialog caption
-    string caption = _("Add-On Creator");
+    string caption = _("Add-On Product Creator");
 
     term contents = `HBox (`HSpacing (), `VBox (
 	`HBox (
@@ -544,6 +545,7 @@ any ContentFileDialog() {
 	});
 	return ret;
     }
+// TODO: editor for REQUIRES: read patterns available on target...
 
     term contents = `HBox (`HSpacing (), `VBox (
 	`Table (`id(`content_table), `opt(`notify), `header (
@@ -849,7 +851,7 @@ any EditValue (map entry, string table_type) {
 	if (result == `help)
 	{
 	    // Heading for help popup window
-	    Popup::LongText (_("Help"), `RichText (help), 50, 9);
+	    Popup::LongText (_("Help"), `RichText (help), 50, 10);
 	}
 	if (result == `all)
 	{
@@ -879,7 +881,7 @@ any EditValue (map entry, string table_type) {
 	    {
 		if (error != "")
 		{
-		    Report::Error (error);
+		    Popup::Error (error);
 		    continue;
 		}
 	    }
@@ -1221,7 +1223,9 @@ Choose another one."));
     return ret;
 }
 
-// TODO
+/**
+ * Dialog for product signing configuration
+ */
 any SigningDialog() {
 
     // dialog caption
@@ -1240,7 +1244,7 @@ any SigningDialog() {
 	    )
 	),
 	// password entry label
-	`Password (`id(`pw), _("&Passphrase"), ""),
+	`Password (`id(`pw), _("&Passphrase"), AddOnCreator::passphrase),
 	`VSpacing (0.7)
     ), `HSpacing ());
 
@@ -1275,12 +1279,13 @@ any SigningDialog() {
 }
 
 /**
+ * TODO better placing, more dialogs?
  * @return dialog result
  */
 any OutputDialog() {
 
     // dialog caption
-    string caption	= _("Output settings");
+    string caption	= _("Various settings");
     boolean iso		= AddOnCreator::iso;
     boolean bootable	= AddOnCreator::bootable; //FIXME
     boolean autorun	= false;
@@ -1288,7 +1293,7 @@ any OutputDialog() {
     term contents = `HBox (`HSpacing (), `VBox (
 	`HBox (
 	    // text entry label
-	    `TextEntry (`id(`output_path), _("&Path to output directory"),
+	    `TextEntry (`id(`output_path), _("P&ath to output directory"),
 		AddOnCreator::base_output_path),
 	    `VBox (
 		`Label (""),
@@ -1298,14 +1303,14 @@ any OutputDialog() {
 	// check box label
 	`Left (`CheckBox (`id(`iso), _("Create &ISO Image"), iso)),
 	// check box label
-	`Left (`CheckBox (`id(`boot), _("Create B&ootable Add-On"), bootable)),
+//FIXME	`Left (`CheckBox (`id(`boot), _("Create B&ootable Add-On"), bootable)),
 	// check box label
 //FIXME	`Left (`CheckBox (`id(`autorun), _("&Autorun"), autorun)),
-	`VSpacing (2),
+	`VSpacing (4),
 	`HBox (
 	    `HStretch (),
 	    // button label
-	    `PushButton (`id(`workflow), _("Configure &Workflow...")),
+	    `PushButton (`id(`workflow), _("&Configure Workflow...")),
 	    // button label
 	    `PushButton (`id(`expert), _("O&ptional Files..."))
 	)
@@ -1321,7 +1326,7 @@ any OutputDialog() {
 	ret = UI::UserInput();
 	string dir	= (string)UI::QueryWidget (`id(`output_path), `Value);
 	boolean iso	= (boolean)UI::QueryWidget (`id(`iso), `Value);
-	boolean bootable= (boolean)UI::QueryWidget (`id(`boot), `Value);
+//	boolean bootable= (boolean)UI::QueryWidget (`id(`boot), `Value);
 	if (ret == `browse) {
 	    dir = UI::AskForExistingDirectory (dir, "");
 	    if (dir != nil)
@@ -1334,7 +1339,7 @@ any OutputDialog() {
 	else if (ret == `expert || ret == `workflow) {
 	    AddOnCreator::base_output_path	= dir;
 	    AddOnCreator::iso			= iso;
-	    AddOnCreator::bootable		= bootable;
+//	    AddOnCreator::bootable		= bootable;
 	    break;
 	}
         else if (ret == `next) {
@@ -1357,7 +1362,11 @@ any OutputDialog() {
 	    }
 	    AddOnCreator::base_output_path	= dir;
 	    AddOnCreator::iso			= iso;
-	    AddOnCreator::bootable		= bootable;
+//	    AddOnCreator::bootable		= bootable;
+	    if (iso && !Package::Install ("mkisofs"))
+	    {
+		AddOnCreator::iso	= false;
+	    }
             break;
         }
 	else if(ret == `abort || ret == `cancel) {
@@ -1373,6 +1382,7 @@ any OutputDialog() {
 
 
 /**
+ * Dialof with overview of the product
  * @return dialog result
  */
 any OverviewDialog() {
@@ -1397,10 +1407,17 @@ any OverviewDialog() {
     // summary header
     sum	= Summary::AddHeader (sum, _("Input directory"));
     sum	= Summary::AddLine (sum, AddOnCreator::rpm_path);
+
     // summary header
     sum	= Summary::AddHeader (sum, _("Output directory"));
     sum	= Summary::AddLine (sum, AddOnCreator::base_output_path);
 
+    if (AddOnCreator::iso)
+    {
+	sum	= Summary::AddLine (sum,
+	    // summary line
+	    _("ISO image will be created in output directory."));
+    }
 
     term contents = `RichText (sum);
     Wizard::SetContentsButtons(caption, contents, HELPS["overview"]:"",

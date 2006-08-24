@@ -115,22 +115,22 @@ any MainSequence() {
 	],
 	"patterns" : $[
 	    `abort	: `abort,
-	    `next	: "signing",
-//	    `next	: "overview",
-	],
-	"signing" : $[
-	    `abort	: `abort,
 	    `next	: "output",
+//	    `next	: "overview",
 	],
 	"output" : $[
 	    `abort	: `abort,
-	    `next	: "overview",
+	    `next	: "signing",
 	    `expert	: "expert1",
 	    `workflow	: "workflow",
 	],
 	"workflow" : $[
 	    `abort	: `abort,
 	    `next	: "output",
+	],
+	"signing" : $[
+	    `abort	: `abort,
+	    `next	: "overview",
 	],
 	"overview" : $[
 	    `abort	: `abort,
