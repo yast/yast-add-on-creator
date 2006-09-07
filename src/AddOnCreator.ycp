@@ -147,7 +147,7 @@ map<string,map> content_descr	= $[
 	    // label of content file PROVIDES key
 	    "label"	: _("Provided resolvables"),
 	    // help text for content file 'PROVIDES' key
-	    "help"	: _("Capabilities this product provides. They can be used to match <b>REQUIRES</b> from others. Every resolvable has a provide by default—its own name and edition. For example, package <i>bar-1.42-1</i> provides the capability <tt>bar = 1.42-1</tt>."),
+	    "help"	: _("Capabilities this product provides. They can be used to match <b>REQUIRES</b> from others. Every resolvable has a provide by default-its own name and edition. For example, package <i>bar-1.42-1</i> provides the capability <tt>bar = 1.42-1</tt>."),
     ],
     "CONFLICTS"		: $[
 	    "key"	: "CONFLICTS",
@@ -375,7 +375,7 @@ global map pattern_descr	= $[
 	// label for 'Prv' pattern key
 	"label"		: _("Provided patterns"),
 	// help text for 'Prv' pattern key
-	"help"		: _("Capabilities this pattern provides. They can be used to match <b>REQUIRES</b> from others. Every resolvable has a provide by default—its own name and edition. For example, package <i>bar-1.42-1</i> provides the capability <tt>bar = 1.42-1</tt>."),
+	"help"		: _("Capabilities this pattern provides. They can be used to match <b>REQUIRES</b> from others. Every resolvable has a provide by default-its own name and edition. For example, package <i>bar-1.42-1</i> provides the capability <tt>bar = 1.42-1</tt>."),
 	"defval"	: "",
 	"type"		: "pattern-list",
     ],
