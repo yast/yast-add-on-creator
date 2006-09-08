@@ -71,7 +71,7 @@ string AddFile (string label, list conflicts, list<string> values) {
 	    if (contains (conflicts, ret))
 	    {
 		// popup message
-		Popup::Error (_("There already exists a file with this name.
+		Popup::Error (_("A file with this name already exists.
 Choose a different one."));
 		ret	= nil;
 		continue;
@@ -115,10 +115,10 @@ any ExpertSettingsDialog () {
 
     term contents = `HBox (`HSpacing (), `VBox (
 	`VWeight (2,
-	    `MultiLineEdit (`id (`info), _("&info.txt file"), info)
+	    `MultiLineEdit (`id (`info), _("&info.txt File"), info)
 	),
 	// frame label
-	`VWeight (4, `Frame (_("&Licence files"), `HBox(`HSpacing (0.4), `VBox (
+	`VWeight (4, `Frame (_("&License Files"), `HBox(`HSpacing (0.4), `VBox (
 	    `HBox (
 	      `ReplacePoint (`id(`rplicenses),
 		`ComboBox (`id(`lic_files), `opt (`notify, `hstretch), "",
@@ -134,7 +134,7 @@ any ExpertSettingsDialog () {
 	), `HSpacing (0.4)))),
 	`VSpacing (0.7),
 	// frame label
-	`VWeight (4, `Frame (_("Readme files"), `HBox (`HSpacing (0.4), `VBox (
+	`VWeight (4, `Frame (_("README Files"), `HBox (`HSpacing (0.4), `VBox (
 	    `HBox (
 	      `ReplacePoint (`id(`rpfiles),
 		`ComboBox (`id(`readme_files), `opt (`notify, `hstretch), "",
@@ -173,7 +173,7 @@ any ExpertSettingsDialog () {
 	if (ret == `add_readme) {
 	    string new = AddFile (
 		// textentry label
-		_("&Name of new Readme file"),
+		_("&Name of the New README File"),
 		maplist (string f, string c, readme_files, ``(f)), nil);
 	    if (new != nil)
 	    {
@@ -189,7 +189,7 @@ any ExpertSettingsDialog () {
 	    string file = UI::AskForExistingFile (
 		AddOnCreator::rpm_path, "",
 		// popup for file selection dialog
-		_("Choose the new README file")
+		_("Choose the New README File")
 	    );
 	    if (file != nil)
 	    {
@@ -232,7 +232,7 @@ any ExpertSettingsDialog () {
 	if (ret == `add_license) {
 	    string new = AddFile (
 		// textentry label
-		_("&Language for new license file"),
+		_("&Language for the New License File"),
 		maplist (string f, string c, license_files, ``(
 		    f == "license" ? "" : substring (f, 8))),
 		AddOnCreator::GetLangCodes (true));
@@ -251,7 +251,7 @@ any ExpertSettingsDialog () {
 	    string file = UI::AskForExistingFile (
 		AddOnCreator::rpm_path, "license*",
 		// popup for file selection dialog
-		_("Choose the new license file")
+		_("Choose the New License File")
 	    );
 	    if (file != nil)
 	    {
@@ -325,7 +325,7 @@ any ExpertSettingsDialog2 () {
 
 
     // dialog caption
-    string caption = _("Expert Settings, part 2");
+    string caption = _("Expert Settings, Part 2");
 
     map<string,string> copying_files	= AddOnCreator::copying_files;
     map<string,string> copyright_files	= AddOnCreator::copyright_files;
@@ -351,7 +351,7 @@ any ExpertSettingsDialog2 () {
 
     term contents = `HBox (`HSpacing (), `VBox (
 	// frame label
-	`Frame (_("&COPYING files"), `HBox(`HSpacing (0.4), `VBox (
+	`Frame (_("&COPYING Files"), `HBox(`HSpacing (0.4), `VBox (
 	    `HBox (
 	      `ReplacePoint (`id(`rpcopyings),
 		`ComboBox (`id(`copying_files), `opt (`notify, `hstretch), "",
@@ -367,7 +367,7 @@ any ExpertSettingsDialog2 () {
 	), `HSpacing (0.4))),
 	`VSpacing (0.7),
 	// frame label
-	`Frame (_("COPY&RIGHT files"), `HBox (`HSpacing (0.4), `VBox (
+	`Frame (_("COPY&RIGHT Files"), `HBox (`HSpacing (0.4), `VBox (
 	    `HBox (
 	      `ReplacePoint (`id(`rpfiles),
 		`ComboBox (`id(`copyright_files), `opt (`notify, `hstretch), "",
@@ -407,7 +407,7 @@ any ExpertSettingsDialog2 () {
 	if (ret == `add_copyright) {
 	    string new = AddFile (
 		// textentry label
-		_("&Language for new COPYRIGHT file"),
+		_("&Language for the New COPYRIGHT File"),
 		maplist (string f, string c, copyright_files, ``(
 		    f == "COPYRIGHT" ? "" : substring (f, 10))),
 		AddOnCreator::GetLangCodes (false));
@@ -425,7 +425,7 @@ any ExpertSettingsDialog2 () {
 	    string file = UI::AskForExistingFile (
 		AddOnCreator::rpm_path, "COPYRIGHT*",
 		// popup for file selection dialog
-		_("Choose the new COPYRIGHT file")
+		_("Choose the New COPYRIGHT File")
 	    );
 	    if (file != nil)
 	    {
@@ -466,7 +466,7 @@ any ExpertSettingsDialog2 () {
 	if (ret == `add_copying) {
 	    string new = AddFile (
 		// textentry label
-		_("&Language for new COPYING file"),
+		_("&Language for the New COPYING File"),
 		maplist (string f, string c, copying_files, ``(
 		    f == "COPYING" ? "" : substring (f, 8))),
 		AddOnCreator::GetLangCodes (false));
@@ -484,7 +484,7 @@ any ExpertSettingsDialog2 () {
 	    string file = UI::AskForExistingFile (
 		AddOnCreator::rpm_path, "copying*",
 		// popup for file selection dialog
-		_("Choose the new COPYING file")
+		_("Choose the New COPYING File")
 	    );
 	    if (file != nil)
 	    {
@@ -564,7 +564,7 @@ any WorkflowConfigurationDialog () {
 	`HBox (
 	    `TextEntry (`id (`workflow_path),
 		// textentry label
-		_("&Location of file with workflow description"),workflow_path),
+		_("&Location of the File with the Workflow Description"),workflow_path),
 	    `VBox (
 		`Label (""),
 		`PushButton (`id(`browse), Label::BrowseButton ())
@@ -590,13 +590,13 @@ any WorkflowConfigurationDialog () {
 	    ),
 	    `Left (`RadioButton (`id(`import), `opt (`notify),
 	        // radiobutton label
-	        _("&Import the packages"),
+	        _("&Import the Packages"),
 	        y2update_packages != [] && y2update_path == ""
 	    )),
 	    `HBox (`HSpacing (2), `VBox (
 	        `Table (`id(`y2update_packages),
 		   // table header
-		   `header (_("YaST module package")), []
+		   `header (_("YaST Module Package")), []
 	        ),
 	        `HBox (
 		   `PushButton (`id(`add), Label::AddButton ()),
@@ -632,7 +632,7 @@ any WorkflowConfigurationDialog () {
 	    string file = UI::AskForExistingFile (
 		AddOnCreator::rpm_path, "*.xml",
 		// popup for file selection dialog
-		_("Choose the installation.xml file")
+		_("Choose the installation.xml File")
 	    );
 	    if (file != nil) //TODO check for xml format
 	    {
@@ -654,7 +654,7 @@ any WorkflowConfigurationDialog () {
 	    string file = UI::AskForExistingFile (
 		AddOnCreator::rpm_path, "y2update.tgz",
 		// popup for file selection dialog
-		_("Choose the path to y2update.tgz file")
+		_("Choose the Path to the y2update.tgz File")
 	    );
 	    if (file != nil) //TODO check for tgz format
 	    {
@@ -667,7 +667,7 @@ any WorkflowConfigurationDialog () {
 	    string file = UI::AskForExistingFile (
 		AddOnCreator::rpm_path, "*.rpm",
 		// popup for file selection dialog
-		_("Choose the YaST module package")
+		_("Choose the YaST Module Package")
 	    );
 	    if (file != nil && !contains (y2update_packages, file))
 	    //TODO check for rpm

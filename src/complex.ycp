@@ -101,21 +101,21 @@ any StartDialog () {
     term contents = `HVCenter (`HBox (`HSpacing (), `VBox (
 	`VSpacing (0.8),
 	// label
-	`Left (`Label (_("Create a new Add-On-Product"))),
+	`Left (`Label (_("Create a New Add-On Product"))),
 	`RadioButtonGroup (`id(`rd), `Left(`HVSquash(`VBox (
 	    `Left (`RadioButton(`id(`new), `opt (`notify),
 		// radio button label
-		_("&from the beginning"), !AddOnCreator::clone)
+		_("&From the Beginning"), !AddOnCreator::clone)
 	    ),
 	    `Left (`RadioButton(`id(`copy), `opt (`notify),
 		// radio button label
-		_("as a &copy of existing Add-On Product"), AddOnCreator::clone)
+		_("&Based on an Existing Add-On Product"), AddOnCreator::clone)
 	    ),
 	    `HBox (
 		`HSpacing (2.5),
 		`TextEntry (`id(`path),
 		    // text entry label
-		    _("&Path to Existing Add-On Product Directory"),
+		    _("&Path to Directory of the Existing Add-On Product"),
 		    AddOnCreator::import_path
 		),
 		`VBox (
@@ -127,7 +127,7 @@ any StartDialog () {
 		`HSpacing (2.5),
 		`Left (`CheckBox (`id(`descr_ch),
 		    // checkbox label
-		    _("&Generate packages descriptions"), generate_descriptions)
+		    _("&Generate Package Descriptions"), generate_descriptions)
 		// TODO move to next dialog?
 		)
 	    )
@@ -206,7 +206,7 @@ any SourcesDialog() {
     term contents = `HBox (`HSpacing (), `VBox (
 	`HBox (
 	    // text entry label
-	    `TextEntry (`id(`rpm_path), _("&Path to directory with packages"),
+	    `TextEntry (`id(`rpm_path), _("&Path to Directory with Packages"),
 		AddOnCreator::rpm_path),
 	    `VBox (
 		`Label (""),
@@ -217,7 +217,7 @@ any SourcesDialog() {
 	/*
 	`HBox (
 	    // text entry label
-	    `TextEntry (`id(`output_path), _("Pa&th to output directory"),
+	    `TextEntry (`id(`output_path), _("Pa&th to Output Directory"),
 		AddOnCreator::base_output_path),
 	    `VBox (
 		`Label (""),
@@ -226,7 +226,7 @@ any SourcesDialog() {
 	),
 	`VSpacing (0.7),
 	*/
-	`Frame (_("Required product"), `HBox (`HSpacing (0.5), `VBox (
+	`Frame (_("Required Product"), `HBox (`HSpacing (0.5), `VBox (
 	    `VSpacing (0.4),
 	    `RadioButtonGroup (`id(`rd),
 		`Left(`HVSquash(`VBox (
@@ -344,14 +344,14 @@ any SourcesDialog() {
 	    if (dir == "")
 	    {
 		// error popup
-		Popup::Error (_("Enter the path to directory with packages"));
+		Popup::Error (_("Enter the path to the directory with packages."));
 		UI::SetFocus (`id(`rpm_path));
 		continue;
 	    }
 	    if (!FileUtils::Exists (dir))
 	    {
 		// error popup
-		Popup::Error (sformat(_("Directory %1 is not accessible"),dir));
+		Popup::Error (sformat(_("Directory %1 is not accessible."),dir));
 		UI::SetFocus (`id(`rpm_path));
 		continue;
 	    }
@@ -523,7 +523,7 @@ map AddContentValue (list conflicts) {
 any ContentFileDialog() {
 
     // dialog caption - 'content' is file name
-    string caption = _("content file");
+    string caption = _("content File");
 
     list<map> content	= AddOnCreator::content;
 
@@ -566,7 +566,7 @@ any ContentFileDialog() {
 	    `HStretch(),
 	    `CheckBox (`id (`filter_ch), `opt (`notify),
 		// checkbox label
-		_("Show only &Mandatory Keywords"), true
+		_("Show &Only Required Keywords"), true
 	    )
 	),
 	`VSpacing ()
@@ -620,7 +620,7 @@ any ContentFileDialog() {
 	    string file = UI::AskForExistingFile (
 		AddOnCreator::base_output_path, "",
 		// popup for file selection dialog
-		_("Choose existing content file")
+		_("Choose the Existing Content File")
 	    );
 	    if (file != nil)
 	    {
@@ -655,7 +655,7 @@ any ContentFileDialog() {
 	    {
 		// error popup
 		Popup::Error (sformat (_("Enter the values for these items:
-%1."), mergestring (missing, "\n")));
+%1"), mergestring (missing, "\n")));
 //		continue;
 	    }
 	    if (!arch_present)
@@ -807,12 +807,12 @@ any EditValue (map entry, string table_type) {
 	cont	= `VBox (
 	    `HSpacing (50),
 	    // MultiSelectionBox label
-	    `MultiSelectionBox (`id(`main), _("Select the &packages"),
+	    `MultiSelectionBox (`id(`main), _("Select the &Packages"),
 		get_package_items (nil)
 	    ),
 	    `Left (
 		// check box label
-		`CheckBox (`id(`all),`opt(`notify),_("Select or Unselect &All"))
+		`CheckBox (`id(`all),`opt(`notify),_("Select or Deselect &All"))
 	    )
 	);
     }
@@ -967,7 +967,7 @@ map AddDescriptionValue (list existing) {
 any PackagesDialog() {
 
     // dialog caption
-    string caption		= _("Packages Descriptions");
+    string caption		= _("Package Descriptions");
     map<string,map> descr	= AddOnCreator::packages_descr;
 
     list descr_files	= maplist (string l, map d, descr, ``(l));
@@ -1008,7 +1008,7 @@ any PackagesDialog() {
 	    UI::ReplaceWidget (`id(`rpcombo),
 		`ComboBox (`id(`descr_files),`opt(`notify,`hstretch),
 		    // combobox label
-		    _("&Language Code of description file"),
+		    _("Description File &Language Code"),
 		    maplist (string l, map d, descr, ``(
 			`item (`id(l), l, l == lang))
 		    )
@@ -1033,7 +1033,7 @@ any PackagesDialog() {
 	    `ReplacePoint (`id(`rpcombo),
 		`ComboBox (`id(`descr_files), `opt (`notify, `hstretch),
 		    // combobox label
-		    _("&Language Code of description file"), descr_files
+		    _("Description File &Language Code"), descr_files
 		)
 	    ),
 	    `VBox (
@@ -1123,7 +1123,7 @@ any PackagesDialog() {
 	    string file = UI::AskForExistingFile (
 		AddOnCreator::rpm_path, "packages.*",
 		// popup for file selection dialog
-		_("Choose the new package description file")
+		_("Choose the New Package Description File")
 	    );
 	    if (file != nil)
 	    {
@@ -1133,7 +1133,7 @@ any PackagesDialog() {
 		if (substring (name, 0, 9) != "packages.")
 		{
 		    // error popup (correct name is 'packages.*')
-		    Popup::Error(_("The package description file has wrong name.
+		    Popup::Error(_("The package description file is named incorrectly.
 Choose another one."));
 		    continue;
 		}
@@ -1236,7 +1236,7 @@ any SigningDialog() {
 	`HBox (
 	    `ComboBox (`id(`gpg_key), `opt(`editable, `hstretch),
 		// text entry label
-		_("GPG &key ID"), gpg_keys),
+		_("GPG &Key ID"), gpg_keys),
 	    `VBox (
 		`Label (""),
 		// button label
@@ -1285,7 +1285,7 @@ any SigningDialog() {
 any OutputDialog() {
 
     // dialog caption
-    string caption	= _("Various settings");
+    string caption	= _("Various Settings");
     boolean iso		= AddOnCreator::iso;
     boolean bootable	= AddOnCreator::bootable; //FIXME
     boolean autorun	= false;
@@ -1293,7 +1293,7 @@ any OutputDialog() {
     term contents = `HBox (`HSpacing (), `VBox (
 	`HBox (
 	    // text entry label
-	    `TextEntry (`id(`output_path), _("P&ath to output directory"),
+	    `TextEntry (`id(`output_path), _("P&ath to Output Directory"),
 		AddOnCreator::base_output_path),
 	    `VBox (
 		`Label (""),
@@ -1346,7 +1346,7 @@ any OutputDialog() {
 	    if (dir == "")
 	    {
 		// error popup
-		Popup::Error (_("Enter the path to directory for Add-On."));
+		Popup::Error (_("Enter the path to the directory for the add-on."));
 		UI::SetFocus (`id(`output_path));
 		continue;
 	    }
@@ -1393,7 +1393,7 @@ any OverviewDialog() {
     string sum	= "";
 
     // summary header
-    sum	= Summary::AddHeader (sum, _("Product name"));
+    sum	= Summary::AddHeader (sum, _("Product Name"));
     sum	= Summary::AddLine (sum, AddOnCreator::content_map["PRODUCT"]:"");
 
     // summary header
@@ -1405,18 +1405,18 @@ any OverviewDialog() {
     sum = Summary::CloseList (sum);
 
     // summary header
-    sum	= Summary::AddHeader (sum, _("Input directory"));
+    sum	= Summary::AddHeader (sum, _("Input Directory"));
     sum	= Summary::AddLine (sum, AddOnCreator::rpm_path);
 
     // summary header
-    sum	= Summary::AddHeader (sum, _("Output directory"));
+    sum	= Summary::AddHeader (sum, _("Output Directory"));
     sum	= Summary::AddLine (sum, AddOnCreator::base_output_path);
 
     if (AddOnCreator::iso)
     {
 	sum	= Summary::AddLine (sum,
 	    // summary line
-	    _("ISO image will be created in output directory."));
+	    _("Creating an ISO image in the output directory"));
     }
 
     term contents = `RichText (sum);

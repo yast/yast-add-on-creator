@@ -46,7 +46,7 @@ string AddPattern (list<string> conflicts) {
 	`HSpacing(1),
 	`VBox(
 	    // text entry label
-	    `TextEntry (`id (`patname), _("&Name of new pattern")),
+	    `TextEntry (`id (`patname), _("&Name of the New Pattern")),
 	    `HBox(
 		`PushButton(`id(`ok),`opt(`default,`key_F10),Label::OKButton()),
 		`PushButton(`id(`cancel),`opt (`key_F9), Label::CancelButton())
@@ -69,7 +69,7 @@ string AddPattern (list<string> conflicts) {
 	    if (contains (conflicts, ret))
 	    {
 		// popup message
-		Popup::Error (_("There already exists a pattern with this name.
+		Popup::Error (_("A pattern with this name already exists.
 Choose a different one."));
 		ret	= nil;
 		continue;
@@ -154,7 +154,7 @@ map AddPatternValue (list conflicts) {
 	    if (contains (conflicts, key))
 	    {
 		// popup message
-		Popup::Error (_("There already exists a key with this name.
+		Popup::Error (_("A key with this name already exists.
 Choose a different one."));
 		continue;
 	    }
@@ -274,7 +274,7 @@ any PatternsDialog() {
 	    string file = UI::AskForExistingFile (
 		AddOnCreator::rpm_path, "*.pat",
 		// popup for file selection dialog
-		_("Choose the existing Pattern")
+		_("Existing Pattern")
 	    );
 	    if (file != nil)
 	    {

@@ -82,9 +82,9 @@ else if(func == "AskUser") {
 else if(func == "Description") {
     ret = $[
 	/* Rich text title for AddOnCreator in proposals */
-	"rich_text_title" : _("AddOnCreator"),
+	"rich_text_title" : _("Add-On Creator"),
 	/* Menu title for AddOnCreator in proposals */
-	"menu_title" : _("&AddOnCreator"),
+	"menu_title" : _("&Add-On Creator"),
 	"id" : "add-on-creator",
     ];
 }

@@ -121,9 +121,9 @@ map<string,map> content_descr	= $[
     "DEFAULTBASE"	: $[
 	    "key"	: "DEFAULTBASE",
 	    // label of content file key
-	    "label"	: _("Minimal architecture base supported"),
+	    "label"	: _("Minimum architecture base supported"),
 	    // help text for content file 'DEFAULTBASE' key
-	    "help"	: _("Minimal architecture base supported by this product. The default is the base architecture if no matching <b>ARCH.base</b> is found."),
+	    "help"	: _("Minimum architecture base supported by this product. The default is the base architecture if no matching <b>ARCH.base</b> is found."),
 	    "mandatory"	: true,
 	    "type"	: "combo",
 	    "allowed_values"	: allowed_archs,
@@ -131,7 +131,7 @@ map<string,map> content_descr	= $[
     "PREREQUIRES"	: $[
 	    "key"	: "PREREQUIRES",
 	    // labeliption of content file PREREQUIRES key
-	    "label"	: _("Resolvables installed before installation"),
+	    "label"	: _("Resolvables needed before installation"),
 	    // help text for content file 'PREREQUIRES' key
 	    "help"	: _("Resolvables that must be installed on the system before installation of this product. The syntax is the same as for <b>REQUIRES</b>."),
     ],
@@ -145,9 +145,9 @@ map<string,map> content_descr	= $[
     "PROVIDES"		: $[
 	    "key"	: "PROVIDES",
 	    // label of content file PROVIDES key
-	    "label"	: _("Provided resolvables"),
+	    "label"	: _("Resolvables provided"),
 	    // help text for content file 'PROVIDES' key
-	    "help"	: _("Capabilities this product provides. They can be used to match <b>REQUIRES</b> from others. Every resolvable has a provide by default-its own name and edition. For example, package <i>bar-1.42-1</i> provides the capability <tt>bar = 1.42-1</tt>."),
+	    "help"	: _("Capabilities this product provides. They can be used to match <b>REQUIRES</b> from others. Every resolvable has a provides by default--its own name and edition. For example, package <i>bar-1.42-1</i> provides the capability <tt>bar = 1.42-1</tt>."),
     ],
     "CONFLICTS"		: $[
 	    "key"	: "CONFLICTS",
@@ -159,7 +159,7 @@ map<string,map> content_descr	= $[
     "OBSOLETES"		: $[
 	    "key"	: "OBSOLETES",
 	    // label of content file 'OBSOLETES' key
-	    "label"	: _("Obsoleted resolvables"),
+	    "label"	: _("Resolvables made obsolete"),
 	    // help text for content file 'OBSOLETES' key
 	    "help"	: _("When this resolvable is installed, it uninstalls any other resolvable with a name matching this keyword."),
     ],
@@ -168,7 +168,7 @@ map<string,map> content_descr	= $[
 	    // label of content file 'RECOMMENDS' key
 	    "label"	: _("Recommended resolvables"),
 	    // help text for content file 'RECOMMENDS' key
-	    "help"	: _("A weak version of <b>REQUIRES</b>. An attempt is made to fulfill <b>RECOMMENDS</b>, but they are silently dropped if no match is possible."),
+	    "help"	: _("A weak version of <b>REQUIRES</b>. An attempt is made to fulfill <b>RECOMMENDS</b>, but they are silently ignored if no match is possible."),
     ],
     "SUGGESTS"		: $[
 	    "key"	: "SUGGESTS",
