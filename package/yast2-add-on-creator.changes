@@ -1,7 +1,9 @@
 -------------------------------------------------------------------
-Fri Sep  8 13:23:29 CEST 2006 - jsuchome@suse.cz
+Mon Sep 11 16:30:29 CEST 2006 - jsuchome@suse.cz
 
+- removed SL10.1 from the list of offered products
 - text fixes from rwalter@suse.de 
+- 2.13.4
 
 -------------------------------------------------------------------
 Thu Aug 24 13:36:00 CEST 2006 - jsuchome@suse.cz

@@ -238,9 +238,6 @@ any SourcesDialog() {
 			// radio button label
 			_("SUSE Linux Enterprise &Desktop 10"),
 			requires == "sled-release-10")),
-		    `Left(`RadioButton(`id(`suse101), `opt (`notify),
-			// radio button label
-			_("S&USE Linux 10.1"),requires == "suse-release-10.1")),
 		    `HBox (
 			`Left(`RadioButton(`id(`other), `opt (`notify),
 			    // radio button label
