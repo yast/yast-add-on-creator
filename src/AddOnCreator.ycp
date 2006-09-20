@@ -640,15 +640,74 @@ global string CreatePatternFullName (map pattern, boolean file) {
     );
 }
 
+// read the list of available secret keys
+list<string> read_secret_keys () {
+
+    map out = (map) SCR::Execute (.target.bash_output, "gpg --list-secret-keys|grep '^sec'|sed -e 's/.*\\///;s/ .*//g;'");
+    return filter (string k, splitstring(out["stdout"]:"", "\n"),``(k!=""));
+}
+
+
+/**
+ * Generate the key pair
+ */
+global string GenerateGPGKey (map<string,string> data) {
+
+    string data_cont	= sformat ("Key-Type: %1\n", data["Key-Type"]:"");
+    data = remove (data, "Key-Type");
+    foreach (string key, string val, data, {
+	if (val != "")
+	    data_cont	= data_cont + sformat ("%1: %2\n", key, val);
+    });
+
+    // save the needed data to file
+    string data_path	= tmpdir + "/gen-key-data";
+    SCR::Write (.target.string, data_path, data_cont);
+
+    map out	= (map) SCR::Execute (.target.bash_output,
+	"gpg --batch --gen-key " + data_path);
+    if (out["exit"]:0 != 0)
+    {
+	y2warning ("error calling gpg: %1", out);
+	return "";
+    }
+    /*
+    string cmd	= sformat ("gpg --batch --gen-key %1 2>&1", data_path);
+    if (SCR::Execute (.background.run_output_err, cmd) != true)
+    {
+	y2error ("cannot start %1", cmd);
+	return "";
+    }
+
+    // while continuing is needed and while it is possible
+    while ((boolean) SCR::Read(.background.output_open)) {
+	// sleep a little while
+	sleep (20);
+	if ((integer)SCR::Read (.background.newlines) > 0)
+	{
+	    list output    = (list) SCR::Read (.background.newout);
+	    y2internal ("last output: %1", output);
+	}
+    }
+
+    // killing the process (if it still runs)
+    SCR::Execute(.background.kill, "");
+    */
+
+    SCR::Execute (.target.remove, data_path);
+
+    gpg_keys	= read_secret_keys ();
+    return gpg_keys[size (gpg_keys) - 1]:"";
+}
+
 /**
  * Initialize the settings for add-on-creator
  * @return true on success
  */
 global boolean Read() {
 
-    map out = (map) SCR::Execute (.target.bash_output, "gpg --list-secret-keys|grep '^sec'|sed -e 's/.*\\///;s/ .*//g;'");
-    gpg_keys = filter (string k, splitstring(out["stdout"]:"", "\n"),``(k!=""));
-    gpg_key = gpg_keys[0]:"";
+    gpg_keys	= read_secret_keys ();
+    gpg_key	= gpg_keys[0]:"";
 
     // fill uninitialized values in content descriptions
     integer i	= 0;
@@ -1448,9 +1507,14 @@ global boolean SignAddOn (string base_path, string key) {
 
     // sign the content file
     SCR::Execute (.target.bash, sformat ("rm -f %1/content.asc", base_path));
-    SCR::Execute (.target.bash,
-	sformat("gpg --passphrase-fd 0 --detach-sign -u %1 -a %2/content < %3",
-	local_key, base_path, pw_path));
+    if (passphrase != "")
+	SCR::Execute (.target.bash, sformat("
+	    gpg --passphrase-fd 0 --detach-sign -u %1 -a %2/content < %3",
+	    local_key, base_path, pw_path));
+    else
+	SCR::Execute (.target.bash, sformat("
+	    gpg --detach-sign -u %1 -a %2/content", local_key, base_path));
+
     SCR::Execute (.target.bash,
 	sformat("gpg --export -a -u %1 > %2/content.key",local_key, base_path));
 

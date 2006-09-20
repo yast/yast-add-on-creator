@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Sep 20 14:11:22 CEST 2006 - jsuchome@suse.cz
+
+- added generation of GPG keys
+- 2.13.5 
+
+-------------------------------------------------------------------
 Mon Sep 11 16:30:29 CEST 2006 - jsuchome@suse.cz
 
 - removed SL10.1 from the list of offered products

@@ -214,18 +214,6 @@ any SourcesDialog() {
 	    )
 	),
 	`VSpacing (0.7),
-	/*
-	`HBox (
-	    // text entry label
-	    `TextEntry (`id(`output_path), _("Pa&th to Output Directory"),
-		AddOnCreator::base_output_path),
-	    `VBox (
-		`Label (""),
-		`PushButton (`id(`browse), Label::BrowseButton ())
-	    )
-	),
-	`VSpacing (0.7),
-	*/
 	`Frame (_("Required Product"), `HBox (`HSpacing (0.5), `VBox (
 	    `VSpacing (0.4),
 	    `RadioButtonGroup (`id(`rd),
@@ -248,24 +236,6 @@ any SourcesDialog() {
 	    ),
 	    `VSpacing (0.4)
 	))),
-
-	/*
-	`HBox (
-	    // text entry label
-	    `TextEntry (`id(`gpg_key), _("GPG &key ID"), AddOnCreator::gpg_key),
-	    `VBox (
-		`Label (""),
-		// button label
-		`PushButton (`id (`create_key), _("&Create..."))
-	    )
-	),
-	*/
-	/*
-	`VSpacing (0.7),
-	`Right (
-	    `PushButton (`id(`expert), _("&More Settings"))
-	),
-	*/
 	`VSpacing (0.7)
     ), `HSpacing ());
 
@@ -288,7 +258,6 @@ any SourcesDialog() {
 
 	ret		= UI::UserInput();
 	string dir	= (string) UI::QueryWidget (`id(`rpm_path), `Value);
-//	string out_dir	= (string)UI::QueryWidget (`id(`output_path), `Value);
 	if (ret == `browse_rpm) {
 	    dir = UI::AskForExistingDirectory (dir, "");
 	    if (dir != nil)
@@ -298,17 +267,6 @@ any SourcesDialog() {
 		UI::ChangeWidget (`id(`rpm_path), `Value, dir);
 	    }
 	}
-	/*
-	else if (ret == `browse) {
-	    out_dir = UI::AskForExistingDirectory (out_dir, "");
-	    if (out_dir != nil)
-	    {
-		if ((findlastof (out_dir, "/") + 1) == size(out_dir))
-		    out_dir = substring (out_dir, 0, size(out_dir)-1);
-		UI::ChangeWidget (`id(`output_path), `Value, out_dir);
-	    }
-	}
-	*/
 	else if (ret == `sles10) {
 	    requires	= "sles-release-10";
 	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
@@ -334,7 +292,6 @@ any SourcesDialog() {
 		requires = (string) UI::QueryWidget (`id(`other_val), `Value);
 	    AddOnCreator::content_map["REQUIRES"]	= requires;
 	    AddOnCreator::rpm_path			= dir;
-//	    AddOnCreator::base_output_path		= out_dir;
 	    break;
 	}
         else if (ret == `next) {
@@ -352,26 +309,6 @@ any SourcesDialog() {
 		UI::SetFocus (`id(`rpm_path));
 		continue;
 	    }
-	    /*
-	    if (out_dir == "")
-	    {
-		// error popup
-		Popup::Error (_("Enter the path to directory for Add-On."));
-		UI::SetFocus (`id(`output_path));
-		continue;
-	    }
-	    if (!FileUtils::Exists (out_dir))
-	    {
-		if(!Popup::YesNo(Message::DirectoryDoesNotExistCreate(out_dir)))
-		    continue;
-		else if (!(boolean) SCR::Execute (.target.mkdir, out_dir))
-		{
-		    Popup::Error (Message::UnableToCreateDirectory (out_dir));
-		    continue;
-		}
-	    AddOnCreator::base_output_path		= out_dir;
-	    }
-	    */
 	    // FIXME check presence of rpms in dir
 	    AddOnCreator::rpm_path	= dir;
 	    if (requires == "")
@@ -653,7 +590,7 @@ any ContentFileDialog() {
 		// error popup
 		Popup::Error (sformat (_("Enter the values for these items:
 %1"), mergestring (missing, "\n")));
-//		continue;
+		continue;
 	    }
 	    if (!arch_present)
 	    {
@@ -1221,6 +1158,93 @@ Choose another one."));
 }
 
 /**
+ * Dialog for entering the data for new GPG keypair
+ */
+string GenerateKeyDialog () {
+
+    string ret	= "";
+    term cont	= `HBox(
+	`HSpacing(1),
+	`VBox(
+	    `VSpacing (0.5),
+	    // frame label
+	    `Frame (_("Key Type"), `HBox (`HSpacing (0.5), `VBox (
+		`RadioButtonGroup (`id("Key-Type"), `Left (`HVSquash (`VBox (
+		    `Left (`RadioButton (`id("DSA"), `opt (`notify),
+			// radiobutton label (key type)
+			_("&DSA"), true)
+		    ),
+		    // radiobutton label (key type)
+		    `Left (`RadioButton (`id("RSA"), `opt (`notify), _("&RSA")))
+		))))
+	    ))),
+	    `VSpacing (0.5),
+	    // textentry label
+	    `IntField (`id("Key-Length"), _("Key &Size"), 1024, 4096, 2048),
+	    // textentry label
+	    `TextEntry (`id("Expire-Date"), _("E&xpiration Date")),
+	    // textentry label
+	    `TextEntry (`id("Name-Real"), _("&Name")),
+	    // textentry label
+	    `TextEntry (`id("Name-Comment"), _("Commen&t")),
+	    // textentry label
+	    `TextEntry (`id("Name-Email"), _("E&mail Address")),
+	    // password widget label
+	    `Password (`id ("Passphrase"), _("&Passphrase"))
+	),
+	`HSpacing(1)
+    );
+    Wizard::OpenAcceptDialog ();
+    // dialog caption
+    Wizard::SetContents(_("New GPG key"), cont, HELPS["generate"]:"",true,true);
+
+    UI::ChangeWidget (`id ("Expire-Date"), `ValidChars, "1234567890dwmy");
+
+    UI::ChangeWidget (`id ("Key-Length"), `Enabled, false);
+
+    while (true)
+    {
+	any result = UI::UserInput ();
+
+	string type	= (string) UI::QueryWidget (`id("Key-Type"), `Value);
+	UI::ChangeWidget (`id ("Key-Length"), `Enabled, type == "RSA");
+
+	if (result == `cancel || result == `back)
+	{
+	    ret	= "";
+	    break;
+	}
+	if (result == `accept)
+	{
+	    map<string,string> data	= $[];
+	    foreach (string key, [ "Key-Type", "Expire-Date", "Key-Length",
+		"Name-Real", "Name-Comment", "Name-Email", "Passphrase" ], {
+		data[key] = sformat ("%1",UI::QueryWidget (`id (key), `Value));
+	    });
+	    if (data["Name-Real"]:"" == "" && data["Name-Comment"]:"" == "" &&
+		data["Name-Email"]:"" == "")
+	    {
+		// error popup (see Name, Comment, Email Adress text entries
+		Popup::Error (_("Name, Comment and Email Adress values are empty.
+You must enter at least one of the them to provide user identification."));
+		continue;
+	    }
+	    // feedback popup headline
+	    Popup::ShowFeedback (_("Generating primary keypair"),
+		// feedback message
+		_("If it takes too long, please do some other work to give
+the OS a chance to collect more entropy.")
+	    );
+	    ret	= AddOnCreator::GenerateGPGKey (data);
+	    Popup::ClearFeedback ();
+	    break;
+	}
+    }
+    Wizard::CloseDialog ();
+    return ret;
+}
+
+/**
  * Dialog for product signing configuration
  */
 any SigningDialog() {
@@ -1231,9 +1255,11 @@ any SigningDialog() {
 
     term contents = `HBox (`HSpacing (), `VBox (
 	`HBox (
-	    `ComboBox (`id(`gpg_key), `opt(`editable, `hstretch),
-		// text entry label
-		_("GPG &Key ID"), gpg_keys),
+	    `ReplacePoint (`id(`rpcombo),
+		`ComboBox (`id(`gpg_keys), `opt(`editable, `hstretch),
+		    // combo box label
+		    _("GPG &Key ID"), gpg_keys)
+	    ),
 	    `VBox (
 		`Label (""),
 		// button label
@@ -1255,9 +1281,17 @@ any SigningDialog() {
     while(true) {
 
 	ret		= UI::UserInput();
-	string key	= (string) UI::QueryWidget (`id(`gpg_key), `Value);
+	string key	= (string) UI::QueryWidget (`id(`gpg_keys), `Value);
 	if (ret == `create_key) {
-	    Popup::Message ("FIXME: not implemented yet");
+	    string k = GenerateKeyDialog ();
+	    if (k != "")
+	    {
+		UI::ChangeWidget (`id (`gpg_keys), `Items,
+		    maplist (string v, AddOnCreator::gpg_keys, ``(
+			`item (v, v == k)
+		    ))
+		);
+	    }
 	}
         else if (ret == `next) {
 	    AddOnCreator::gpg_key	= key;

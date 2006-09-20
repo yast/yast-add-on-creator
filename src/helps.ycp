@@ -114,7 +114,22 @@ An additional dialog informs whether it is safe to do so.
     "expert2"	: _("<p>The <tt>COPYRIGHT</tt> and <tt>COPYING</tt> files can have various language modifications and are stored in the root directory of the add-on product.</p>"),
 
     // help text for signing dialog
-    "signing"	: _("The passphrase is needed to unlock the secret key."),
+    "signing"	: _("<p>Here, configure the signing of the Add-On Product. Choose a secret key from the list of keys available or create a new one with <b>Create</b> button.</p>") +
+
+	// help text for signing dialog, cont.
+	_("<p>Enter the <b>passphrase</b> which is needed to unlock the secret key.</p>"),
+
+    // help text for generating new key dialog
+    "generate"	: _("<p>Enter the values necessary for generating of new primary keypair.</p>") +
+
+	// help text for generating new key dialog, cont.
+	_("<p>The default <b>size</b> of a DSA key is 1024 bits, RSA keys may be between 1024 and 4096 bits long.</p>") +
+
+	// help text for generating new key dialog, cont.
+	_("<p>As <b>Expiration Date</b>, enter the number of days in which the key expires. If the number is followed by <i>w</i>,<i>m</i>, or <i>y</i>, it indicates the number of weeks, months or years, respectively. Leave the entry empty for key that never expires.</p>") +
+
+	// help text for generating new key dialog, cont.
+	_("<p>Use <b>Name</b>, <b>Comment</b> and <b>Email Adress</b> to provide user identification the new key could be associated with.</p>"),
 
     // help text for overview dialog
     "overview"	: _("<p>Here, see the overview of already entered data to use to generate the add-on product.</p>") +
