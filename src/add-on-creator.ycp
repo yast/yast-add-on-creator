@@ -47,7 +47,7 @@ include "add-on-creator/wizards.ycp";
 map cmdline_description = $[
     "id"	: "add-on-creator",
     // Command line help text for the add-on-creator module
-    "help"	: _("Add-On creator"),
+    "help"	: _("Creator for add-on products"),
     "guihandler"        : AddOnCreatorSequence,
     "initialize"        : AddOnCreator::Read,
     "finish"            : AddOnCreator::Write,

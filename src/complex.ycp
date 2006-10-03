@@ -101,15 +101,16 @@ any StartDialog () {
     term contents = `HVCenter (`HBox (`HSpacing (), `VBox (
 	`VSpacing (0.8),
 	// label
-	`Left (`Label (_("Create a New Add-On Product"))),
+//	`Left (`Label (_("Create a New Add-On Product"))),
 	`RadioButtonGroup (`id(`rd), `Left(`HVSquash(`VBox (
 	    `Left (`RadioButton(`id(`new), `opt (`notify),
 		// radio button label
-		_("&From the Beginning"), !AddOnCreator::clone)
+		_("Create an Add-On &from the Beginning"), !AddOnCreator::clone)
 	    ),
 	    `Left (`RadioButton(`id(`copy), `opt (`notify),
 		// radio button label
-		_("&Based on an Existing Add-On Product"), AddOnCreator::clone)
+		_("Create an Add-On Based on an &Existing Add-On"),
+		 AddOnCreator::clone)
 	    ),
 	    `HBox (
 		`HSpacing (2.5),
@@ -741,7 +742,7 @@ any EditValue (map entry, string table_type) {
 	cont	= `VBox (
 	    `HSpacing (50),
 	    // MultiSelectionBox label
-	    `MultiSelectionBox (`id(`main), _("Select the &Packages"),
+	    `MultiSelectionBox (`id(`main), _("&Packages"),
 		get_package_items (nil)
 	    ),
 	    `Left (
@@ -1188,7 +1189,7 @@ string GenerateKeyDialog () {
 	    // textentry label
 	    `TextEntry (`id("Name-Comment"), _("Commen&t")),
 	    // textentry label
-	    `TextEntry (`id("Name-Email"), _("E&mail Address")),
+	    `TextEntry (`id("Name-Email"), _("E-&Mail Address")),
 	    // password widget label
 	    `Password (`id ("Passphrase"), _("&Passphrase"))
 	),
@@ -1196,7 +1197,7 @@ string GenerateKeyDialog () {
     );
     Wizard::OpenAcceptDialog ();
     // dialog caption
-    Wizard::SetContents(_("New GPG key"), cont, HELPS["generate"]:"",true,true);
+    Wizard::SetContents(_("New GPG Key"), cont, HELPS["generate"]:"",true,true);
 
     UI::ChangeWidget (`id ("Expire-Date"), `ValidChars, "1234567890dwmy");
 
@@ -1225,15 +1226,17 @@ string GenerateKeyDialog () {
 		data["Name-Email"]:"" == "")
 	    {
 		// error popup (see Name, Comment, Email Adress text entries
-		Popup::Error (_("Name, Comment and Email Adress values are empty.
-You must enter at least one of the them to provide user identification."));
+		Popup::Error (_("Name, comment, and e-mail address values are empty.
+You must enter at least one of the them to provide user identification.
+"));
 		continue;
 	    }
 	    // feedback popup headline
-	    Popup::ShowFeedback (_("Generating primary keypair"),
+	    Popup::ShowFeedback (_("Generating Primary Key Pair"),
 		// feedback message
-		_("If it takes too long, please do some other work to give
-the OS a chance to collect more entropy.")
+		_("If it takes too long, do some other work to give
+the OS a chance to collect more entropy.
+")
 	    );
 	    ret	= AddOnCreator::GenerateGPGKey (data);
 	    Popup::ClearFeedback ();

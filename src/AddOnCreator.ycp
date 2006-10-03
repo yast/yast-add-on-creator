@@ -55,7 +55,7 @@ map<string,map> content_descr	= $[
 	    // label of content file key
 	    "label"	: _("Product name"),
 	    // help text for content file 'PRODUCT' key
-	    "help"	: _("Name of the Add-On product"),
+	    "help"	: _("Name of the add-on product"),
 	    "mandatory"	: true,
     ],
     "VERSION"	: $[
@@ -236,7 +236,7 @@ global map content_specials	= $[
 
     "LABEL"	: $[
 	    // label of content file LABEL.lang key
-	    "label"	: _("Language specific label"),
+	    "label"	: _("Language-specific label"),
 	    // help text for content file 'LABEL.lang' key
 	    "help"	: _("UTF-8-encoded <b>LABEL</b>. <tt>lang</tt> has the same syntax as the <b>LINGUAS</b> values. For each language in <b>LINGUAS</b>, a matching <b>LABEL.lang</b> is expected."),
 	    "helplabel"	: "LABEL.lang",
@@ -375,7 +375,7 @@ global map pattern_descr	= $[
 	// label for 'Prv' pattern key
 	"label"		: _("Provided patterns"),
 	// help text for 'Prv' pattern key
-	"help"		: _("Capabilities this pattern provides. They can be used to match <b>REQUIRES</b> from others. Every resolvable has a provide by default-its own name and edition. For example, package <i>bar-1.42-1</i> provides the capability <tt>bar = 1.42-1</tt>."),
+	"help"		: _("Capabilities this pattern provides. They can be used to match <b>REQUIRES</b> from others. Every resolvable has a provide by default--its own name and edition. For example, package <i>bar-1.42-1</i> provides the capability <tt>bar = 1.42-1</tt>."),
 	"defval"	: "",
 	"type"		: "pattern-list",
     ],
@@ -389,7 +389,7 @@ global map pattern_descr	= $[
     ],
     "Obs"	: $[
 	// label for 'Obs' pattern key
-	"label"		: _("Obsoleted patterns"),
+	"label"		: _("Patterns made obsolete"),
 	// help text for 'Obs' pattern key
 	"help"		: _("When this pattern is installed, it uninstalls any 
 other patterns marked as obsolete here."),
@@ -398,9 +398,9 @@ other patterns marked as obsolete here."),
     ],
     "Rec"	: $[
 	// label for 'Rec' pattern key
-	"label"		: _("Reccomended patterns"),
+	"label"		: _("Recommended patterns"),
 	// help text for 'Rec' pattern key
-	"help"		: _("A weak version of REQUIRES. If recommended patterns cannot be installed no error is shown."),
+	"help"		: _("A weak version of REQUIRES. If recommended patterns cannot be installed, no error is shown."),
 	"defval"	: "",
 	"type"		: "pattern-list",
     ],
@@ -1574,13 +1574,13 @@ global boolean CreateISOImage (string dir_path, string iso_p) {
 global boolean Write() {
 
     /* AddOnCreator read dialog caption */
-    string caption	= _("Creating Add-On");
+    string caption	= _("Creating the Add-On");
 
     list<string> stages	= [
 	    // Progress stage
 	    _("Write the content file"),
 	    // Progress stage
-	    _("Create AddOn structure"),
+	    _("Create the structure of the add-on"),
 	    // Progress stage
 	    _("Write the patterns"),
 	    // Progress stage
@@ -1592,7 +1592,7 @@ global boolean Write() {
 	    // Progress step
 	    _("Writing the content file..."),
 	    // Progress step
-	    _("Creating AddOn structure..."),
+	    _("Creating the structure of the add-on..."),
 	    // Progress stage
 	    _("Writing the patterns..."),
 	    // Progress step
@@ -1640,7 +1640,7 @@ global boolean Write() {
     if (!CreateAddOnStructure (base_output_path))
     {
 	// Error message (do not translate 'content'
-	Report::Error (_("Cannot create output directory structure."));
+	Report::Error (_("Cannot create the output directory structure."));
     }
 
     WriteProductsFiles (base_output_path, products_files);
