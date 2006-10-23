@@ -544,6 +544,68 @@ any ExpertSettingsDialog2 () {
 }
 
 /**
+ * editor of patches, products, media files FIXME
+ * @return dialog result
+ */
+any ExpertSettingsDialog3 () {
+
+
+    // dialog caption
+    string caption = _("Expert Settings, Part 3");
+
+    list<string> products_files	= AddOnCreator::products_files;
+    list<string> patches_files	= AddOnCreator::patches_files;
+    list<string> media_files	= AddOnCreator::media_files;
+
+    string products	= products_files[0]:"";
+    string patches	= patches_files[0]:"";
+    string media	= media_files[0]:"";
+
+    term contents = `HBox (`HSpacing (), `VBox (
+	`MultiLineEdit (`id (`products), _("products"), products),
+	`Right (
+	      // button label
+	      `PushButton (`id (`import_products), _("I&mport"))
+	),
+	`VSpacing (0.7),
+	`MultiLineEdit (`id (`patches), _("patches"), patches),
+	`Right (
+	      // button label
+	      `PushButton (`id (`import_patches), _("&Import"))
+	),
+	`VSpacing (0.7),
+	`MultiLineEdit (`id (`media), _("media"), media),
+	`Right (
+	      // button label
+	      `PushButton (`id (`import_media), _("Im&port"))
+	),
+	`VSpacing (0.7)
+    ), `HSpacing ());
+
+
+    Wizard::SetContentsButtons(caption, contents, HELPS["expert3"]:"",
+	    Label::BackButton(), Label::NextButton());
+
+
+    any ret = nil;
+    while(true) {
+	ret		= UI::UserInput();
+        if (ret == `next) {
+	    Wizard::RestoreAbortButton();
+	    break;
+	}
+	else if (ret == `abort || ret == `cancel) {
+	    if(ReallyAbort()) break;
+	    else continue;
+	}
+	else if (ret == `back) {
+            break;
+        }
+    }
+    return ret;
+}
+
+/**
  * Dialog for configuration of an installation workflow
  */
 any WorkflowConfigurationDialog () {

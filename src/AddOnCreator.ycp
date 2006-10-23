@@ -197,7 +197,7 @@ map<string,map> content_descr	= $[
 	    "label"	: _("Languages"),
 	    // help text for content file 'LINGUAS' key
 	    "help"	: _("ISO language code or language code_country code."),
-// FIXME editor
+// TODO editor
     ],
     "LANGUAGE"		: $[
 	    "key"	: "LANGUAGE",
@@ -500,8 +500,14 @@ global list<string> products_files	= [];
 // the contents of media files
 global list<string> media_files	= [];
 
+// the contents of patches files
+global list<string> patches_files	= [];
+
 // the contents of info.txt file
 global string info		= "";
+
+// the contents of nextmedia file
+global string nextmedia		= "";
 
 // content of readme files
 global map<string,string> readme_files	= $[
@@ -548,6 +554,7 @@ string tmpdir	= "";
 
 list full_media_paths	= [];
 
+// architecture specific directory names of target product
 list<string> arch_directories = [];
 
 // full path to descr directory
@@ -572,6 +579,9 @@ global list<string> gpg_keys	= [];
 // packages available for the pattern
 global map<string,list> available_packages = $[];
 
+// mapping of package name to full file name
+global map<string,string> package2filename = $[];
+
 /**
  * Data was modified?
  */
@@ -584,24 +594,6 @@ global boolean modified = false;
 global boolean Modified() {
     y2debug("modified=%1",modified);
     return modified;
-}
-
-/**
- * Abort function
- * return boolean return true if abort
- */
-global boolean() AbortFunction = Modified;
-
-/**
- * Abort function
- * @return boolean return true if abort
- */
-global define boolean Abort() ``{
-    if(AbortFunction != nil)
-    {
-	return AbortFunction () == true;//FIXME
-    }
-    return false;
 }
 
 map lang_codes = $[
@@ -671,28 +663,6 @@ global string GenerateGPGKey (map<string,string> data) {
 	y2warning ("error calling gpg: %1", out);
 	return "";
     }
-    /*
-    string cmd	= sformat ("gpg --batch --gen-key %1 2>&1", data_path);
-    if (SCR::Execute (.background.run_output_err, cmd) != true)
-    {
-	y2error ("cannot start %1", cmd);
-	return "";
-    }
-
-    // while continuing is needed and while it is possible
-    while ((boolean) SCR::Read(.background.output_open)) {
-	// sleep a little while
-	sleep (20);
-	if ((integer)SCR::Read (.background.newlines) > 0)
-	{
-	    list output    = (list) SCR::Read (.background.newout);
-	    y2internal ("last output: %1", output);
-	}
-    }
-
-    // killing the process (if it still runs)
-    SCR::Execute(.background.kill, "");
-    */
 
     SCR::Execute (.target.remove, data_path);
 
@@ -921,13 +891,21 @@ global boolean ImportExistingProduct (string dir_path) {
 	    }
 	    else products_files  = add (products_files, "");
 	    string media_path	= d + "/media";
-	    if (FileUtils::Exists (products_path))
+	    if (FileUtils::Exists (media_path))
 	    {
 		y2milestone ("Importing media file '%1'", media_path);
 		media_files	= add (media_files,
 		    (string) SCR::Read (.target.string, media_path));
 	    }
 	    else media_files	= add (media_files, "");
+	    string patches_path	= d + "/patches";
+	    if (FileUtils::Exists (patches_path))
+	    {
+		y2milestone ("Importing patches file '%1'", patches_path);
+		patches_files	= add (patches_files,
+		    (string) SCR::Read (.target.string, patches_path));
+	    }
+	    else patches_files	= add (patches_files, "");
 	});
     }
 
@@ -993,16 +971,18 @@ global void FillContentDefaults () {
 	y2milestone ("asking the RPM's for ARCH and NAME...");
 	foreach (string f, splitstring (out["stdout"]:"", "\n"), {
 	    if (f == "") return;
-	    out	= (map) SCR::Execute (.target.bash_output,
-		sformat ("rpm -q -p %1 --qf \"%%{ARCH}\"", f));
-	    string arch	= out["stdout"]:"";
-// FIXME use only one rpm -q call? "%{DESCRIPTION}\n__oddelovac__\n%{NAME}\n
-	    out	= (map) SCR::Execute (.target.bash_output,
-		sformat ("rpm -q -p %1 --qf \"%%{NAME}\"", f));
-	    string name = out["stdout"]:"";
+
+	    out = (map) SCR::Execute (.target.bash_output,
+	        sformat ("rpm -q -p %1 --qf \"%%{ARCH}\n%%{NAME}\"", f));
+	    list lines  = splitstring (out["stdout"]:"", "\n");
+	    string arch = lines[0]:"";
+	    string name = lines[1]:"";
 	    if (name != "" && arch != "")
+	    {
 		available_packages[arch] = add (
 		    available_packages[arch]:[], name);
+		package2filename[name]	= f;
+	    }
 	});
 	y2milestone ("... done");
 
@@ -1130,7 +1110,7 @@ global boolean CreateAddOnStructure (string base_path) {
     if (arch_directories == [])
     {
 	foreach (string arch_dir, list pa, available_packages, {
-	SCR::Execute (.target.mkdir, sformat("%1/%2",full_data_path, arch_dir));
+	    SCR::Execute (.target.mkdir, full_data_path + "/" + arch_dir);
 	});
     }
 
@@ -1172,7 +1152,7 @@ global boolean WritePackageDescriptions (string descr_path, map descr) {
     return ret;
 }
 
-// Write ARCHIVES.gz TODO generate it! mk_listings
+// Write ARCHIVES.gz FIXME generate if not present! mk_listings
 global boolean WriteARCHIVES (string base_path)
 {
     string archives_path	= tmpdir + "/ARCHIVES.gz";
@@ -1209,7 +1189,26 @@ global boolean WriteLslR (string base_path)
 }
 
 /**
- * Create the products file FIXME editor?
+ * Create the patches files
+ * @param base_path path to base output directory
+ * @param list with patches file contents
+ * @return success
+ */
+global boolean WritePatchesFiles (string base_path, list<string> p_files)
+{
+    integer i	= 1;
+    foreach (string cont, p_files, {
+	string file_path = base_path + sformat ("/media.%1/patches", i);
+	if (cont != "")
+	{
+	    SCR::Write (.target.string, file_path, cont);
+	}
+	i	= i + 1;
+    });
+    return true;
+}
+/**
+ * Create the products file FIXME editor - see ExpertSettingsDialog3
  * @param base_path path to base output directory
  * @return success
  */
@@ -1218,14 +1217,14 @@ global boolean WriteProductsFiles (string base_path, list<string> p_files)
     integer i	= 1;
     if (p_files == [])	p_files = [ "" ];
     foreach (string cont, p_files, {
-	string media_path = base_path + sformat ("/media.%1", i);
 	if (cont == "")
 	{
 	    cont = "/\t" +
 		content_map["DISTPRODUCT"]:"" + " " +
 		content_map["VERSION"]:"";
 	}
-	SCR::Write (.target.string, media_path + "/products", cont);
+	SCR::Write (.target.string,
+	    sformat ("%1/media.%2/products", base_path, i), cont);
 	i	= i + 1;
     });
     return true;
@@ -1234,9 +1233,12 @@ global boolean WriteProductsFiles (string base_path, list<string> p_files)
 /**
  * Write the media.n/media files
  * @param base_path path to base output directory
+ * @param m_files list of media files contents
+ * @param next content of nextmedia file
  * @return success
  */
-global boolean WriteMediaFiles (string base_path, list<string> m_files)
+global boolean WriteMediaFiles (string base_path, list<string> m_files,
+    string next)
 {
     integer i	= 1;
     if (m_files == [])	m_files = [ "" ];
@@ -1253,6 +1255,9 @@ global boolean WriteMediaFiles (string base_path, list<string> m_files)
 		cont	= cont + "\n" + size (m_files);
 	}
 	SCR::Write (.target.string, media_path + "/media", cont);
+	// write nextmedia file if not empty
+	if (i == 1 && next != "")
+	    SCR::Write (.target.string, media_path + "/nextmedia", next);
 	i	= i + 1;
     });
     return true;
@@ -1330,13 +1335,16 @@ global boolean WritePatterns (string base_path) {
 }
 
 /**
+ * Copy the packages from the source directory to target
+ * @param in_path source path
+ * @param base_path destination directory
  * @return success
  */
 global boolean CopyRPMs (string in_path, string base_path) {
 
     if (!FileUtils::Exists (base_path) || !FileUtils::Exists (in_path))
 	return false;
-    // 1. packages in the directories with arch name
+    // packages in the directories with arch name
     if (arch_directories != [])
     {
 	foreach (string arch, arch_directories, {
@@ -1351,18 +1359,27 @@ global boolean CopyRPMs (string in_path, string base_path) {
 	    }
 	});
     }
-    // 1.5 packages not in directories but we have asked them for arch's
+    // packages not in directories but we have asked them for arch's
     else if (available_packages != $[])
     {
 	foreach (string arch, list pa, available_packages, {
 	    string out_dir	= full_data_path + "/" + arch;
 	    if (FileUtils::Exists (out_dir))
 	    {
-		foreach (string p, (list<string>) pa, {
-		    // FIXME store the real file name during read...!
-		    SCR::Execute (.target.bash_output,
-			sformat ("/bin/cp %1/%2*.rpm %3/",in_path,p, out_dir));
-		});
+		if (size (package2filename) > 0)
+		{
+		    foreach (string p, (list<string>) pa, {
+			SCR::Execute (.target.bash, sformat (
+			    "/bin/cp %1 %2/", package2filename[p]:"", out_dir));
+		    });
+		}
+		else
+		{
+		    foreach (string p, (list<string>) pa, {
+			SCR::Execute (.target.bash, sformat (
+			    "/bin/cp %1/%2*.rpm %3/", in_path, p, out_dir));
+		    });
+		}
 	    }
 	});
     }
@@ -1416,6 +1433,53 @@ boolean WriteWorkflow (string base_path,string desc_path, list<string> packages,
 	    y2warning ("%1 returned %2", cmd, out);
 	    ret	= false;
 	}
+    }
+    return ret;
+}
+
+/**
+ * Generate servicepack.tar.gz archive for bootable media
+ * @param base_path base output path
+ */
+boolean WriteServicepackArchive (string base_path)
+{
+    boolean ret = true;
+    if (!bootable) return ret;
+
+    string spdir	= tmpdir + "/servicepack";
+    SCR::Execute (.target.mkdir, spdir);
+
+    SCR::Execute (.target.bash,
+	sformat ("cp %1/content* %2/", base_path, spdir));
+
+    SCR::Execute (.target.bash,
+	sformat ("cp %1/gpg-pubkey* %2/", base_path, spdir));
+
+    SCR::Execute (.target.bash,
+	sformat ("cp -r %1/media.1 %2/", base_path,spdir));
+
+    // copy descriptions (with the stucture)
+    string descr_path = sformat ("%1/%2", spdir, content_map["DESCRDIR"]:"");
+    SCR::Execute (.target.mkdir, descr_path);
+    SCR::Execute (.target.bash,
+	sformat("cp %1/* %2/", full_descr_path, descr_path));
+
+    if (workflow_path != "")
+	SCR::Execute (.target.bash, sformat("cp %1/installation.xml %2/",
+	    base_path, spdir));
+    if (FileUtils::Exists (base_path + "/y2update.tgz"))
+	SCR::Execute (.target.bash, sformat("cp %1/y2update.tgz %2",
+	    base_path, spdir));
+
+    // finally, create the archive
+    string cmd = sformat ("cd %1; tar -czf %2/servicepack.tar.gz .",
+	spdir, base_path);
+    y2debug ("tar cmd: %1", cmd);
+    map out = (map) SCR::Execute (.target.bash_output, cmd);
+    if (out["stderr"]:"" != "")
+    {
+	y2warning ("%1 returned %2", cmd, out);
+	ret	= false;
     }
     return ret;
 }
@@ -1613,11 +1677,8 @@ global boolean Write() {
 
     Progress::New (caption, " ", size (stages), stages, steps, "");
 
-    if(Abort()) return false;
-
     Progress::NextStage();
 
-    // FIXME make tmp base_output_path if iso should be generated
     if (iso)
     {
 	iso_path	= base_output_path;
@@ -1639,13 +1700,15 @@ global boolean Write() {
 
     if (!CreateAddOnStructure (base_output_path))
     {
-	// Error message (do not translate 'content'
+	// Error message
 	Report::Error (_("Cannot create the output directory structure."));
     }
 
+    WritePatchesFiles (base_output_path, patches_files);
+
     WriteProductsFiles (base_output_path, products_files);
 
-    WriteMediaFiles (base_output_path, media_files);
+    WriteMediaFiles (base_output_path, media_files, nextmedia);
 
     WriteLicensesFiles (full_media_paths[0]:"", license_files);
 
@@ -1675,6 +1738,8 @@ global boolean Write() {
 
     SignAddOn (base_output_path, gpg_key);
 
+    WriteServicepackArchive (base_output_path);
+
     CreateDirectoryYaSTFiles (base_output_path);
 
     if (iso)
@@ -1683,10 +1748,8 @@ global boolean Write() {
 	CreateISOImage (base_output_path, iso_path);
     }
 
-    if(Abort()) return false;
     Progress::NextStage();
 
-    if(Abort()) return false;
     return true;
 }
 

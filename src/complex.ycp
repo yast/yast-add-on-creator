@@ -458,7 +458,7 @@ map AddContentValue (list conflicts) {
 any ContentFileDialog() {
 
     // dialog caption - 'content' is file name
-    string caption = _("content File");
+    string caption = _("Product Definition (content File)");
 
     list<map> content	= AddOnCreator::content;
 
@@ -1319,7 +1319,7 @@ any SigningDialog() {
 any OutputDialog() {
 
     // dialog caption
-    string caption	= _("Various Settings");
+    string caption	= _("Output Settings");
     boolean iso		= AddOnCreator::iso;
     boolean bootable	= AddOnCreator::bootable; //FIXME
     boolean autorun	= false;

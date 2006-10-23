@@ -1,4 +1,13 @@
 -------------------------------------------------------------------
+Mon Oct 23 10:53:42 CEST 2006 - jsuchome@suse.cz
+
+- support for generating servicepack.tar.gz
+- import 'patches' file
+- minor performance improvements
+- fixed desktop file (#213878)
+- 2.13.7
+
+-------------------------------------------------------------------
 Tue Oct  3 09:17:44 CEST 2006 - jsuchome@suse.cz
 
 - merged proofread texts 
