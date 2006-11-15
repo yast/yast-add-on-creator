@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Wed Nov 15 12:31:02 CET 2006 - jsuchome@suse.cz
+
+- configure iso image file name (#220534)
+- always generate ARCHIVES.gz, INDEX.gz and ls-lR.gz (#221220)
+- offer additional path to packages for editing patterns (#220535)
+- 2.13.9
+
+-------------------------------------------------------------------
 Mon Oct 23 14:00:54 CEST 2006 - jsuchome@suse.cz
 
 - used existing yast-addon.png icon (#213875)

@@ -57,11 +57,22 @@ An additional dialog informs whether it is safe to do so.
 	// help text for start menu, cont.
 	_("<p>When basing the new product on an existing product, check <b>Generate Package Descriptions</b> to generate new descriptions of packages in the existing product.</p>"),
 
-    // help text for initial data
-    "sources"	: _("<p>Choose the path to the directory containing the RPM packages that should form your add-on product.</p>") +
+    // help text for initial data (paragraph title)
+    "sources"	: _("<p><b>Required Product</b></p>") +
 
 	// help text for initial data, cont.
-	_("<p>Select the product to which the new add-on product can be applied. This selection forms the <b>REQUIRES</b> value of the <tt>content</tt> file.</p>"),
+	_("<p>Select the product to which the new add-on product can be applied. This selection forms the <b>REQUIRES</b> value of the <tt>content</tt> file.</p>") +
+	// help text for initial data (paragraph title), cont.
+	_("<p><b>Add-On Packages</b></p>") +
+
+	// help text for initial data, cont.
+	_("<p>Choose the path to the directory containing the RPM packages that should form your add-on product.</p>") +
+
+	// help text for initial data (paragraph title), cont.
+	_("<p><b>Required Product Packages</b></p>") +
+
+	// help text for initial data, cont.
+	_("<p>Optionally, choose the path to the directory containing the RPM packages from the product the add-on product should be based on. These packages will not be contained in the add-on product, but could be used for creating the patterns later in the workflow.</p>"),
 
     // help text for content file editor (<tt>content</tt> is a name of file)
     "content"	: _("<p>Here, edit the values of the <tt>content</tt> file.</p>") +

@@ -205,16 +205,6 @@ any SourcesDialog() {
     string caption = _("Add-On Product Creator");
 
     term contents = `HBox (`HSpacing (), `VBox (
-	`HBox (
-	    // text entry label
-	    `TextEntry (`id(`rpm_path), _("&Path to Directory with Packages"),
-		AddOnCreator::rpm_path),
-	    `VBox (
-		`Label (""),
-		`PushButton (`id(`browse_rpm), Label::BrowseButton ())
-	    )
-	),
-	`VSpacing (0.7),
 	`Frame (_("Required Product"), `HBox (`HSpacing (0.5), `VBox (
 	    `VSpacing (0.4),
 	    `RadioButtonGroup (`id(`rd),
@@ -237,6 +227,27 @@ any SourcesDialog() {
 	    ),
 	    `VSpacing (0.4)
 	))),
+	`VSpacing (0.7),
+	`HBox (
+	    `TextEntry (`id(`rpm_path),
+		// text entry label
+		_("&Path to Directory with Add-On Packages"),
+		AddOnCreator::rpm_path),
+	    `VBox (
+		`Label (""),
+		`PushButton (`id(`browse_rpm), Label::BrowseButton ())
+	    )
+	),
+	`HBox (
+	    `TextEntry (`id(`required_rpm_path),
+		// text entry label
+		_("Path to Directory with Re&quired Product Packages"),
+		AddOnCreator::required_rpm_path),
+	    `VBox (
+		`Label (""),
+		`PushButton (`id(`browse_req_rpm), Label::BrowseButton ())
+	    )
+	),
 	`VSpacing (0.7)
     ), `HSpacing ());
 
@@ -259,6 +270,9 @@ any SourcesDialog() {
 
 	ret		= UI::UserInput();
 	string dir	= (string) UI::QueryWidget (`id(`rpm_path), `Value);
+	string req_dir	= (string)
+	    UI::QueryWidget (`id(`required_rpm_path), `Value);
+
 	if (ret == `browse_rpm) {
 	    dir = UI::AskForExistingDirectory (dir, "");
 	    if (dir != nil)
@@ -266,6 +280,15 @@ any SourcesDialog() {
 		if ((findlastof (dir, "/") + 1) == size(dir))
 		    dir = substring (dir, 0, size(dir)-1);
 		UI::ChangeWidget (`id(`rpm_path), `Value, dir);
+	    }
+	}
+	if (ret == `browse_req_rpm) {
+	    req_dir = UI::AskForExistingDirectory (req_dir, "");
+	    if (req_dir != nil)
+	    {
+		if ((findlastof (req_dir, "/") + 1) == size(req_dir))
+		    req_dir = substring (req_dir, 0, size(req_dir)-1);
+		UI::ChangeWidget (`id(`required_rpm_path), `Value, req_dir);
 	    }
 	}
 	else if (ret == `sles10) {
@@ -287,14 +310,6 @@ any SourcesDialog() {
 	else if (ret == `create_key) {
 	    Popup::Message ("FIXME: not implemented yet");
 	}
-	else if (ret == `expert) {
-	    // save the data...
-	    if (requires == "")
-		requires = (string) UI::QueryWidget (`id(`other_val), `Value);
-	    AddOnCreator::content_map["REQUIRES"]	= requires;
-	    AddOnCreator::rpm_path			= dir;
-	    break;
-	}
         else if (ret == `next) {
 	    if (dir == "")
 	    {
@@ -306,12 +321,20 @@ any SourcesDialog() {
 	    if (!FileUtils::Exists (dir))
 	    {
 		// error popup
-		Popup::Error (sformat(_("Directory %1 is not accessible."),dir));
+		Popup::Error(sformat(_("Directory %1 is not accessible."),dir));
 		UI::SetFocus (`id(`rpm_path));
 		continue;
 	    }
-	    // FIXME check presence of rpms in dir
-	    AddOnCreator::rpm_path	= dir;
+	    if (req_dir != "" && !FileUtils::Exists (req_dir))
+	    {
+		// error popup
+		Popup::Error (sformat (_("Directory %1 is not accessible."),
+		    req_dir));
+		UI::SetFocus (`id(`required_rpm_path));
+		continue;
+	    }
+	    AddOnCreator::rpm_path		= dir;
+	    AddOnCreator::required_rpm_path	= req_dir;
 	    if (requires == "")
 		requires = (string) UI::QueryWidget (`id(`other_val), `Value);
 	    AddOnCreator::content_map["REQUIRES"]	= requires;
@@ -603,6 +626,7 @@ any ContentFileDialog() {
 		], AddOnCreator::content_specials["ARCH"]:$[]));
 	    }
 	    AddOnCreator::content	= content;
+	    AddOnCreator::UpdateContentMap ();
 	    break;
 	}
 	else if(ret == `abort || ret == `cancel) {
@@ -671,11 +695,12 @@ any EditValue (map entry, string table_type) {
 	    entry["help"]:"")
 	: entry["help"]:"";
 
+    list all_items	= [];
+
     // generate items for MultiSelectionBox
     // if all is boolean, apply to each item (=> all checked or all unchecked)
     list get_package_items (boolean all) {
 	list ret	= [];
-//FIXME too slow for many items!
 	foreach (string a, list pa, AddOnCreator::available_packages, {
 	    ret = union (ret, maplist (string p, (list<string>) pa, {
 		height	= height + 1;
@@ -739,12 +764,11 @@ any EditValue (map entry, string table_type) {
     }
     else if (type == "package-list")
     {
+	all_items	= get_package_items (nil);
 	cont	= `VBox (
 	    `HSpacing (50),
 	    // MultiSelectionBox label
-	    `MultiSelectionBox (`id(`main), _("&Packages"),
-		get_package_items (nil)
-	    ),
+	    `MultiSelectionBox (`id(`main), _("&Packages"), all_items),
 	    `Left (
 		// check box label
 		`CheckBox (`id(`all),`opt(`notify),_("Select or Deselect &All"))
@@ -770,9 +794,7 @@ any EditValue (map entry, string table_type) {
     boolean all_checked	= false;
     if (type == "package-list")
     {
-	all_checked = (value != [] &&
-	    (size ((list)value) == size ((list)UI::QueryWidget (`id(w_id),`SelectedItems)))
-	);
+	all_checked = (value != [] && (size ((list)value) == size (all_items)));
 	UI::ChangeWidget (`id(`all), `Value, all_checked);
     }
     while (true)
@@ -1321,8 +1343,15 @@ any OutputDialog() {
     // dialog caption
     string caption	= _("Output Settings");
     boolean iso		= AddOnCreator::iso;
-    boolean bootable	= AddOnCreator::bootable; //FIXME
+    boolean bootable	= AddOnCreator::bootable;
     boolean autorun	= false;
+    map<string,string> content_map	= AddOnCreator::content_map;
+
+    string iso_name	= AddOnCreator::iso_name;
+    if (iso_name == "")
+	iso_name	= sformat ("%1-%2-%3",
+	    tolower (content_map["DISTPRODUCT"]:""),
+	    content_map["DISTVERSION"]:"", content_map["DEFAULTBASE"]:"");
 
     term contents = `HBox (`HSpacing (), `VBox (
 	`HBox (
@@ -1335,11 +1364,18 @@ any OutputDialog() {
 	    )
 	),
 	// check box label
-	`Left (`CheckBox (`id(`iso), _("Create &ISO Image"), iso)),
-	// check box label
 //FIXME	`Left (`CheckBox (`id(`boot), _("Create B&ootable Add-On"), bootable)),
 	// check box label
 //FIXME	`Left (`CheckBox (`id(`autorun), _("&Autorun"), autorun)),
+
+
+	// check box label
+	`Left (`CheckBox (`id(`iso),`opt(`notify),_("Create &ISO Image"), iso)),
+	`HBox (
+	    `HSpacing (2),
+	    // text entry label
+	    `TextEntry (`id(`iso_name), _("Image File Name"), iso_name)
+	),
 	`VSpacing (4),
 	`HBox (
 	    `HStretch (),
@@ -1353,6 +1389,7 @@ any OutputDialog() {
     Wizard::SetContentsButtons(caption, contents, HELPS["output"]:"",
 	    Label::BackButton(), Label::NextButton());
     UI::SetFocus (`id(`output_path));
+    UI::ChangeWidget (`id(`iso_name), `Enabled, iso);
 
     any ret = nil;
     while(true) {
@@ -1360,6 +1397,8 @@ any OutputDialog() {
 	ret = UI::UserInput();
 	string dir	= (string)UI::QueryWidget (`id(`output_path), `Value);
 	boolean iso	= (boolean)UI::QueryWidget (`id(`iso), `Value);
+	iso_name	= (string)UI::QueryWidget (`id(`iso_name), `Value);
+	UI::ChangeWidget (`id(`iso_name), `Enabled, iso);
 //	boolean bootable= (boolean)UI::QueryWidget (`id(`boot), `Value);
 	if (ret == `browse) {
 	    dir = UI::AskForExistingDirectory (dir, "");
@@ -1373,6 +1412,7 @@ any OutputDialog() {
 	else if (ret == `expert || ret == `workflow) {
 	    AddOnCreator::base_output_path	= dir;
 	    AddOnCreator::iso			= iso;
+	    AddOnCreator::iso_name		= iso_name;
 //	    AddOnCreator::bootable		= bootable;
 	    break;
 	}
@@ -1396,10 +1436,13 @@ any OutputDialog() {
 	    }
 	    AddOnCreator::base_output_path	= dir;
 	    AddOnCreator::iso			= iso;
+	    AddOnCreator::iso_name		= iso_name;
 //	    AddOnCreator::bootable		= bootable;
 	    if (iso && !Package::Install ("mkisofs"))
 	    {
-		AddOnCreator::iso	= false;
+		UI::ChangeWidget (`id(`iso), `Value, false);
+		ret	= `notnext;
+		continue;
 	    }
             break;
         }

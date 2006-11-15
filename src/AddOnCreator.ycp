@@ -488,6 +488,10 @@ global map<string,map> patterns	= $[];
 // path to directory with RPM's
 global string rpm_path	= "";
 
+// path to directory with RPM's, used only for building patterns
+// and not present on AddOn
+global string required_rpm_path = "";
+
 // path to directory with existing product
 global string import_path	= "";
 
@@ -569,6 +573,9 @@ global string base_output_path	= "";
 // where the iso image should be put
 global string iso_path	= "";
 
+// name of the iso image file
+global string iso_name	= "";
+
 global string gpg_key	= "";
 
 // passphrase to unlock secret key
@@ -576,7 +583,7 @@ global string passphrase	= "";
 
 global list<string> gpg_keys	= [];
 
-// packages available for the pattern
+// packages from current AddOn available for the pattern
 global map<string,list> available_packages = $[];
 
 // mapping of package name to full file name
@@ -772,7 +779,12 @@ global map ReadPatternFile (string file_path) {
 
     foreach (string key, any val, (map<string,any>) pt, {
 	if (pattern_descr[key,"type"]:"" == "package-list")
+	{
 	    ret[key]	= splitstring (sformat ("%1", val), "\n");
+	    // make the packages included in imported pattern available for UI
+	    available_packages["ZZZ_imported"] = union (
+		available_packages["ZZZ_imported"]:[], ret[key]:[]);
+	}
 	else
 	    ret[key]	= val;
     });
@@ -909,25 +921,6 @@ global boolean ImportExistingProduct (string dir_path) {
 	});
     }
 
-    string archives_path	= dir_path + "/ARCHIVES.gz";
-    if (FileUtils::Exists (archives_path))
-    {
-	SCR::Execute (.target.bash,
-	    sformat ("/bin/cp %1 %2", archives_path, tmpdir));
-    }
-    string index_path	= dir_path + "/INDEX.gz";
-    if (FileUtils::Exists (index_path))
-    {
-	SCR::Execute (.target.bash,
-	    sformat ("/bin/cp %1 %2", index_path, tmpdir));
-    }
-    string lslr_path	= dir_path + "/ls-lR.gz";
-    if (FileUtils::Exists (lslr_path))
-    {
-	SCR::Execute (.target.bash,
-	    sformat ("/bin/cp %1 %2", lslr_path, tmpdir));
-    }
-
     string desc_path	= dir_path + "/installation.xml";
     if (FileUtils::Exists (desc_path))
     {
@@ -1002,6 +995,28 @@ global void FillContentDefaults () {
 		content = add (content, arch_skel);
 	    });
 	}
+
+	// 4. read the list of packages, not present on AddOn
+	if (required_rpm_path != "" && required_rpm_path != rpm_path)
+	{
+	    out	= (map) SCR::Execute (.target.bash_output,
+		sformat ("find %1 -name *.rpm", required_rpm_path));
+	    y2milestone ("asking the RPM's for NAME...");
+	    foreach (string f, splitstring (out["stdout"]:"", "\n"), {
+		if (f == "") return;
+		out = (map) SCR::Execute (.target.bash_output,
+		    sformat ("rpm -q -p %1 --qf \"%%{NAME}\"", f));
+		string name = out["stdout"]:"";
+		if (name != "")
+		{
+		    available_packages["ZZZ_required"] = add (
+			available_packages["ZZZ_required"]:[], name);
+		}
+	    });
+	    available_packages["ZZZ_required"] =
+		sort (available_packages["ZZZ_required"]:[]);
+	    y2milestone ("... done");
+	}
     }
 
     // generate tmp package descriptions...
@@ -1038,6 +1053,18 @@ global void FillContentDefaults () {
 	});
     }
 
+}
+
+/**
+ * Update content_map with current value of 'content' list
+ */
+global map<string,string> UpdateContentMap () {
+
+    foreach (map entry, content, {
+	if (entry["value"]:"" != "")
+	    content_map[entry["key"]:""] = entry["value"]:"";
+    });
+    return content_map;
 }
 
 /**
@@ -1152,41 +1179,27 @@ global boolean WritePackageDescriptions (string descr_path, map descr) {
     return ret;
 }
 
-// Write ARCHIVES.gz FIXME generate if not present! mk_listings
-global boolean WriteARCHIVES (string base_path)
+/**
+ * Generate ARCHIVES.gz, INDEX.gz and ls-lR.gz
+ */
+global boolean GenerateArchiveFiles (string base_path)
 {
-    string archives_path	= tmpdir + "/ARCHIVES.gz";
-    if (FileUtils::Exists (archives_path))
+
+    if (!Package::Installed ("inst-source-utils") &&
+	!FileUtils::Exists ("/usr/bin/mk_listings"))
     {
-	SCR::Execute (.target.bash,
-	    sformat ("/bin/cp %1 %2", archives_path, base_path));
+	y2error ("inst-source-utils not installed and mk_listings not present");
+	return false;
+    }
+    map out = (map) SCR::Execute (.target.bash_output,
+	"mk_listings " + base_path);
+    if (out["stderr"]:"" != "")
+    {
+	y2warning ("mk_listings returns %1", out);
     }
     return true;
 }
 
-// TODO generate it!
-global boolean WriteINDEX (string base_path)
-{
-    string index_path	= tmpdir + "/INDEX.gz";
-    if (FileUtils::Exists (index_path))
-    {
-	SCR::Execute (.target.bash,
-	    sformat ("/bin/cp %1 %2", index_path, base_path));
-    }
-    return true;
-}
-
-// TODO generate it!
-global boolean WriteLslR (string base_path)
-{
-    string lslr_path	= tmpdir + "/ls-lR.gz";
-    if (FileUtils::Exists (lslr_path))
-    {
-	SCR::Execute (.target.bash,
-	    sformat ("/bin/cp %1 %2", lslr_path, base_path));
-    }
-    return true;
-}
 
 /**
  * Create the patches files
@@ -1364,7 +1377,8 @@ global boolean CopyRPMs (string in_path, string base_path) {
     {
 	foreach (string arch, list pa, available_packages, {
 	    string out_dir	= full_data_path + "/" + arch;
-	    if (FileUtils::Exists (out_dir))
+	    if (arch != "ZZZ_imported" && arch != "ZZZ_required" &&
+		FileUtils::Exists (out_dir))
 	    {
 		if (size (package2filename) > 0)
 		{
@@ -1614,14 +1628,20 @@ global boolean CreateDirectoryYaSTFiles (string base_path) {
 /**
  * Create an ISO image of the product
  */
-global boolean CreateISOImage (string dir_path, string iso_p) {
+global boolean CreateISOImage (string dir_path, string iso_p, string name) {
 
     if (!iso) return true;
-    string name	=
-	tolower (content_map["DISTPRODUCT"]:content_map["PRODUCT"]:"addon");
+
+    if (name == "")
+	name	= sformat ("%1-%2-%3",
+	    tolower (content_map["DISTPRODUCT"]:content_map["PRODUCT"]:"addon"),
+	    content_map["DISTVERSION"]:"", content_map["DEFAULTBASE"]:"");
+
+    if (!issubstring (name, ".iso"))
+	name	= name + ".iso";
+
     // possible options -allow-leading-dots
-    string cmd	= sformat ("mkisofs -r -J -l -o %1/%2.iso %3",
-	iso_p, name, dir_path);
+    string cmd	= sformat("mkisofs -r -J -l -o %1/%2 %3",iso_p, name, dir_path);
     map out	= (map) SCR::Execute (.target.bash_output, cmd);
     if (out["exit"]:0 != 0)
     {
@@ -1712,10 +1732,6 @@ global boolean Write() {
 
     WriteLicensesFiles (full_media_paths[0]:"", license_files);
 
-    WriteARCHIVES (base_output_path);
-    WriteINDEX (base_output_path);
-    WriteLslR (base_output_path);
-
     if (info != "")
 	SCR::Write (.target.string, full_media_paths[0]:"" + "/info.txt", info);
 
@@ -1734,6 +1750,8 @@ global boolean Write() {
 
     Progress::NextStage();
 
+    GenerateArchiveFiles (base_output_path);
+
     CreateMD5SUMS (base_output_path);
 
     SignAddOn (base_output_path, gpg_key);
@@ -1745,7 +1763,7 @@ global boolean Write() {
     if (iso)
     {
 	Progress::NextStage();
-	CreateISOImage (base_output_path, iso_path);
+	CreateISOImage (base_output_path, iso_path, iso_name);
     }
 
     Progress::NextStage();
