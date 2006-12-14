@@ -800,7 +800,10 @@ global map ReadPackagesFile (string file_path) {
     return ret;
 }
 
-// import the data from existing add-on
+/**
+ * import the data from existing add-on
+ * @param path to existing addon directory
+ */
 global boolean ImportExistingProduct (string dir_path) {
 
     content	= ReadContentFile (dir_path + "/content");
@@ -936,6 +939,37 @@ global boolean ImportExistingProduct (string dir_path) {
     return true;
 }
 
+/**
+ * converts the output of find command (=possibly big string with each file on one line),
+ * to the list of smaller strings (<128kB), each with space separated file names
+ * @param stdout output of find command
+ */
+list<string> create_argument_lists (string stdout) {
+
+    list<string> ret	= [];
+    // approximately maximum size of parameters list passed to rpm
+    integer kbytes		= 120;
+    // looks like pre-sorting helps to fasten rpm call
+    list<string> found	= sort (splitstring (stdout, "\n"));
+    if (size (stdout)/1024 <= kbytes)
+	ret	= [ mergestring (found, " ") ];
+    else
+    {
+	string line	= "";
+	foreach (string file, found, {
+	    line	= line + file + " ";
+	    if (size (line) / 1024 > kbytes)
+	    {
+		ret	= add (ret, line);
+		line	= "";
+	    }
+	});
+	if (size (line) / 1024 <= kbytes)
+	    ret	= add (ret, line);
+    }
+    return ret;
+}
+
 // this is used during the workflow, not in the write!
 // TODO change name...
 global void FillContentDefaults () {
@@ -960,7 +994,7 @@ global void FillContentDefaults () {
     {
 	// 2. get the list of architectures from RPM's
 	out	= (map) SCR::Execute (.target.bash_output,
-	    sformat ("find %1 -name *.rpm", rpm_path));
+	    sformat ("find %1 -name '*.rpm'", rpm_path));
 	y2milestone ("asking the RPM's for ARCH and NAME...");
 	foreach (string f, splitstring (out["stdout"]:"", "\n"), {
 	    if (f == "") return;
@@ -1000,21 +1034,19 @@ global void FillContentDefaults () {
 	if (required_rpm_path != "" && required_rpm_path != rpm_path)
 	{
 	    out	= (map) SCR::Execute (.target.bash_output,
-		sformat ("find %1 -name *.rpm", required_rpm_path));
+		sformat ("cd %1; find -name '*.rpm'", required_rpm_path));
 	    y2milestone ("asking the RPM's for NAME...");
-	    foreach (string f, splitstring (out["stdout"]:"", "\n"), {
-		if (f == "") return;
-		out = (map) SCR::Execute (.target.bash_output,
-		    sformat ("rpm -q -p %1 --qf \"%%{NAME}\"", f));
-		string name = out["stdout"]:"";
-		if (name != "")
-		{
-		    available_packages["ZZZ_required"] = add (
-			available_packages["ZZZ_required"]:[], name);
-		}
+	    list<string> inputs		= create_argument_lists (out["stdout"]:"");
+	    string output	= "";
+	    foreach (string input, inputs, {
+		string cmd	= sformat ("cd %1; rpm --qf \"%%{NAME}\n\" -qp %2",
+		    required_rpm_path, input);
+		out	= (map) SCR::Execute (.target.bash_output, cmd);
+		output	= output + out["stdout"]:"" + "\n";
 	    });
-	    available_packages["ZZZ_required"] =
-		sort (available_packages["ZZZ_required"]:[]);
+	    // remove empty strings and duplicates
+	    available_packages["ZZZ_required"] = toset (filter (
+		string name, splitstring (output, "\n"), ``(name != "")));
 	    y2milestone ("... done");
 	}
     }
