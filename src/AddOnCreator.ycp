@@ -1584,6 +1584,12 @@ global boolean CreateMD5SUMS (string base_path) {
  */
 global boolean SignAddOn (string base_path, string key) {
 
+    if (key == "")
+    {
+	y2warning ("No GPG key provided - signing skipped");
+	return true;
+    }
+
     string command = sformat ("gpg --list-secret-keys %1|grep '^sec'|sed -e 's/.*\\///;s/ .*//g;'|head -n 1", key);
     map out = (map)SCR::Execute (.target.bash_output, command, $["LANG" : "C"]);
     string local_key	= deletechars (out["stdout"]:"0","\n");

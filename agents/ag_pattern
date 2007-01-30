@@ -29,14 +29,14 @@ sub parse_file {
     my $multiline_val	= "";
     foreach my $line (<PATTERN>) {
 	chomp $line;
-	if ($line =~ /^=([\w]+):[ \t]*(.*)/) {
+	if ($line =~ /^=([\w\.]+):[ \t]*(.*)/) {
 	    $pattern{$1}	= $2;
 	}
-	elsif ($line =~ /^\+([\w]+):.*/) {
+	elsif ($line =~ /^\+([\w\.]+):.*/) {
 	    $multiline_key	= $1;
 	    $multiline_val	= "";
 	}
-	elsif ($line =~ /^\-([\w]+):.*/) {
+	elsif ($line =~ /^\-([\w\.]+):.*/) {
 	    if ($multiline_key eq $1) {
 		$pattern{$multiline_key}	= $multiline_val;
 	    }

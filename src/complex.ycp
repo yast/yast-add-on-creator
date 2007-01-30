@@ -307,9 +307,6 @@ any SourcesDialog() {
 	    requires	= "";
 	    UI::ChangeWidget (`id(`other_val), `Enabled, true);
 	}
-	else if (ret == `create_key) {
-	    Popup::Message ("FIXME: not implemented yet");
-	}
         else if (ret == `next) {
 	    if (dir == "")
 	    {
