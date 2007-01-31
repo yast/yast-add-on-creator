@@ -1,0 +1,1517 @@
+/* ------------------------------------------------------------------------------
+ * Copyright (c) 2006 Novell, Inc. All Rights Reserved.
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify it under
+ * the terms of version 2 of the GNU General Public License as published by the
+ * Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, contact Novell, Inc.
+ *
+ * To contact Novell about this file by physical or electronic mail, you may find
+ * current contact information at www.novell.com.
+ * ------------------------------------------------------------------------------
+ */
+
+/**
+ * File:	include/add-on-creator/complex.ycp
+ * Package:	Add-On Creator
+ * Summary:	Dialogs definitions
+ * Authors:	Jiri Suchomel <jsuchome@suse.cz>
+ *
+ * $Id$
+ */
+
+{
+
+textdomain "add-on-creator";
+
+import "AddOnCreator";
+import "FileUtils";
+import "Label";
+import "Message";
+import "Package";
+import "Popup";
+import "Report";
+import "String";
+import "Summary";
+import "Wizard";
+
+
+include "add-on-creator/helps.ycp";
+
+// function prototypes
+any EditValue (map entry, string table_type);
+
+
+
+// -----------------------------------------------------------------------
+
+// how to show and handle package descriptions keys
+map<string,map> description_descr	= AddOnCreator::description_descr;
+
+/**
+ * Return a modification status
+ * @return true if data was modified
+ */
+boolean Modified() {
+    return AddOnCreator::Modified();
+}
+
+boolean ReallyAbort() {
+    return !AddOnCreator::Modified() || Popup::ReallyAbort(true);
+}
+
+boolean PollAbort() {
+    return UI::PollInput() == `abort;
+}
+
+/**
+ * Read settings dialog
+ * @return `abort if aborted and `next otherwise
+ */
+symbol ReadDialog() {
+    Wizard::RestoreHelp(HELPS["read"]:"");
+    boolean ret = AddOnCreator::Read();
+    return ret ? `next : `abort;
+}
+
+/**
+ * Write settings dialog
+ * @return `abort if aborted and `next otherwise
+ */
+symbol WriteDialog() {
+    Wizard::RestoreHelp(HELPS["write"]:"");
+    // AddOnCreator::AbortFunction = PollAbort;
+    boolean ret = AddOnCreator::Write();
+    return ret ? `next : `abort;
+}
+
+any StartDialog () {
+
+    // dialog caption
+    string caption = _("Add-On Product Creator");
+    boolean generate_descriptions	= AddOnCreator::generate_descriptions;
+
+    term contents = `HVCenter (`HBox (`HSpacing (), `VBox (
+	`VSpacing (0.8),
+	// label
+//	`Left (`Label (_("Create a New Add-On Product"))),
+	`RadioButtonGroup (`id(`rd), `Left(`HVSquash(`VBox (
+	    `Left (`RadioButton(`id(`new), `opt (`notify),
+		// radio button label
+		_("Create an Add-On &from the Beginning"), !AddOnCreator::clone)
+	    ),
+	    `Left (`RadioButton(`id(`copy), `opt (`notify),
+		// radio button label
+		_("Create an Add-On Based on an &Existing Add-On"),
+		 AddOnCreator::clone)
+	    ),
+	    `HBox (
+		`HSpacing (2.5),
+		`TextEntry (`id(`path),
+		    // text entry label
+		    _("&Path to Directory of the Existing Add-On Product"),
+		    AddOnCreator::import_path
+		),
+		`VBox (
+		    `Label (""),
+		    `PushButton (`id(`browse), Label::BrowseButton ())
+		)
+	    ),
+	    `HBox (
+		`HSpacing (2.5),
+		`Left (`CheckBox (`id(`descr_ch),
+		    // checkbox label
+		    _("&Generate Package Descriptions"), generate_descriptions)
+		// TODO move to next dialog?
+		)
+	    )
+	)))),
+	`VSpacing (0.9)
+    )));
+
+    Wizard::SetContentsButtons(caption, contents, HELPS["start"]:"",
+	    Label::BackButton(), Label::NextButton());
+    Wizard::HideBackButton();
+
+    foreach (symbol w, [ `path, `descr_ch, `browse ], {
+	UI::ChangeWidget (`id(w), `Enabled, AddOnCreator::clone);
+    });
+
+    UI::SetFocus (`id(`next));
+
+    any ret = nil;
+    while(true) {
+
+	ret		= UI::UserInput();
+	string dir	= (string) UI::QueryWidget (`id(`path), `Value);
+	boolean clone	= (boolean)UI::QueryWidget (`id(`copy), `Value);
+	if (ret == `browse) {
+	    dir = UI::AskForExistingDirectory (dir, "");
+	    if (dir != nil)
+	    {
+		if ((findlastof (dir, "/") + 1) == size(dir))
+		    dir = substring (dir, 0, size(dir)-1);
+		UI::ChangeWidget (`id(`path), `Value, dir);
+	    }
+	}
+	else if (ret == `new || ret == `copy) {
+	    foreach (symbol w, [ `path, `descr_ch, `browse ], {
+		UI::ChangeWidget (`id(w), `Enabled, ret == `copy);
+	    });
+	}
+        else if (ret == `next) {
+	    AddOnCreator::generate_descriptions = !clone ||
+		(boolean)UI::QueryWidget (`id(`descr_ch),`Value);
+	    if (clone && dir != "")
+	    {
+		AddOnCreator::import_path	= dir;
+		AddOnCreator::clone		= true;
+		ret				= `copy;
+	    }
+	    break;
+	    // FIXME checks...
+	}
+	else if (ret == `abort || ret == `cancel) {
+	    if(ReallyAbort()) break;
+	    else continue;
+	}
+	else if (ret == `back) {
+            break;
+        }
+    }
+    Wizard::RestoreBackButton();
+    return ret;
+}
+
+/**
+ * @return dialog result
+ */
+any SourcesDialog() {
+
+    string requires	= AddOnCreator::content_map["REQUIRES"]:"";
+    if (requires == "")
+	requires	= "sles-release-10";
+    string old_dir	= AddOnCreator::rpm_path;
+    string old_requires	= requires;
+
+    // dialog caption
+    string caption = _("Add-On Product Creator");
+
+    term contents = `HBox (`HSpacing (), `VBox (
+	`Frame (_("Required Product"), `HBox (`HSpacing (0.5), `VBox (
+	    `VSpacing (0.4),
+	    `RadioButtonGroup (`id(`rd),
+		`Left(`HVSquash(`VBox (
+		    `Left (`RadioButton(`id(`sles10), `opt (`notify),
+			// radio button label
+			_("SUSE Linux &Enterprise Server 10"),
+			requires == "sles-release-10")),
+		    `Left (`RadioButton(`id(`sled10), `opt (`notify),
+			// radio button label
+			_("SUSE Linux Enterprise &Desktop 10"),
+			requires == "sled-release-10")),
+		    `HBox (
+			`Left(`RadioButton(`id(`other), `opt (`notify),
+			    // radio button label
+			    _("&Other"))),
+			`TextEntry (`id(`other_val), "")
+		    )
+		)))
+	    ),
+	    `VSpacing (0.4)
+	))),
+	`VSpacing (0.7),
+	`HBox (
+	    `TextEntry (`id(`rpm_path),
+		// text entry label
+		_("&Path to Directory with Add-On Packages"),
+		AddOnCreator::rpm_path),
+	    `VBox (
+		`Label (""),
+		`PushButton (`id(`browse_rpm), Label::BrowseButton ())
+	    )
+	),
+	`HBox (
+	    `TextEntry (`id(`required_rpm_path),
+		// text entry label
+		_("Path to Directory with Re&quired Product Packages"),
+		AddOnCreator::required_rpm_path),
+	    `VBox (
+		`Label (""),
+		`PushButton (`id(`browse_req_rpm), Label::BrowseButton ())
+	    )
+	),
+	`VSpacing (0.7)
+    ), `HSpacing ());
+
+
+    Wizard::SetContentsButtons(caption, contents, HELPS["sources"]:"",
+	    Label::BackButton(), Label::NextButton());
+    UI::SetFocus (`id(`rpm_path));
+
+    if (UI::QueryWidget (`id(`rd), `Value) == nil)
+    {
+	UI::ChangeWidget (`id(`rd), `Value, `other);
+	UI::ChangeWidget (`id(`other_val), `Value, requires);
+    }
+    UI::ChangeWidget (`id(`other_val), `Enabled,
+	UI::QueryWidget (`id(`rd), `Value) == `other);
+
+    any ret = nil;
+
+    while(true) {
+
+	ret		= UI::UserInput();
+	string dir	= (string) UI::QueryWidget (`id(`rpm_path), `Value);
+	string req_dir	= (string)
+	    UI::QueryWidget (`id(`required_rpm_path), `Value);
+
+	if (ret == `browse_rpm) {
+	    dir = UI::AskForExistingDirectory (dir, "");
+	    if (dir != nil)
+	    {
+		if ((findlastof (dir, "/") + 1) == size(dir))
+		    dir = substring (dir, 0, size(dir)-1);
+		UI::ChangeWidget (`id(`rpm_path), `Value, dir);
+	    }
+	}
+	if (ret == `browse_req_rpm) {
+	    req_dir = UI::AskForExistingDirectory (req_dir, "");
+	    if (req_dir != nil)
+	    {
+		if ((findlastof (req_dir, "/") + 1) == size(req_dir))
+		    req_dir = substring (req_dir, 0, size(req_dir)-1);
+		UI::ChangeWidget (`id(`required_rpm_path), `Value, req_dir);
+	    }
+	}
+	else if (ret == `sles10) {
+	    requires	= "sles-release-10";
+	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
+	}
+	else if (ret == `sled10) {
+	    requires	= "sled-release-10";
+	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
+	}
+	else if (ret == `suse101) {
+	    requires    = "suse-release-10.1";
+	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
+	}
+	else if (ret == `other) {
+	    requires	= "";
+	    UI::ChangeWidget (`id(`other_val), `Enabled, true);
+	}
+        else if (ret == `next) {
+	    if (dir == "")
+	    {
+		// error popup
+		Popup::Error (_("Enter the path to the directory with packages."));
+		UI::SetFocus (`id(`rpm_path));
+		continue;
+	    }
+	    if (!FileUtils::Exists (dir))
+	    {
+		// error popup
+		Popup::Error(sformat(_("Directory %1 is not accessible."),dir));
+		UI::SetFocus (`id(`rpm_path));
+		continue;
+	    }
+	    if (req_dir != "" && !FileUtils::Exists (req_dir))
+	    {
+		// error popup
+		Popup::Error (sformat (_("Directory %1 is not accessible."),
+		    req_dir));
+		UI::SetFocus (`id(`required_rpm_path));
+		continue;
+	    }
+	    AddOnCreator::rpm_path		= dir;
+	    AddOnCreator::required_rpm_path	= req_dir;
+	    if (requires == "")
+		requires = (string) UI::QueryWidget (`id(`other_val), `Value);
+	    AddOnCreator::content_map["REQUIRES"]	= requires;
+
+	    if (requires == old_requires && dir == old_dir)
+		ret	= `skip_gen;
+	    break;
+	}
+	else if (ret == `abort || ret == `cancel) {
+	    if(ReallyAbort()) break;
+	    else continue;
+	}
+	else if (ret == `back) {
+            break;
+        }
+    }
+    return ret;
+}
+
+/**
+ * Validation for pattern values
+ */
+string ValidatePatternValue (string key, any val) {
+
+    string sval	= sformat ("%1", val);
+    return "";
+}
+
+
+/**
+ * Validation for values in content file
+ */
+string ValidateContentValue (string key, any val) {
+
+    string sval	= sformat ("%1", val);
+    if (key == "DISTPRODUCT")
+    {
+	if (deletechars (sval, String::CAlnum() + ".~_-") != "" )
+	{
+	    // error popup (input validation failed)
+	    return _("The value of DISTPRODUCT may contain only
+letters, numbers, and the characters \".~_-\".");
+	}
+    }
+    return "";
+}
+
+map AddContentValue (list conflicts) {
+
+    map ret		= $[];
+    list allowed_archs	= filter (string arch, AddOnCreator::allowed_archs, {
+	return !contains (conflicts, "ARCH." + arch);
+    });
+    list allowed_langs	= filter (string l, AddOnCreator::GetLangCodes (true),{
+	return !contains (conflicts, "LABEL." + l);
+    });
+    string help	= mergestring (maplist (string k, ["ARCH", "LABEL"], {
+	return sformat ("<p><b>%1</b></p>%2",
+		AddOnCreator::content_specials[k,"helplabel"]:"",
+		AddOnCreator::content_specials[k,"help"]:"");
+    }), "<br>");
+
+    UI::OpenDialog (`opt(`decorated), `HBox(
+	`HSpacing(1),
+	`VBox(
+	    `VSpacing (0.5),
+	    `RadioButtonGroup (`id(`rd), `Left(`VBox (
+	      `Left (`RadioButton(`id("ARCH"), `opt (`notify),_("&ARCH"),true)),
+	      allowed_archs == [] ? `VSpacing (0) :
+	      `HBox (
+		`HSpacing (),
+		// combo label
+		`Left (`ComboBox (`id(`base), _("&Base Architecture"),
+		    allowed_archs))
+	      ),
+	      `Left (`RadioButton (`id("LABEL"), `opt (`notify), _("&LABEL"))),
+	      `HBox (
+		`HSpacing (),
+		// combo label
+		`Left (`ComboBox (`id(`lang), _("La&nguage Code"),
+		    allowed_langs))
+	      )
+	    ))),
+	    // textentry label
+	    `TextEntry (`id(`val), _("&Value"), ""),
+	    `HBox(
+		`PushButton(`id(`ok),`opt(`default,`key_F10),Label::OKButton()),
+		`PushButton(`id(`cancel),`opt (`key_F9), Label::CancelButton()),
+		`PushButton(`id(`help),`opt (`key_F2), Label::HelpButton())
+	    )
+	),
+	`HSpacing(1)
+    ));
+    if (allowed_archs != [])
+    {
+	UI::ChangeWidget (`id(`lang), `Enabled, false);
+    }
+    else
+    {
+	UI::ChangeWidget (`id("ARCH"), `Enabled, false);
+	UI::ChangeWidget (`id(`rd), `Value, "LABEL");
+    }
+    UI::SetFocus (`id(`val));
+    while (true)
+    {
+	any result = UI::UserInput ();
+	if (result == `cancel)
+	{
+	    ret	= $[];
+	    break;
+	}
+	string but = (string) UI::QueryWidget (`id(`rd), `Value);
+	if (result == "ARCH" || result == "LABEL")
+	{
+	    UI::ChangeWidget (`id(`lang), `Enabled, result == "LABEL");
+	    UI::ChangeWidget (`id(`base), `Enabled, result == "ARCH");
+	}
+	if (result == `help)
+	{
+	    // Heading for help popup window
+	    Popup::LongText (_("Help"), `RichText (help), 50, 14);
+	}
+	if (result == `ok)
+	{
+	    string key	= sformat ("%1.%2", but, but == "ARCH" ?
+		UI::QueryWidget (`id(`base), `Value) :
+		UI::QueryWidget (`id(`lang), `Value));
+	    ret	= union (AddOnCreator::content_specials[but]:$[], $[
+		"key"	: key,
+		"value"	: UI::QueryWidget (`id(`val), `Value)
+	    ]);
+	    break;
+	}
+    }
+    UI::CloseDialog ();
+    return ret;
+}
+
+
+/**
+ * First dialog
+ * @return dialog result
+ */
+any ContentFileDialog() {
+
+    // dialog caption - 'content' is file name
+    string caption = _("Product Definition (content File)");
+
+    list<map> content	= AddOnCreator::content;
+
+    integer linguas_entry	= -1;
+
+    // generate items for content file table
+    list get_content_items (boolean mandatory_only) {
+	integer i	= -1;
+	list ret	= [];
+	foreach (map entry, content, {
+	    i	= i + 1;
+	    if (entry["key"]:"" == "LINGUAS")
+		linguas_entry	= i;
+	    if (mandatory_only && !entry["mandatory"]:false) return;
+	    if (entry["label"]:"" == "") return;
+	    ret	= add (ret, `item (`id (i),
+		entry["key"]:"", entry["value"]:"", entry["label"]:"")
+	    );
+	});
+	return ret;
+    }
+// TODO: editor for REQUIRES: read patterns available on target...
+
+    term contents = `HBox (`HSpacing (), `VBox (
+	`Table (`id(`content_table), `opt(`notify), `header (
+	    // table header
+	    _("Key"),
+	    // table header
+	    _("Value"),
+	    // table header
+	    _("Description")
+	    ),
+	    get_content_items (true)
+	),
+        `HBox (
+	    `PushButton (`id(`add), Label::AddButton ()),
+	    `PushButton (`id(`edit), Label::EditButton ()),
+	    // push button label
+	    `PushButton (`id(`import), _("Im&port")),
+	    `HStretch(),
+	    `CheckBox (`id (`filter_ch), `opt (`notify),
+		// checkbox label
+		_("Show &Only Required Keywords"), true
+	    )
+	),
+	`VSpacing ()
+    ),`HSpacing ());
+
+    Wizard::SetContentsButtons(caption, contents, HELPS["content"]:"",
+	    Label::BackButton(), Label::NextButton());
+    UI::SetFocus (`id(`content_table));
+
+    any ret = nil;
+    boolean mandatory	= true;
+    while(true) {
+	ret = UI::UserInput();
+
+	if (ret == `add) {
+	    map new = AddContentValue (maplist(map e, content,``(e["key"]:"")));
+	    if (new != $[])
+	    {
+		if (mandatory && !new["mandatory"]:false)
+		{
+		    UI::ChangeWidget (`id(`filter_ch),`Value, false);
+		    ret	= `filter_ch;
+		}
+		// add new language to LINGUAS when new LABEL.lang was added
+		if (substring (new["key"]:"", 0, 5) == "LABEL" &&
+		    linguas_entry != -1)
+		{
+		    string linguas	= content[linguas_entry,"value"]:"";
+		    content[linguas_entry,"value"]	= sformat ("%1%2%3",
+			linguas,
+			linguas == "" ? "" : " ",
+			substring (new["key"]:"", 6)
+		    );
+		}
+		content	= add (content, new);
+		UI::ChangeWidget (`id(`content_table),`Items,
+		    get_content_items (mandatory));
+	    }
+	}
+	if (ret == `filter_ch)
+	{
+	    boolean filt = (boolean) UI::QueryWidget (`id(`filter_ch),`Value);
+	    if (filt != mandatory)
+	    {
+		mandatory	= filt;
+		UI::ChangeWidget (`id(`content_table),`Items,
+		    get_content_items (mandatory));
+	    }
+	}
+	else if (ret == `import) {
+	    string file = UI::AskForExistingFile (
+		AddOnCreator::base_output_path, "",
+		// popup for file selection dialog
+		_("Choose the Existing Content File")
+	    );
+	    if (file != nil)
+	    {
+		content	= AddOnCreator::ReadContentFile (file);
+		UI::ChangeWidget (`id(`content_table),`Items,
+		    get_content_items (mandatory));
+	    }
+	}
+	else if (ret == `edit || ret == `content_table) {
+	    integer key_no	= (integer)
+		UI::QueryWidget (`id(`content_table), `CurrentItem);
+	    any val	= (string) EditValue (content[key_no]:$[], "content");
+	    if (val != nil)
+	    {
+		content[key_no,"value"]	= val;
+		UI::ChangeWidget (`id(`content_table),`Item(key_no,1), val);
+	    }
+	}
+        else if (ret == `next) {
+	    list<string> missing	= [];
+	    boolean arch_present	= false;
+	    string default_base		= "";
+	    foreach (map entry, content, {
+		if (entry["value"]:"" == "" && entry["mandatory"]:false)
+		    missing	= add (missing, entry["key"]:"");
+		if (substring (entry["key"]:"",0,4) == "ARCH")
+		    arch_present	= true;
+		if (entry["key"]:"" == "DEFAULTBASE")
+		    default_base	= entry["value"]:"";
+	    });
+	    if (missing != [])
+	    {
+		// error popup
+		Popup::Error (sformat (_("Enter the values for these items:
+%1"), mergestring (missing, "\n")));
+		continue;
+	    }
+	    if (!arch_present)
+	    {
+		// we should not get here, because ARCH's are created
+		// after entering source with RPM's
+		content = add (content, union ($[
+		    "key" : "ARCH." + default_base,
+		    "value": AddOnCreator::ValueForArchitecture (default_base)
+		], AddOnCreator::content_specials["ARCH"]:$[]));
+	    }
+	    AddOnCreator::content	= content;
+	    AddOnCreator::UpdateContentMap ();
+	    break;
+	}
+	else if(ret == `abort || ret == `cancel) {
+	    if(ReallyAbort()) break;
+	    else continue;
+	}
+	else if (ret == `back) {
+            break;
+        }
+    }
+    return ret;
+}
+
+
+// helper
+string value2string (any val) {
+
+    if (is (val, string))
+    {
+        string s	= (string) val;
+        if (issubstring ((string) s, "\n"))
+        {
+	    s = mergestring (splitstring (s,"\n"), " ");
+        }
+        return s;
+    }
+    else if (is (val, boolean))
+    {
+	// table item
+        return ((boolean)val) ? _("Yes") :
+	    // table item
+	    _("No");
+    }
+    else if (is (val, list))
+    {
+	return mergestring ((list<string>)val, " ");
+    }
+    return sformat ("%1", val);
+}
+
+// default function for maps
+string NoString (any arg) {
+    return "";
+}
+
+// edit the value in table (specific key in pattern/content file description)
+any EditValue (map entry, string table_type) {
+
+    any ret		= nil;
+    string type		= entry["type"]:"string";
+    // textentry label
+    string label	= sformat (_("Value of \"%1\""),
+	table_type == "content" ? entry["key"]:"" : entry["label"]:"");
+
+    any value		= entry["value"]:nil;
+    if (table_type == "content" && value == nil)
+	value = "";
+
+    term cont		= `TextEntry (`id (`main), label, sformat("%1", value));
+    symbol w_id		= `main;
+    integer height	= 5;
+
+    string help		= table_type == "content" ?
+	sformat ("<p><b>%1</b></p>%2",
+	    entry["helplabel"]:entry["key"]:"",
+	    entry["help"]:"")
+	: entry["help"]:"";
+
+    list all_items	= [];
+
+    // generate items for MultiSelectionBox
+    // if all is boolean, apply to each item (=> all checked or all unchecked)
+    list get_package_items (boolean all) {
+	list ret	= [];
+	foreach (string a, list pa, AddOnCreator::available_packages, {
+	    ret = union (ret, maplist (string p, (list<string>) pa, {
+		height	= height + 1;
+		return
+		`item (p, all == nil ? contains ((list<string>)value, p) : all);
+	    }));
+	});
+	return ret;
+    }
+
+    if (type == "boolean")
+    {
+	cont	= `VBox (
+	    `Label (label),
+	    `RadioButtonGroup (`id(`rd),
+		`Left(`HVSquash(`VBox (
+		    `Left (`RadioButton(`id(`yes), `opt (`notify),
+			Label::YesButton (), (boolean)value)),
+		    `Left (`RadioButton(`id(`no), `opt (`notify),
+			Label::NoButton (), !(boolean)value))
+		)))
+	    )
+	);
+	w_id	= `yes;
+    }
+    else if (type == "multiline" || type == "pattern-list")
+    {
+	string sval	= (string) value;
+	term rt		= `Empty ();
+	height		= size (splitstring (sval, "\n")) + 3;
+	if (table_type == "packages" && issubstring (sval, "<!-- DT:Rich -->"))
+	{
+	    rt		= `RichText (`id(`rt), `opt (`shrinkable), sval);
+	    height	= height * 2;
+	}
+	cont	= `VBox (
+	    `HSpacing (54),
+	    rt,
+	    `MultiLineEdit(`id(`main), label, sval)
+	);
+	if (height < 9) height = 9;
+    }
+    else if (type == "combo")
+    {
+	cont	= `VBox (
+	    `ComboBox (`id(`main), label,
+		maplist (string v, (list<string>) entry["allowed_values"]:[], {
+		    return `item (v, v == value);
+		})
+	    )
+	);
+    }
+    else if (type == "integer")
+    {
+	integer ival	= tointeger (value);
+	if (ival == nil) ival	= entry["range",0]:0;
+	cont	= `VBox (
+	    `IntField (`id(`main), label,
+		entry["range",0]:0, entry["range",1]:1000, ival)
+	);
+    }
+    else if (type == "package-list")
+    {
+	all_items	= get_package_items (nil);
+	cont	= `VBox (
+	    `HSpacing (50),
+	    // MultiSelectionBox label
+	    `MultiSelectionBox (`id(`main), _("&Packages"), all_items),
+	    `Left (
+		// check box label
+		`CheckBox (`id(`all),`opt(`notify),_("Select or Deselect &All"))
+	    )
+	);
+    }
+    if (height > 25) height = 25;
+    UI::OpenDialog( `opt(`decorated), `HBox(
+	`VSpacing (height),
+	`HSpacing(1),
+	`VBox(
+	    cont,
+	    `HBox(
+		`PushButton(`id(`ok),`opt(`default,`key_F10),Label::OKButton()),
+		`PushButton(`id(`cancel),`opt (`key_F9), Label::CancelButton()),
+		`PushButton(`id(`help),`opt (`key_F2), Label::HelpButton())
+	    )
+	),
+	`HSpacing(1)
+    ));
+    UI::SetFocus (`id(w_id));
+    UI::ChangeWidget (`id(`help), `Enabled, help != "");
+    boolean all_checked	= false;
+    if (type == "package-list")
+    {
+	all_checked = (value != [] && (size ((list)value) == size (all_items)));
+	UI::ChangeWidget (`id(`all), `Value, all_checked);
+    }
+    while (true)
+    {
+	any result = UI::UserInput ();
+	if (result == `cancel)
+	{
+	    ret	= nil;
+	    break;
+	}
+	if (result == `help)
+	{
+	    // Heading for help popup window
+	    Popup::LongText (_("Help"), `RichText (help), 50, 10);
+	}
+	if (result == `all)
+	{
+	    boolean ch	= (boolean)UI::QueryWidget (`id(`all),`Value);
+	    if (ch != all_checked)
+	    {
+		UI::ChangeWidget (`id(w_id), `Items, get_package_items (ch));
+		all_checked	= ch;
+	    }
+	}
+	if (result == `ok)
+	{
+	    if (type == "package-list")
+		ret	= UI::QueryWidget (`id(w_id),`SelectedItems);
+	    else
+		ret	= UI::QueryWidget (`id(w_id),`Value);
+	    string error	= "";
+	    switch (table_type) {
+		case "content" :
+		    error	= ValidateContentValue (entry["key"]:"", ret);
+		    break;
+		case "pattern" :
+		    error	= ValidatePatternValue (entry["key"]:"", ret);
+		    break;
+	    }
+	    if (table_type == "content")
+	    {
+		if (error != "")
+		{
+		    Popup::Error (error);
+		    continue;
+		}
+	    }
+	    break;
+	}
+    }
+    UI::CloseDialog ();
+    return ret;
+}
+
+// edit the key and value in pattern description
+map AddDescriptionValue (list existing) {
+
+    map ret		= $[];
+    // textentry label
+    string label	= _("&Value");
+    string focus	= "";
+    string help		= "";
+    integer height	= 10;
+    term rbs		= `VBox ();
+    foreach (string key, map val, description_descr, {
+	if (!contains (existing, key))
+	{
+	    rbs		= add (rbs, `Left (`RadioButton(
+		`id(key), `opt (`notify), val["label"]:"", focus == "")
+	    ));
+	    help	= help +
+		sformat ("<b>%1</b><p>%2</p>", val["label"]:"", val["help"]:"");
+	    height	= height + 1;
+	    if (focus == "")
+		focus	= key;
+	}
+    });
+    UI::OpenDialog( `opt(`decorated), `HBox(
+	`VSpacing (height),
+	`HSpacing(1),
+	`VBox(
+	    `HSpacing (50),
+	    `VSpacing (0.5),
+	    `RadioButtonGroup (`id(`rd),
+		`Left(`HVSquash(rbs))
+	    ),
+	    `MultiLineEdit(`id(`val), label, ""),
+	    `HBox(
+		`PushButton(`id(`ok),`opt(`default,`key_F10),Label::OKButton()),
+		`PushButton(`id(`cancel),`opt (`key_F9), Label::CancelButton()),
+		`PushButton(`id(`help),`opt (`key_F2), Label::HelpButton())
+	    )
+	),
+	`HSpacing(1)
+    ));
+    UI::SetFocus (`id(focus));
+    while (true)
+    {
+	any result = UI::UserInput ();
+	if (result == `cancel)
+	{
+	    ret	= $[];
+	    break;
+	}
+	string key	= (string) UI::QueryWidget (`id(`rd), `Value);
+	if (result == `help)
+	{
+	    Wizard::ShowHelp (help);
+	}
+	if (result == `ok)
+	{
+	    ret	= $[
+		"key"	: key,
+		"value"	: UI::QueryWidget (`id(`val), `Value)
+	    ];
+	    break;
+	}
+    }
+    UI::CloseDialog ();
+    return ret;
+}
+
+/**
+ * Editor od packages.lang files
+ * @return dialog result
+ */
+any PackagesDialog() {
+
+    // dialog caption
+    string caption		= _("Package Descriptions");
+    map<string,map> descr	= AddOnCreator::packages_descr;
+
+    list descr_files	= maplist (string l, map d, descr, ``(l));
+
+    // generate the items for table with package names
+    list get_package_names (string lang) {
+	list package_names	= [];
+	// build the items with packages
+	foreach (string package, map d, (map<string,map>) descr[lang]:$[], {
+	    if (package == "___global___") return;
+	    package_names	= add (package_names,
+		`item (`id(package), d["Pkg"]:package));
+	});
+	return package_names;
+    }
+
+    // generate items for table with description of selected package
+    list get_descr_items (map<string,string> description) {
+	list ret	= [];
+	foreach (string key, string val, description, ``{
+	    if (key != "Pkg")
+		ret	= add (ret, `item (`id (key),
+		    description_descr[key,"label"]:key,
+		    value2string (val)
+		));
+	});
+	return ret;
+    }
+
+    list<string> allowed_langs	= sort (
+	splitstring (AddOnCreator::content_map["LINGUAS"]:""," \t"));
+    if (allowed_langs == []) allowed_langs = [ "en", "de"];
+    string def_lang	= "en"; //FIXME other default?
+    // FIXME Addon for 10.1 has more languages, although only en, de in LINGUAS
+
+    // lang is language that should be active in the combo box
+    void replace_language_widgets (string lang) {
+	    UI::ReplaceWidget (`id(`rpcombo),
+		`ComboBox (`id(`descr_files),`opt(`notify,`hstretch),
+		    // combobox label
+		    _("Description File &Language Code"),
+		    maplist (string l, map d, descr, ``(
+			`item (`id(l), l, l == lang))
+		    )
+		)
+	    );
+	UI::ReplaceWidget (`id(`mbutton),
+	    // button label
+	    `MenuButton (`id (`add_lang), _("Add Lan&guage"),
+		maplist (string l,
+		    filter (string la, allowed_langs, ``(!haskey (descr,la))),
+		    ``(`item (`id(l), l))
+		)
+	    )
+	);
+	UI::ChangeWidget (`id(`add_lang),`Enabled,
+	    size(descr) < size (allowed_langs));
+    }
+
+    term contents = `HBox (`HSpacing (), `VBox(
+        `VSpacing (0.5),
+	`HBox (
+	    `ReplacePoint (`id(`rpcombo),
+		`ComboBox (`id(`descr_files), `opt (`notify, `hstretch),
+		    // combobox label
+		    _("Description File &Language Code"), descr_files
+		)
+	    ),
+	    `VBox (
+		`Label (""),
+		`HBox (
+		    `ReplacePoint (`id(`mbutton),
+			// button label
+			`MenuButton (`id (`add_lang), _("Add Lan&guage"), [])
+		    ),
+		    // button label
+		    `PushButton (`id (`import_lang), _("I&mport")),
+		    `PushButton (`id (`delete_lang), Label::DeleteButton ())
+		)
+	    )
+	),
+	`Table (`id(`packages), `opt(`notify, `immediate), `header(
+	    // table header
+	    _("Package")), []
+	),
+        `VSpacing (0.5),
+	`Table (`id(`description), `opt(`notify), `header(
+	    // table header 1/2
+	    _("Attribute"),
+	    // table header 2/2
+	    _("Value")),
+	   []
+	),
+        `HBox (
+            `PushButton (`id(`add), `opt(`key_F6), Label::AddButton ()),
+            `PushButton (`id(`edit), `opt(`key_F7), Label::EditButton ()),
+            `HStretch ()
+	),
+	`VSpacing (0.5)
+    ), `HSpacing ());
+
+    Wizard::SetContentsButtons(caption, contents, HELPS["packages"]:"",
+	    Label::BackButton(), Label::NextButton());
+
+    UI::SetFocus (`id(`packages));
+    string current_lang =
+	(string)UI::QueryWidget (`id(`descr_files),`Value);
+
+    UI::ChangeWidget (`id(`packages), `Items, get_package_names (current_lang));
+
+    string current_package =
+	(string)UI::QueryWidget (`id(`packages),`CurrentItem);
+
+    // build the items with description of current package
+    UI::ChangeWidget (`id(`description), `Items,
+	get_descr_items (descr[current_lang,current_package]:$[]));
+
+    // do not allow to add new description key when all are present
+    integer full_descr	= size (description_descr);
+    UI::ChangeWidget (`id(`add), `Enabled,
+	size (descr[current_lang, current_package]:$[]) < full_descr);
+
+    // do not delete default language file
+    UI::ChangeWidget (`id(`delete_lang),`Enabled, current_lang != def_lang);
+
+    replace_language_widgets (current_lang);
+
+    any ret = nil;
+    while(true) {
+
+	ret = UI::UserInput();
+	string lang	= (string)UI::QueryWidget (`id(`descr_files), `Value);
+	if ((is (ret, string))) {
+	    lang		= (string) ret;
+	    // copy global values and "Pkg" from default langauge,
+	    // add keys with defaults
+	    descr[lang]		=
+		mapmap (string pa, map d, (map<string,map>)descr[def_lang]:$[],{
+		    if (pa == "___global___")
+			return $[ pa : d ];
+		    map des	= $[ "Pkg" : d["Pkg"]:"" ];
+		    foreach (string key, map de, description_descr, {
+			if (haskey (de, "defval"))
+			    des[key]	= de["defval"]:"";
+		    });
+		    return $[ pa : des ];
+		});
+	    replace_language_widgets (lang);
+	    ret	= `descr_files;
+	}
+	if (ret == `import_lang)
+	{
+	    string file = UI::AskForExistingFile (
+		AddOnCreator::rpm_path, "packages.*",
+		// popup for file selection dialog
+		_("Choose the New Package Description File")
+	    );
+	    if (file != nil)
+	    {
+		string name	= file;
+		if (issubstring (name, "/"))
+		    name = substring (name, findlastof (name, "/") + 1);
+		if (substring (name, 0, 9) != "packages.")
+		{
+		    // error popup (correct name is 'packages.*')
+		    Popup::Error(_("The package description file is named incorrectly.
+Choose another one."));
+		    continue;
+		}
+		list f		= splitstring (name, ".");
+		lang		= f[size(f)-1]:"en";
+		map description = AddOnCreator::ReadPackagesFile (file);
+		if (description == nil) continue; //TODO error handling
+		descr[lang]	= description;
+		if (!contains (allowed_langs, lang))
+		    allowed_langs = add (allowed_langs, lang);
+		replace_language_widgets (lang);
+		ret		= `descr_files;
+		current_lang	= nil;
+	    }
+	}
+	if (ret == `delete_lang)
+	{
+	    descr	= remove (descr, lang);
+	    replace_language_widgets (def_lang);
+	    lang	= (string)UI::QueryWidget (`id(`descr_files), `Value);
+	    current_lang= nil;
+	    ret		= `descr_files;
+	}
+	if (ret == `descr_files)
+	{
+	    if (lang != current_lang)
+	    {
+		current_lang	= lang;
+		UI::ChangeWidget(`id(`packages),`Items,get_package_names(lang));
+		UI::ChangeWidget (`id(`delete_lang),`Enabled, lang != def_lang);
+		ret		= `packages;
+		current_package	= nil;
+	    }
+	}
+	string sel	= (string)UI::QueryWidget (`id(`packages),`CurrentItem);
+	if (ret == `packages) {
+	    if (sel != current_package)
+	    {
+		current_package	= sel;
+		UI::ChangeWidget (`id(`description), `Items,
+		    get_descr_items (descr[lang, sel]:$[]));
+		UI::ChangeWidget (`id(`add), `Enabled,
+		    size (descr[lang, sel]:$[]) < full_descr);
+	    }
+	}
+	else if (ret == `add) {
+	    map new_val	= AddDescriptionValue (
+		maplist (string key, string v, descr[lang, sel]:$[], ``(key))
+	    );
+	    if (new_val != $[])
+	    {
+		descr[lang,sel,new_val["key"]:""]	= new_val["value"]:"";
+		UI::ChangeWidget (`id(`description), `Items,
+		    get_descr_items (descr[lang, sel]:$[]));
+	    }
+	    UI::SetFocus (`id(`description));
+	    UI::ChangeWidget (`id(`add), `Enabled,
+		size (descr[lang, sel]:$[]) < full_descr);
+	}
+	else if (ret == `edit || ret == `description) {
+	    string key =(string)UI::QueryWidget(`id(`description),`CurrentItem);
+	    map des	= description_descr[key]:$[];
+	    any val	= EditValue (
+		union (des, $[ "value" : descr[lang,sel,key]:"" ]),
+		"packages"
+	    );
+	    if (val != nil)
+	    {
+		descr[lang,sel,key]	= val;
+		UI::ChangeWidget (`id(`description), `Item(key,1),
+		    value2string (val));
+	    }
+	    UI::SetFocus (`id(`description));
+	}
+        else if(ret == `next) {
+	    AddOnCreator::packages_descr	= descr;
+            break;
+        }
+	else if (ret == `back) {
+            break;
+        }
+	else if(ret == `abort || ret == `cancel) {
+	    if(ReallyAbort()) break;
+	    continue;
+	}
+    }
+    return ret;
+}
+
+/**
+ * Dialog for entering the data for new GPG keypair
+ */
+string GenerateKeyDialog () {
+
+    string ret	= "";
+    term cont	= `HBox(
+	`HSpacing(1),
+	`VBox(
+	    `VSpacing (0.5),
+	    // frame label
+	    `Frame (_("Key Type"), `HBox (`HSpacing (0.5), `VBox (
+		`RadioButtonGroup (`id("Key-Type"), `Left (`HVSquash (`VBox (
+		    `Left (`RadioButton (`id("DSA"), `opt (`notify),
+			// radiobutton label (key type)
+			_("&DSA"), true)
+		    ),
+		    // radiobutton label (key type)
+		    `Left (`RadioButton (`id("RSA"), `opt (`notify), _("&RSA")))
+		))))
+	    ))),
+	    `VSpacing (0.5),
+	    // textentry label
+	    `IntField (`id("Key-Length"), _("Key &Size"), 1024, 4096, 2048),
+	    // textentry label
+	    `TextEntry (`id("Expire-Date"), _("E&xpiration Date")),
+	    // textentry label
+	    `TextEntry (`id("Name-Real"), _("&Name")),
+	    // textentry label
+	    `TextEntry (`id("Name-Comment"), _("Commen&t")),
+	    // textentry label
+	    `TextEntry (`id("Name-Email"), _("E-&Mail Address")),
+	    // password widget label
+	    `Password (`id ("Passphrase"), _("&Passphrase"))
+	),
+	`HSpacing(1)
+    );
+    Wizard::OpenAcceptDialog ();
+    // dialog caption
+    Wizard::SetContents(_("New GPG Key"), cont, HELPS["generate"]:"",true,true);
+
+    UI::ChangeWidget (`id ("Expire-Date"), `ValidChars, "1234567890dwmy");
+
+    UI::ChangeWidget (`id ("Key-Length"), `Enabled, false);
+
+    while (true)
+    {
+	any result = UI::UserInput ();
+
+	string type	= (string) UI::QueryWidget (`id("Key-Type"), `Value);
+	UI::ChangeWidget (`id ("Key-Length"), `Enabled, type == "RSA");
+
+	if (result == `cancel || result == `back)
+	{
+	    ret	= "";
+	    break;
+	}
+	if (result == `accept)
+	{
+	    map<string,string> data	= $[];
+	    foreach (string key, [ "Key-Type", "Expire-Date", "Key-Length",
+		"Name-Real", "Name-Comment", "Name-Email", "Passphrase" ], {
+		data[key] = sformat ("%1",UI::QueryWidget (`id (key), `Value));
+	    });
+	    if (data["Name-Real"]:"" == "" && data["Name-Comment"]:"" == "" &&
+		data["Name-Email"]:"" == "")
+	    {
+		// error popup (see Name, Comment, Email Adress text entries
+		Popup::Error (_("Name, comment, and e-mail address values are empty.
+You must enter at least one of the them to provide user identification.
+"));
+		continue;
+	    }
+	    // feedback popup headline
+	    Popup::ShowFeedback (_("Generating Primary Key Pair"),
+		// feedback message
+		_("If it takes too long, do some other work to give
+the OS a chance to collect more entropy.
+")
+	    );
+	    ret	= AddOnCreator::GenerateGPGKey (data);
+	    Popup::ClearFeedback ();
+	    break;
+	}
+    }
+    Wizard::CloseDialog ();
+    return ret;
+}
+
+/**
+ * Dialog for product signing configuration
+ */
+any SigningDialog() {
+
+    // dialog caption
+    string caption	= _("Signing the Add-On Product");
+    list gpg_keys	= AddOnCreator::gpg_keys;
+
+    term contents = `HBox (`HSpacing (), `VBox (
+	`HBox (
+	    `ReplacePoint (`id(`rpcombo),
+		`ComboBox (`id(`gpg_keys), `opt(`editable, `hstretch),
+		    // combo box label
+		    _("GPG &Key ID"), gpg_keys)
+	    ),
+	    `VBox (
+		`Label (""),
+		// button label
+		`PushButton (`id (`create_key), _("&Create..."))
+	    )
+	),
+	// password entry label
+	`Password (`id(`pw), _("&Passphrase"), AddOnCreator::passphrase),
+	`VSpacing (0.7)
+    ), `HSpacing ());
+
+
+    Wizard::SetContentsButtons(caption, contents, HELPS["signing"]:"",
+	    Label::BackButton(), Label::NextButton());
+    UI::SetFocus (`id(`pw));
+
+    any ret = nil;
+
+    while(true) {
+
+	ret		= UI::UserInput();
+	string key	= (string) UI::QueryWidget (`id(`gpg_keys), `Value);
+	if (ret == `create_key) {
+	    string k = GenerateKeyDialog ();
+	    if (k != "")
+	    {
+		UI::ChangeWidget (`id (`gpg_keys), `Items,
+		    maplist (string v, AddOnCreator::gpg_keys, ``(
+			`item (v, v == k)
+		    ))
+		);
+	    }
+	}
+        else if (ret == `next) {
+	    AddOnCreator::gpg_key	= key;
+	    AddOnCreator::passphrase = (string)UI::QueryWidget(`id(`pw),`Value);
+	    break;
+	}
+	else if (ret == `abort || ret == `cancel) {
+	    if(ReallyAbort()) break;
+	    else continue;
+	}
+	else if (ret == `back) {
+            break;
+        }
+    }
+    return ret;
+}
+
+/**
+ * TODO better placing, more dialogs?
+ * @return dialog result
+ */
+any OutputDialog() {
+
+    // dialog caption
+    string caption	= _("Output Settings");
+    boolean iso		= AddOnCreator::iso;
+    boolean bootable	= AddOnCreator::bootable;
+    boolean autorun	= false;
+    map<string,string> content_map	= AddOnCreator::content_map;
+
+    string iso_name	= AddOnCreator::iso_name;
+    if (iso_name == "")
+	iso_name	= sformat ("%1-%2-%3",
+	    tolower (content_map["DISTPRODUCT"]:""),
+	    content_map["DISTVERSION"]:"", content_map["DEFAULTBASE"]:"");
+
+    term contents = `HBox (`HSpacing (), `VBox (
+	`HBox (
+	    // text entry label
+	    `TextEntry (`id(`output_path), _("P&ath to Output Directory"),
+		AddOnCreator::base_output_path),
+	    `VBox (
+		`Label (""),
+		`PushButton (`id(`browse), Label::BrowseButton ())
+	    )
+	),
+	// check box label
+//FIXME	`Left (`CheckBox (`id(`boot), _("Create B&ootable Add-On"), bootable)),
+	// check box label
+//FIXME	`Left (`CheckBox (`id(`autorun), _("&Autorun"), autorun)),
+
+
+	// check box label
+	`Left (`CheckBox (`id(`iso),`opt(`notify),_("Create &ISO Image"), iso)),
+	`HBox (
+	    `HSpacing (2),
+	    // text entry label
+	    `TextEntry (`id(`iso_name), _("Image File Name"), iso_name)
+	),
+	`VSpacing (4),
+	`HBox (
+	    `HStretch (),
+	    // button label
+	    `PushButton (`id(`workflow), _("&Configure Workflow...")),
+	    // button label
+	    `PushButton (`id(`expert), _("O&ptional Files..."))
+	)
+    ), `HSpacing ());
+
+    Wizard::SetContentsButtons(caption, contents, HELPS["output"]:"",
+	    Label::BackButton(), Label::NextButton());
+    UI::SetFocus (`id(`output_path));
+    UI::ChangeWidget (`id(`iso_name), `Enabled, iso);
+
+    any ret = nil;
+    while(true) {
+
+	ret = UI::UserInput();
+	string dir	= (string)UI::QueryWidget (`id(`output_path), `Value);
+	boolean iso	= (boolean)UI::QueryWidget (`id(`iso), `Value);
+	iso_name	= (string)UI::QueryWidget (`id(`iso_name), `Value);
+	UI::ChangeWidget (`id(`iso_name), `Enabled, iso);
+//	boolean bootable= (boolean)UI::QueryWidget (`id(`boot), `Value);
+	if (ret == `browse) {
+	    dir = UI::AskForExistingDirectory (dir, "");
+	    if (dir != nil)
+	    {
+		if ((findlastof (dir, "/") + 1) == size(dir))
+		    dir = substring (dir, 0, size(dir)-1);
+		UI::ChangeWidget (`id(`output_path), `Value, dir);
+	    }
+	}
+	else if (ret == `expert || ret == `workflow) {
+	    AddOnCreator::base_output_path	= dir;
+	    AddOnCreator::iso			= iso;
+	    AddOnCreator::iso_name		= iso_name;
+//	    AddOnCreator::bootable		= bootable;
+	    break;
+	}
+        else if (ret == `next) {
+	    if (dir == "")
+	    {
+		// error popup
+		Popup::Error (_("Enter the path to the directory for the add-on."));
+		UI::SetFocus (`id(`output_path));
+		continue;
+	    }
+	    if (!FileUtils::Exists (dir))
+	    {
+		if (!Popup::YesNo (Message::DirectoryDoesNotExistCreate (dir)))
+		    continue;
+		else if (!(boolean) SCR::Execute (.target.mkdir, dir))
+		{
+		    Popup::Error (Message::UnableToCreateDirectory (dir));
+		    continue;
+		}
+	    }
+	    AddOnCreator::base_output_path	= dir;
+	    AddOnCreator::iso			= iso;
+	    AddOnCreator::iso_name		= iso_name;
+//	    AddOnCreator::bootable		= bootable;
+	    if (iso && !Package::Install ("mkisofs"))
+	    {
+		UI::ChangeWidget (`id(`iso), `Value, false);
+		ret	= `notnext;
+		continue;
+	    }
+            break;
+        }
+	else if(ret == `abort || ret == `cancel) {
+	    if(ReallyAbort()) break;
+	    else continue;
+	}
+	else if (ret == `back) {
+	    break;
+	}
+    }
+    return ret;
+}
+
+
+/**
+ * Dialof with overview of the product
+ * @return dialog result
+ */
+any OverviewDialog() {
+
+    // dialog caption
+    string caption = _("Overview");
+
+    string sum	= "";
+
+    // summary header
+    sum	= Summary::AddHeader (sum, _("Product Name"));
+    sum	= Summary::AddLine (sum, AddOnCreator::content_map["PRODUCT"]:"");
+
+    // summary header
+    sum	= Summary::AddHeader (sum, _("Patterns"));
+    sum = Summary::OpenList (sum);
+    foreach (string name, map p, AddOnCreator::patterns, {
+	sum	= Summary::AddListItem (sum, p["Pat"]:name);
+    });
+    sum = Summary::CloseList (sum);
+
+    // summary header
+    sum	= Summary::AddHeader (sum, _("Input Directory"));
+    sum	= Summary::AddLine (sum, AddOnCreator::rpm_path);
+
+    // summary header
+    sum	= Summary::AddHeader (sum, _("Output Directory"));
+    sum	= Summary::AddLine (sum, AddOnCreator::base_output_path);
+
+    if (AddOnCreator::iso)
+    {
+	sum	= Summary::AddLine (sum,
+	    // summary line
+	    _("Creating an ISO image in the output directory"));
+    }
+
+    term contents = `RichText (sum);
+    Wizard::SetContentsButtons(caption, contents, HELPS["overview"]:"",
+	    Label::BackButton(), Label::FinishButton());
+
+    any ret = nil;
+    while(true) {
+
+	ret = UI::UserInput();
+
+	if(ret == `abort || ret == `cancel) {
+	    if(ReallyAbort()) break;
+	    else continue;
+	}
+        else if(ret == `next || ret == `back) {
+            break;
+        }
+    }
+    return ret;
+}
+
+/* EOF */
+}

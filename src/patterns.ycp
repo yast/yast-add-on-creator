@@ -1,0 +1,379 @@
+/**
+ * File:	include/add-on-creator/patterns.ycp
+ * Package:	Add-On Creator
+ * Summary:	Dialogs for patterns and selections
+ * Authors:	Jiri Suchomel <jsuchome@suse.cz>
+ *
+ * $Id$
+ */
+
+{
+
+textdomain "add-on-creator";
+
+import "Label";
+import "Popup";
+import "Wizard";
+import "AddOnCreator";
+
+include "add-on-creator/helps.ycp";
+
+// how to show and handle pattern keys
+map pattern_descr	= AddOnCreator::pattern_descr;
+
+string create_full_name (map pattern) {
+    return AddOnCreator::CreatePatternFullName (pattern, false);
+}
+
+
+// new pattern map - maybe add default values to pattern_descr map?
+map new_pattern (string name) {
+    map ret = mapmap (string key, map descr, (map<string,map>)pattern_descr, {
+	return $[ key : haskey (descr, "defval") ? descr["defval"]:nil : "" ];
+    });
+    ret["name"]	= name;
+    ret["Pat"]	= create_full_name (ret);
+    return ret;
+}
+
+// add new pattern: get the identification (currently only name)
+// return its name
+string AddPattern (list<string> conflicts) {
+
+    string ret	= nil;
+
+    UI::OpenDialog( `opt(`decorated), `HBox(
+	`HSpacing(1),
+	`VBox(
+	    // text entry label
+	    `TextEntry (`id (`patname), _("&Name of the New Pattern")),
+	    `HBox(
+		`PushButton(`id(`ok),`opt(`default,`key_F10),Label::OKButton()),
+		`PushButton(`id(`cancel),`opt (`key_F9), Label::CancelButton())
+	    )
+	),
+	`HSpacing(1)
+    ));
+    UI::SetFocus (`id(`patname));
+    while (true)
+    {
+	any result = UI::UserInput ();
+	if (result == `cancel)
+	{
+	    ret	= nil;
+	    break;
+	}
+	if (result == `ok)
+	{
+	    ret	= (string)UI::QueryWidget (`id(`patname),`Value);
+	    if (contains (conflicts, ret))
+	    {
+		// popup message
+		Popup::Error (_("A pattern with this name already exists.
+Choose a different one."));
+		ret	= nil;
+		continue;
+	    }
+	    break;
+	}
+    }
+    UI::CloseDialog ();
+    return ret;
+}
+
+// edit the key and value in pattern description
+map AddPatternValue (list conflicts) {
+
+    map ret		= $[];
+    // textentry label
+    string label	= _("&Value");
+    string help	= mergestring (maplist (string k, ["Des", "Sum", "Cat"], {
+	return sformat ("<p><b>%1</b></p>%2",
+		AddOnCreator::pattern_descr[k,"label"]:"",
+		AddOnCreator::pattern_descr[k,"lang_help"]:"");
+    }), "<br>");
+    UI::OpenDialog( `opt(`decorated), `HBox(
+	`HSpacing(1),
+	`VBox(
+	    `VSpacing (0.5),
+	    `RadioButtonGroup (`id(`rd),
+		`Left(`HVSquash(`VBox (
+		    `Left (`RadioButton(`id("Des"), `opt (`notify),
+			_("&Description"), true)),
+		    `Left (`RadioButton(`id("Sum"), `opt (`notify),
+			_("&Summary"))),
+		    `Left (`RadioButton(`id("Cat"), `opt (`notify),
+			_("Ca&tegory")))
+		)))
+	    ),
+	    // combo label
+	    `Left (`ComboBox (`id(`lang), `opt(`editable), _("&Language Code"),
+		AddOnCreator::GetLangCodes (false))
+	    ),
+	    `ReplacePoint (`id(`rp),
+		`MultiLineEdit(`id(`val), label, "")
+	    ),
+	    `HBox(
+		`PushButton(`id(`ok),`opt(`default,`key_F10),Label::OKButton()),
+		`PushButton(`id(`cancel),`opt (`key_F9), Label::CancelButton()),
+		`PushButton(`id(`help),`opt (`key_F2), Label::HelpButton())
+	    )
+	),
+	`HSpacing(1)
+    ));
+    UI::SetFocus (`id("Des"));
+    while (true)
+    {
+	any result = UI::UserInput ();
+	if (result == `cancel)
+	{
+	    ret	= $[];
+	    break;
+	}
+	string val = (string) UI::QueryWidget (`id(`val), `Value);
+	if (result == "Des")
+	{
+	    UI::ReplaceWidget (`id(`rp),
+		`MultiLineEdit(`id(`val), label, val));
+	}
+	if (result == "Sum" || result == "Cat")
+	{
+	    UI::ReplaceWidget (`id(`rp),
+		`TextEntry (`id(`val), label, value2string (val)));
+	}
+	if (result == `help)
+	{
+	    // Heading for help popup window
+	    Popup::LongText (_("Help"), `RichText (help), 50, 14);
+	}
+	if (result == `ok)
+	{
+	    string key	= sformat ("%1.%2",
+		UI::QueryWidget (`id(`rd), `Value),
+		UI::QueryWidget (`id(`lang), `Value));
+	    if (contains (conflicts, key))
+	    {
+		// popup message
+		Popup::Error (_("A key with this name already exists.
+Choose a different one."));
+		continue;
+	    }
+	    ret	= $[
+		"key"	: key,
+		"value"	: val
+	    ];
+	    break;
+	}
+    }
+    UI::CloseDialog ();
+    return ret;
+}
+
+/**
+ * Dialog for editing patterns
+ * @return dialog result
+ */
+any PatternsDialog() {
+
+    map<string,map> patterns	= AddOnCreator::patterns;
+
+    // helper for generation of table items
+    list get_pattern_items (map pattern) {
+	list ret	= [];
+	foreach (string key, any value, (map<string,any>) pattern,
+	{
+	    map pat	= pattern_descr[key]:$[];
+	    if (pat == $[])
+	    {
+		string shortkey	= substring (key,0,3);
+		pat		= pattern_descr[shortkey]:$[];
+		pat["label"]	= pat["label"]:"" + sformat (" (%1)",
+		    substring (key, 4));
+	    }
+	    if (pat != $[] && pat["label"]:"" != "")
+	    {
+		ret = add (ret, `item (
+		    `id(key), pat["label"]:"", value2string (value))
+		);
+	    }
+	});
+	return ret;
+    }
+
+    list get_patterns_items () {
+	return maplist (string name, map pattern, patterns, ``(
+	    `item (`id(name), name, create_full_name (pattern))
+	));
+    }
+
+
+    // dialog caption
+    string caption = _("Editor for Patterns");
+
+    term contents = `HBox (`HSpacing (), `VBox(
+        `VSpacing (0.5),
+	`VWeight (1, `Table (`id(`patterns), `opt(`notify, `immediate),
+		// table header
+	    `header(_("Name of the Pattern"),
+		// table header
+		_("Full Name")
+	    ), get_patterns_items ()
+	)),
+        `HBox (
+            `PushButton (`id(`new_pt), `opt(`key_F3), Label::NewButton()),
+	    // button label
+            `PushButton (`id(`import_pt), `opt(`key_F4), _("I&mport")),
+            `PushButton (`id(`delete_pt), `opt(`key_F5), Label::DeleteButton()),
+	    `HStretch()
+	),
+	`VWeight (2, `Table (`id(`pattern), `opt(`notify), `header(
+	    // table header 1/2
+	    _("Attribute"),
+	    // table header 2/2
+	    _("Value")),
+	    []
+	)),
+        `HBox (
+            `PushButton (`id(`add), `opt(`key_F6), Label::AddButton ()),
+            `PushButton (`id(`edit), `opt(`key_F7), Label::EditButton ()),
+            `HStretch ()
+	),
+	`VSpacing (0.5)
+    ), `HSpacing ());
+
+    Wizard::SetContentsButtons(caption, contents, HELPS["patterns"]:"",
+	    Label::BackButton(), Label::NextButton());
+    UI::SetFocus (`id(`patterns));
+    string current_pattern =
+	(string)UI::QueryWidget (`id(`patterns),`CurrentItem);
+    if (patterns[current_pattern]:nil != nil)
+    {
+	UI::ChangeWidget (`id(`pattern), `Items,
+	    get_pattern_items (patterns[current_pattern]:$[]));
+    }
+    UI::ChangeWidget (`id(`delete_pt), `Enabled, patterns != $[]);
+    UI::ChangeWidget (`id(`edit), `Enabled, patterns != $[]);
+    UI::ChangeWidget (`id(`add), `Enabled, patterns != $[]);
+
+    symbol ret	= nil;
+    while(true) {
+
+	ret	= (symbol) UI::UserInput();
+
+	if (ret == `new_pt) {
+	    string new_pt	= AddPattern (
+		maplist (string name, map p, patterns, ``(name)));
+	    if (new_pt != nil && new_pt != "")
+	    {
+		patterns[new_pt]	= new_pattern (new_pt);
+		UI::ChangeWidget(`id(`patterns),`Items, get_patterns_items());
+		UI::ChangeWidget(`id(`patterns),`CurrentItem, new_pt);
+	    }
+	}
+	else if (ret == `import_pt) {
+	    string file = UI::AskForExistingFile (
+		AddOnCreator::rpm_path, "*.pat",
+		// popup for file selection dialog
+		_("Existing Pattern")
+	    );
+	    if (file != nil)
+	    {
+		map pat	= AddOnCreator::ReadPatternFile (file);
+		list<string> pt	= splitstring (pat["Pat"]:"", " ");
+		string name	= pt[0]:"";
+		if (name != "")
+		{
+		    pat["name"]		= name;
+		    pat["version"]	= pt[1]:"";
+		    pat["release"]	= pt[2]:"";
+		    pat["arch"]		= pt[3]:"";
+		    patterns[name]	= pat;
+		    UI::ChangeWidget(`id(`patterns), `Items,
+			get_patterns_items());
+		    UI::ChangeWidget(`id(`patterns), `CurrentItem, name);
+		}
+	    }
+	}
+	else if (ret == `delete_pt) {
+	    string sel = (string)UI::QueryWidget (`id(`patterns),`CurrentItem);
+	    if (sel != nil)
+	    {
+		patterns	= remove (patterns, sel);
+		UI::ChangeWidget(`id(`patterns),`Items, get_patterns_items());
+	    }
+	}
+	if (contains ([`new_pt, `import_pt, `delete_pt], ret))
+	{
+	    foreach (symbol s, [`delete_pt, `edit, `add], {
+		UI::ChangeWidget (`id(s), `Enabled, patterns != $[]);
+	    });
+	    ret = `patterns;
+	    if (ret != `delete_pt)
+		UI::SetFocus (`id(`pattern));
+	}
+	string sel = (string)UI::QueryWidget (`id(`patterns),`CurrentItem);
+	if (ret == `patterns) {
+	    if (sel != current_pattern)
+	    {
+		current_pattern	= sel;
+		UI::ChangeWidget (`id(`pattern), `Items,
+		    get_pattern_items (patterns[current_pattern]:$[]));
+	    }
+	}
+	else if (ret == `add) {
+	    map new_val	= AddPatternValue (maplist (
+		string k, any a, (map<string,any>) patterns[sel]:$[], ``(k))
+	    );
+	    if (new_val != $[])
+	    {
+		patterns[sel,new_val["key"]:""]	= new_val["value"]:"";
+		UI::ChangeWidget (`id(`pattern), `Items,
+		    get_pattern_items (patterns[sel]:$[]));
+	    }
+	    UI::SetFocus (`id(`pattern));
+	}
+	else if (ret == `edit || ret == `pattern) {
+	    string key	= (string)UI::QueryWidget (`id(`pattern),`CurrentItem);
+	    map pat	= pattern_descr[key]:$[];
+	    if (pat == $[])
+	    {
+		string shortkey = substring (key,0,3);
+		pat             = pattern_descr[shortkey]:$[];
+		pat["label"]    =
+		    pat["label"]:"" + sformat (" (%1)", substring(key,4));
+		pat["help"]	= pat["lang_help"]:pat["help"]:"";
+	    }
+
+	    any val = EditValue (
+		union (pat, $[ "value" : patterns[sel,key]:nil ]),
+		"pattern"
+	    );
+	    if (val != nil)
+	    {
+		patterns[sel,key]	= val;
+		UI::ChangeWidget(`id(`pattern),`Item(key,1),value2string (val));
+	    }
+	    if (pattern_descr[key,"adapt_name"]:false)
+	    {
+		string full_name	= create_full_name (patterns[sel]:$[]);
+		patterns[sel,"Pat"]	= full_name;
+		UI::ChangeWidget (`id(`patterns), `Item (sel,1), full_name);
+	    }
+	    UI::SetFocus (`id(`pattern));
+	}
+        else if (ret == `next) {
+	    AddOnCreator::patterns	= patterns;
+	    break;
+	}
+	else if (ret == `back) {
+            break;
+        }
+	else if(ret == `abort || ret == `cancel) {
+	    if(ReallyAbort()) break;
+	    continue;
+	}
+    }
+    return ret;
+}
+
+}//EOF

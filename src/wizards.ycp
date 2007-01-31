@@ -1,0 +1,191 @@
+/* -----------------------------------------------------------------------------
+ * Copyright (c) 2006 Novell, Inc. All Rights Reserved.
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify it under
+ * the terms of version 2 of the GNU General Public License as published by the
+ * Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, contact Novell, Inc.
+ *
+ * To contact Novell about this file by physical or electronic mail, you may find
+ * current contact information at www.novell.com.
+ * -----------------------------------------------------------------------------
+ */
+
+/**
+ * File:	include/add-on-creator/wizards.ycp
+ * Package:	Configuration of add-on
+ * Summary:	Wizards definitions
+ * Authors:	Jiri Suchomel <jsuchome@suse.cz>
+ *
+ * $Id$
+ */
+
+{
+
+textdomain "add-on-creator";
+
+import "Popup";
+import "Sequencer";
+import "Wizard";
+
+include "add-on-creator/complex.ycp";
+include "add-on-creator/dialogs.ycp";
+include "add-on-creator/patterns.ycp";
+
+any GenerateContent () {
+
+    // busy message
+    Popup::ShowFeedback ("", _("Generating content file..."));
+     //FIXME logview.., not only content
+
+    AddOnCreator::FillContentDefaults ();
+
+    Popup::ClearFeedback ();
+    return `next;
+}
+
+any CopyExisting () {
+
+    // busy message
+    Popup::ShowFeedback ("", _("Importing product..."));
+
+    AddOnCreator::ImportExistingProduct (AddOnCreator::import_path);
+
+    Popup::ClearFeedback ();
+    return `next;
+}
+
+
+
+/**
+ * Main workflow of the add-on-creator configuration
+ * @return sequence result
+ */
+any MainSequence() {
+
+    map aliases = $[
+	"start"		:   ``( StartDialog() ),
+	"content"	:   ``( ContentFileDialog() ),
+	"sources"	:   ``( SourcesDialog() ),
+	"expert1"	:   ``( ExpertSettingsDialog() ),
+	"expert2"	:   ``( ExpertSettingsDialog2() ),
+	"packages"	:   ``( PackagesDialog() ),
+	"patterns"	:   ``( PatternsDialog() ),
+	"signing"	:   ``( SigningDialog() ),
+	"output"	:   ``( OutputDialog() ),
+	"overview"	:   ``( OverviewDialog() ),
+	"workflow"	:   ``( WorkflowConfigurationDialog() ),
+	"copy"		:  [ ``(CopyExisting ()), true ],
+	"generate"	:  [ ``(GenerateContent ()), true ],
+    ];
+
+    map sequence = $[
+	"ws_start"	: "start",
+	"start" : $[
+	    `abort	: `abort,
+	    `next	: "sources",
+//	    `copy	: "content",
+	    `copy	: "copy",
+	],
+	"sources" : $[
+	    `abort	: `abort,
+	    `next	: "generate",
+	    `skip_gen	: "content",
+	],
+	"copy"	: $[
+	    `next	: "generate", // FIXME in fact, it only reads the data..
+	],
+	"generate"	: $[
+	    `next	: "content",
+	],
+	"content" : $[
+	    `abort	: `abort,
+	    `next	: "packages",
+	],
+	"packages" : $[
+	    `abort	: `abort,
+	    `next	: "patterns",
+	],
+	"patterns" : $[
+	    `abort	: `abort,
+	    `next	: "output",
+//	    `next	: "overview",
+	],
+	"output" : $[
+	    `abort	: `abort,
+	    `next	: "signing",
+	    `expert	: "expert1",
+	    `workflow	: "workflow",
+	],
+	"workflow" : $[
+	    `abort	: `abort,
+	    `next	: "output",
+	],
+	"signing" : $[
+	    `abort	: `abort,
+	    `next	: "overview",
+	],
+	"overview" : $[
+	    `abort	: `abort,
+	    `next	: `next,
+	],
+	"expert1"	: $[
+	    `abort	: `abort,
+	    `next	: "expert2",
+	],
+	"expert2"	: $[
+	    `abort	: `abort,
+	    `next	: "output",
+	],
+    ];
+
+    any ret = Sequencer::Run(aliases, sequence);
+
+    return ret;
+}
+
+/**
+ * Whole configuration of add-on-creator
+ * @return sequence result
+ */
+any AddOnCreatorSequence() {
+
+    map aliases = $[
+	"read"	: [ ``( ReadDialog() ), true ],
+	"main"	:   ``( MainSequence() ),
+	"write"	: [ ``( WriteDialog() ), true ]
+    ];
+
+    map sequence = $[
+	"ws_start" : "read",
+	"read" : $[
+	    `abort	: `abort,
+	    `next	: "main"
+	],
+	"main" : $[
+	    `abort	: `abort,
+	    `next	: "write"
+	],
+	"write" : $[
+	    `abort	: `abort,
+	    `next	: `next
+	]
+    ];
+
+    Wizard::CreateDialog();
+
+    any ret = Sequencer::Run(aliases, sequence);
+
+    UI::CloseDialog();
+    return ret;
+}
+
+/* EOF */
+}

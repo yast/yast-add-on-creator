@@ -1,0 +1,1813 @@
+/* ------------------------------------------------------------------------------
+ * Copyright (c) 2006 Novell, Inc. All Rights Reserved.
+ *
+ *
+ * This program is free software; you can redistribute it and/or modify it under
+ * the terms of version 2 of the GNU General Public License as published by the
+ * Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, contact Novell, Inc.
+ *
+ * To contact Novell about this file by physical or electronic mail, you may find
+ * current contact information at www.novell.com.
+ * ------------------------------------------------------------------------------
+ */
+
+/**
+ * File:	modules/AddOnCreator.ycp
+ * Package:	Configuration of add-on-creator
+ * Summary:	AddOnCreator settings, input and output functions
+ * Authors:	Jiri Suchomel <jsuchome@suse.cz>
+ *
+ * $Id$
+ *
+ * Representation of the configuration of add-on-creator.
+ * Input and output routines.
+ */
+
+{
+
+module "AddOnCreator";
+textdomain "add-on-creator";
+
+import "Directory";
+import "FileUtils";
+import "Package";
+import "Popup";
+import "Progress";
+import "Report";
+
+
+// variables from content file, + their description
+global list<map> content	= [];
+
+global list<string> allowed_archs = [ "ppc", "ppc64", "ia64", "x86_64", "i686", "i586", "i486", "i386","noarch"];
+
+
+map<string,map> content_descr	= $[
+    "PRODUCT"	: $[
+	    "key"	: "PRODUCT",
+	    // label of content file key
+	    "label"	: _("Product name"),
+	    // help text for content file 'PRODUCT' key
+	    "help"	: _("Name of the add-on product"),
+	    "mandatory"	: true,
+    ],
+    "VERSION"	: $[
+	    "key"       : "VERSION",
+	    // label of content file 'VERSION' key
+	    "label"	: _("Product version and release"),
+	    // help text for content file 'VERSION' key
+	    "help"	: _("Product version and release as in RPM <tt>major.minor-release</tt>."),
+	    "mandatory"	: true,
+    ],
+    "DISTPRODUCT"	: $[
+	    "key"	: "DISTPRODUCT",
+	    // label of content file key
+	    "label"	: _("Distribution ID"),
+	    // help text for content file 'DISTPRODUCT' key
+	    "help"	: _("Distribution ID (vendor specific). The value of the keyword must not contain spaces. Only letters, numbers, and the characters \".~_-\" are allowed."),
+	    "mandatory"	: true,
+    ],
+    "DISTVERSION"	: $[
+	    "key"	: "DISTVERSION",
+	    // label of content file key
+	    "label"	: _("Distribution version"),
+	    // help text for content file 'DISTVERSION' key
+	    "help"	: _("Distribution version (vendor specific)."),
+	    "mandatory"	: true,
+    ],
+    "VENDOR"		: $[
+	    "key"	: "VENDOR",
+	    // label of content file key
+	    "label"	: _("Vendor name"),
+	    // help text for content file 'VENDOR' key
+	    "help"	: _("Vendor name (free form)."),
+	    "mandatory"	: true,
+    ],
+    "REQUIRES"		: $[
+	    "key"	: "REQUIRES",
+	    // label of content file key
+	    "label"	: _("Resolvables that must be installed"),
+	    // help text for content file 'REQUIRES' key
+	    "help"	: _("<p>Resolvables that must be installed on the system to meet the needs of this product.</p>
+<p>This is a space-separated list of names or <tt>kind:name</tt> pairs optionally followed by version constraints. Just a name denotes a dependency to a package, such as <tt>sles-release</tt> or <tt>sles-release-10</tt>. The kind can be package, pattern, or product, such as <tt>pattern:basesystem</tt>.</p>"),
+	    "mandatory"	: true,
+//TODO editor...
+    ],
+    "DESCRDIR"		: $[
+	    "key"	: "DESCRDIR",
+	    // label of content file key
+	    "label"	: _("Package description directory"),
+	    "value"	: "suse/setup/descr",
+	    // help text for content file 'DESCRDIR' key
+	    "help"	: _("Package description directory (relative to product directory)."),
+	    "mandatory"	: true,
+    ],
+    "DATADIR"		: $[
+	    "key"	: "DATADIR",
+	    // label of content file key
+	    "label"	: _("Package data directory"),
+	    // help text for content file 'DATADIR' key
+	    "help"	: _("Package data directory (relative to product directory)."),
+	    "value"	: "suse",
+	    "mandatory"	: true,
+    ],
+    "DEFAULTBASE"	: $[
+	    "key"	: "DEFAULTBASE",
+	    // label of content file key
+	    "label"	: _("Minimum architecture base supported"),
+	    // help text for content file 'DEFAULTBASE' key
+	    "help"	: _("Minimum architecture base supported by this product. The default is the base architecture if no matching <b>ARCH.base</b> is found."),
+	    "mandatory"	: true,
+	    "type"	: "combo",
+	    "allowed_values"	: allowed_archs,
+    ],
+    "PREREQUIRES"	: $[
+	    "key"	: "PREREQUIRES",
+	    // labeliption of content file PREREQUIRES key
+	    "label"	: _("Resolvables needed before installation"),
+	    // help text for content file 'PREREQUIRES' key
+	    "help"	: _("Resolvables that must be installed on the system before installation of this product. The syntax is the same as for <b>REQUIRES</b>."),
+    ],
+    "LABEL"		: $[
+	    "key"	: "LABEL",
+	    // label of content file key
+	    "label"	: _("Label"),
+	    // help text for content file '' key
+	    "help"	: _("UTF-8 encoded label. Default label if <b>LINGUAS</b> is omitted or no default language can be determined."),
+    ],
+    "PROVIDES"		: $[
+	    "key"	: "PROVIDES",
+	    // label of content file PROVIDES key
+	    "label"	: _("Resolvables provided"),
+	    // help text for content file 'PROVIDES' key
+	    "help"	: _("Capabilities this product provides. They can be used to match <b>REQUIRES</b> from others. Every resolvable has a provides by default--its own name and edition. For example, package <i>bar-1.42-1</i> provides the capability <tt>bar = 1.42-1</tt>."),
+    ],
+    "CONFLICTS"		: $[
+	    "key"	: "CONFLICTS",
+	    // label of content file 'CONFLICTS' key
+	    "label"	: _("Conflicting resolvables"),
+	    // help text for content file 'CONFLICTS' key
+	    "help"	: _("This resolvable cannot be installed if the specified resolvable or one that provides the capability is installed."),
+    ],
+    "OBSOLETES"		: $[
+	    "key"	: "OBSOLETES",
+	    // label of content file 'OBSOLETES' key
+	    "label"	: _("Resolvables made obsolete"),
+	    // help text for content file 'OBSOLETES' key
+	    "help"	: _("When this resolvable is installed, it uninstalls any other resolvable with a name matching this keyword."),
+    ],
+    "RECOMMENDS"	: $[
+	    "key"	: "RECOMMENDS",
+	    // label of content file 'RECOMMENDS' key
+	    "label"	: _("Recommended resolvables"),
+	    // help text for content file 'RECOMMENDS' key
+	    "help"	: _("A weak version of <b>REQUIRES</b>. An attempt is made to fulfill <b>RECOMMENDS</b>, but they are silently ignored if no match is possible."),
+    ],
+    "SUGGESTS"		: $[
+	    "key"	: "SUGGESTS",
+	    // label of content file 'SUGGESTS' key
+	    "label"	: _("Suggested resolvables"),
+	    // help text for content file 'SUGGESTS' key
+	    "help"	: _("These are just hints for an application and not handled during dependency resolution."),
+    ],
+    "SUPPLEMENTS"	: $[
+	    "key"	: "SUPPLEMENTS",
+	    // label of content file 'SUPPLEMENTS' key
+	    "label"	: _("Supplemented resolvables"),
+	    // help text for content file 'SUPPLEMENTS' key
+	    "help"	: _("A reverse <b>RECOMMENDS</b>. This product is installed if the specified capability is provided by an installed resolvable. The dependency resolver installs it. Uninstalling it is silently accepted."),
+    ],
+    "ENHANCES"		: $[
+	    "key"	: "ENHANCES",
+	    // label of content file 'ENHANCES' key
+	    "label"	: _("Enhanced resolvables"),
+	    // help text for content file 'ENHANCES' key
+	    "help"	: _("A reverse <b>SUGGESTS</b>. This product can be installed if this capability is provided by an installed resolvable. It is just a hint for an application. For example, <i>SuSEplugger</i> can suggest packages for installation if specific hardware is found."),
+    ],
+    "LINGUAS"		: $[
+	    "key"	: "LINGUAS",
+	    // label of content file 'LINGUAS' key
+	    "label"	: _("Languages"),
+	    // help text for content file 'LINGUAS' key
+	    "help"	: _("ISO language code or language code_country code."),
+// TODO editor
+    ],
+    "LANGUAGE"		: $[
+	    "key"	: "LANGUAGE",
+	    // label of content file 'LANGUAGE' key
+	    "label"	: _("Default language"),
+	    // help text for content file 'LANGUAGE' key
+	    "help"	: _("Default language code."),
+	    "type"	: "combo",
+	    "allowed_values"	: nil,
+    ],
+    "RELNOTESURL"	: $[
+	    "key"	: "RELNOTESURL",
+	    // label of content file 'RELNOTESURL' key
+	    "label"	: _("Release notes URL"),
+	    // help text for content file 'RELNOTESURL' key
+	    "help"	: _("URL from which to fetch release notes."),
+    ],
+    "FLAGS"		: $[
+	    "key"	: "FLAGS",
+	    // label of content file 'FLAGS' key
+	    "label"	: _("Flags"),
+	    // help text for content file 'FLAGS' key
+	    "help"	: _("Product-specific capabilities."),
+    ],
+    "UPDATEURLS"	: $[
+	    "key"	: "UPDATEURLS",
+	    // label of content file 'UPDATEURLS' key
+	    "label"	: _("Update URL"),
+	    // help text for content file 'UPDATEURLS' key
+	    "help"	: _("URL of the update source."),
+    ],
+];
+
+// skeletons for special keys in content file
+global map content_specials	= $[
+
+    "LABEL"	: $[
+	    // label of content file LABEL.lang key
+	    "label"	: _("Language-specific label"),
+	    // help text for content file 'LABEL.lang' key
+	    "help"	: _("UTF-8-encoded <b>LABEL</b>. <tt>lang</tt> has the same syntax as the <b>LINGUAS</b> values. For each language in <b>LINGUAS</b>, a matching <b>LABEL.lang</b> is expected."),
+	    "helplabel"	: "LABEL.lang",
+    ],
+    "ARCH"	: $[
+	    // label of content file ARCH.base key
+	    "label"	: _("Allowed architectures"),
+	    // help text for content file 'ARCH.base' key
+	    "help"	: _("Space-separated list of allowed architectures for <tt>base</tt>."),
+	    "helplabel"	: "ARCH.base",
+	    "mandatory"	: true
+    ],
+];
+
+
+// desctiption of pattern keys
+global map pattern_descr	= $[
+    "name"	: $[
+	"internal"	: true,
+    ],
+    "version"	: $[
+	"label"		: _("Version"),
+	"internal"	: true,
+	"adapt_name"	: true,
+	"defval"	: "1.0",
+    ],
+    "release"	: $[
+	"label"		: _("Release"),
+	"internal"	: true,
+	"adapt_name"	: true,
+	"defval"	: "1",
+    ],
+    "arch"	: $[
+	"label"		: _("Architecture"),
+	"internal"	: true,
+	"type"		: "combo",
+	"allowed_values": allowed_archs,
+	"adapt_name"	: true,
+	"defval"	: "noarch",
+    ],
+    "Pat"	: $[
+	"single_line"	: true,
+    ],
+    "Ver"	: $[
+	"defval"	: "5.0",
+	"single_line"	: true,
+    ],
+    "Sum"	: $[
+	"label"		: _("Summary"),
+	// help text for 'Sum' pattern key
+	"help"		: _("One line label in the default language"),
+	// help text for 'Sum.lang' pattern key
+	"lang_help"	: _("One line language-specific label."),
+	"single_line"	: true,
+    ],
+    "Des"	: $[
+	// label for 'Des' pattern key
+	"label"		: _("Description"),
+	"type"		: "multiline",
+	// help text for 'Des' pattern key
+	"help"		:_("Multiple line description in the default language"),
+	// help text for 'Des.lang' pattern key
+	"lang_help"	:_("Multiple line description, language specific.")
+    ],
+    "Cat"	: $[
+	// label for 'Cat' pattern key
+	"label"		: _("Category"),
+	// help text for 'Cat' pattern key
+	"help"		: _("One line category in the default language used to group patterns. Categories are intended for the user and can be specified freely."),
+	// help text for 'Cat.lang' pattern key
+	"lang_help"	: _("Language-specific version of the category."),
+	"single_line"	: true,
+    ],
+    "Vis"	: $[
+	// label for 'Vis' pattern key
+	"label"		: _("Visibility"),
+	// help text for 'Vis' pattern key
+	"help"		: _("Set whether the pattern should be visible in the user interface."),
+	"type"		: "boolean",
+	"defval"	: true,
+	"single_line"	: true,
+    ],
+    "Prq"	: $[
+	// label for 'Prq' pattern key
+	"label"		: _("Packages"),
+	// help text for 'Prq' pattern key
+	"help"		: _("List of packages to install."),
+	"type"		: "package-list",
+	"defval"	: [],
+    ],
+    "Prc"	: $[
+	// label for 'Prc' pattern key
+	"label"		: _("Recommended packages"),
+	// help text for 'Prc' pattern key
+	"help"		: _("These packages are installed by default but can be removed without complaint."),
+	"type"		: "package-list",
+	"defval"	: [],
+    ],
+    "Prs"	: $[
+	// label for 'Prs' pattern key
+	"label"		: _("Suggested packages"),
+	// help text for 'Prs' pattern key
+	"help"		: _("These are just hints for an application and not handled during dependency resolution."),
+	"type"		: "package-list",
+	"defval"	: [],
+    ],
+    "Ico"	: $[
+	// label for 'Ico' pattern key
+	"label"		: _("Icon filename"),
+	// help text for 'Ico' pattern key
+	"help"		: _("If unspecified, the pattern name is used 
+ instead (with blanks in the name replaced by underscores). If the filename does not include a .png or .jpg extension, .png is appended. If no path is specified, icons are searched for in the theme icon path (first /usr/share/YaST2/theme/current/icons/32x32/apps/ then /usr/share/YaST2/theme/current/icons/48x48/apps/). Absolute and relative paths (to the theme path /usr/share/YaST2/theme/current/) are allowed."),
+	"type"		: "file-name",
+	"defval"	: "",
+	"single_line"	: true,
+    ],
+    "Ord"	: $[
+	// label for 'Ord' pattern key
+	"label"		: _("Pattern Order"),
+	// help text for 'Ord' pattern key
+	"help"		: _("This three-digit integer value defines the order of the pattern when listing multiple patterns in the user interface."),
+	"defval"	: "",
+	"single_line"	: true,
+	"type"		: "integer",
+	"range"		: [ 100, 9999 ],
+    ],
+    "Req"	: $[
+	// label for 'Req' pattern key
+	"label"		: _("Required patterns"),
+	// help text for 'Req' pattern key
+	"help"		: _("Patterns that need to be installed together with this pattern."),
+	"defval"	: "",
+	"type"		: "pattern-list",
+    ],
+    "Prv"	: $[
+	// label for 'Prv' pattern key
+	"label"		: _("Provided patterns"),
+	// help text for 'Prv' pattern key
+	"help"		: _("Capabilities this pattern provides. They can be used to match <b>REQUIRES</b> from others. Every resolvable has a provide by default--its own name and edition. For example, package <i>bar-1.42-1</i> provides the capability <tt>bar = 1.42-1</tt>."),
+	"defval"	: "",
+	"type"		: "pattern-list",
+    ],
+    "Con"	: $[
+	// label for 'Con' pattern key
+	"label"		: _("Conflicting patterns"),
+	// help text for 'Con' pattern key
+	"help"		: _("This pattern cannot be installed if the specified resolvable or one that provides the capability is installed."),
+	"defval"	: "",
+	"type"		: "pattern-list",
+    ],
+    "Obs"	: $[
+	// label for 'Obs' pattern key
+	"label"		: _("Patterns made obsolete"),
+	// help text for 'Obs' pattern key
+	"help"		: _("When this pattern is installed, it uninstalls any 
+other patterns marked as obsolete here."),
+	"defval"	: "",
+	"type"		: "pattern-list",
+    ],
+    "Rec"	: $[
+	// label for 'Rec' pattern key
+	"label"		: _("Recommended patterns"),
+	// help text for 'Rec' pattern key
+	"help"		: _("A weak version of REQUIRES. If recommended patterns cannot be installed, no error is shown."),
+	"defval"	: "",
+	"type"		: "pattern-list",
+    ],
+    "Sup"	: $[
+	// label for 'Sup' pattern key
+	"label"		: _("Supplemented patterns"),
+	// help text for 'Sup' pattern key
+	"help"		: _("A reverse <b>Rec</b>. This pattern is installed if the specified capability is provided by an installed resolvable. The dependency resolver installs it. Uninstalling it is silently accepted."),
+	"defval"	: "",
+	"type"		: "pattern-list",
+    ],
+    "Sug"	: $[
+	// label for 'Sug' pattern key
+	"label"		: _("Suggested patterns"),
+	// help text for 'Sug' pattern key
+	"help"		: _("These are just hints for an application and not handled during dependency resolution."),
+	"defval"	: "",
+	"type"		: "pattern-list",
+    ],
+    "Fre"	: $[
+	// label for 'Fre' pattern key
+	"label"		: _("Freshen"),
+	// help text for 'Fre' pattern key
+	"help"		: _("The current pattern is only considered for installation is the pattern specified here is installed."),
+	"defval"	: "",
+	"type"		: "pattern-list",
+    ],
+    // TODO during editing, remove from Prc and Prs packages contained in Prq
+    // TODO add some key for sorting, so output file is readable
+];
+
+// description of packages (initially generated by create_package_descr
+global map<string,map> packages_descr	= $[];
+
+// description of keys in package description files
+global map<string,map> description_descr	= $[
+    "Pkg"	: $[
+	// label for 'Pkg' key
+	"label"		: _("Package"),
+    ],
+    "Des"	: $[
+	// label for 'Des' key
+	"label"		: _("Description"),
+	// help text for 'Des' key
+	"help"		: _("Multiple line package description."),
+	"type"		: "multiline",
+	"defval"	: "-",
+    ],
+    "Sum"	: $[
+	// label for 'Sum' key
+	"label"		: _("Summary"),
+	// help text for 'Sum' key
+	"help"		: _("The package summary (label), a one line description of the package."),
+	"single_line"	: true,
+	"defval"	: "-",
+    ],
+    "Ins"	: $[
+	// label for 'Ins' key
+	"label"		: _("Installation Notification"),
+	// help text for 'Ins' key
+	"help"		: _("An informal message shown to the user if the package is selected, such as a test version warning or a commercial license."),
+	"type"		: "multiline",
+    ],
+    "Del"	: $[
+	// label for 'Del' key
+	"label"		: _("Deletion Notification"),
+	// help text for 'Del' key
+	"help"		: _("An informal message shown to the user if the package is selected for deletion, such as a warning that the system is unusable without the package."),
+	"type"		: "multiline",
+    ],
+    "Eul"	: $[
+	// label for 'Eul' key
+	"label"		: _("EULA"),
+	// help text for 'Eul' key
+	"help"		: _("Text of the EULA. This text is displayed before package installation. If the user does not accept the EULA, package is not installed."),
+	"type"		: "multiline",
+    ],
+];
+
+// just key:value mapping
+global map<string,string> content_map	= $[];
+
+global map<string,map> patterns	= $[];
+
+// path to directory with RPM's
+global string rpm_path	= "";
+
+// path to directory with RPM's, used only for building patterns
+// and not present on AddOn
+global string required_rpm_path = "";
+
+// path to directory with existing product
+global string import_path	= "";
+
+// text with license (in the root dir)
+global string license		= "";
+
+// the contents of products files
+global list<string> products_files	= [];
+
+// the contents of media files
+global list<string> media_files	= [];
+
+// the contents of patches files
+global list<string> patches_files	= [];
+
+// the contents of info.txt file
+global string info		= "";
+
+// the contents of nextmedia file
+global string nextmedia		= "";
+
+// content of readme files
+global map<string,string> readme_files	= $[
+    "README"	: ""
+];
+
+// content of license files (in media.1 dir)
+global map<string,string> license_files	= $[
+    "license"	: ""
+];
+
+global map<string,string> copying_files	= $[
+    "COPYING"	: ""
+];
+
+global map<string,string> copyright_files	= $[
+    "COPYRIGHT"	: ""
+];
+
+// paths with packages to be archived in y2update.tgz
+global list<string> y2update_packages	= [];
+
+// path with y2update.tgz (alternative to y2update_packages)
+global string y2update_path	= "";
+
+// path to file with installation workflow (installation.xml)
+global string workflow_path	= "";
+
+// if the descriptions of packages should be generated
+// (false have only sense when cloning)
+global boolean generate_descriptions = false;
+
+// if iso image should be created from the final Add-On
+global boolean iso	= false;
+
+// if final Add-On should be bootable
+global boolean bootable	= false;
+
+// if we have 'source add-on' to base the target one on
+global boolean clone	= false;
+
+// tmp directory
+string tmpdir	= "";
+
+list full_media_paths	= [];
+
+// architecture specific directory names of target product
+list<string> arch_directories = [];
+
+// full path to descr directory
+string full_descr_path	= "";
+
+// full path to data directory
+string full_data_path = "";
+
+// path to output directory
+global string base_output_path	= "";
+
+// where the iso image should be put
+global string iso_path	= "";
+
+// name of the iso image file
+global string iso_name	= "";
+
+global string gpg_key	= "";
+
+// passphrase to unlock secret key
+global string passphrase	= "";
+
+global list<string> gpg_keys	= [];
+
+// packages from current AddOn available for the pattern
+global map<string,list> available_packages = $[];
+
+// mapping of package name to full file name
+global map<string,string> package2filename = $[];
+
+/**
+ * Data was modified?
+ */
+global boolean modified = false;
+
+/**
+ * Data was modified?
+ * @return true if modified
+ */
+global boolean Modified() {
+    y2debug("modified=%1",modified);
+    return modified;
+}
+
+map lang_codes = $[
+    "languages"		: nil,
+    "with_country"	: nil,
+];
+
+// return list of language codes, optionally together with country code
+global list<string> GetLangCodes (boolean country) {
+
+    string key	= country ? "with_country" : "languages";
+    string cut	= country ? "cut -f 1 -d . | cut -f 1 -d @" : "cut -f 1 -d _";
+    if (lang_codes[key]:nil == nil)
+    {
+	map out = (map) SCR::Execute (.target.bash_output, "locale -a | " + cut,
+	    $[ "LANG" : "C"]);
+	lang_codes[key] =
+	    filter (string l, toset (splitstring (out["stdout"]:"", "\n")), {
+		return (l != "" && l != "C" && l != "POSIX");
+	    });
+    }
+    return lang_codes[key]:[];
+}
+
+// if file is true, it creates the file name for the pattern, otherwise
+// the Pat value
+global string CreatePatternFullName (map pattern, boolean file) {
+    return sformat ("%1%5%2%5%3%6%4%7",
+	pattern["name"]:"",
+        pattern["version"]:"",
+        pattern["release"]:"",
+        pattern["arch"]:"",
+	file ? "-" : " ",
+	file ? "." : " ",
+	file ? ".pat" : ""
+    );
+}
+
+// read the list of available secret keys
+list<string> read_secret_keys () {
+
+    map out = (map) SCR::Execute (.target.bash_output, "gpg --list-secret-keys|grep '^sec'|sed -e 's/.*\\///;s/ .*//g;'");
+    return filter (string k, splitstring(out["stdout"]:"", "\n"),``(k!=""));
+}
+
+
+/**
+ * Generate the key pair
+ */
+global string GenerateGPGKey (map<string,string> data) {
+
+    string data_cont	= sformat ("Key-Type: %1\n", data["Key-Type"]:"");
+    data = remove (data, "Key-Type");
+    foreach (string key, string val, data, {
+	if (val != "")
+	    data_cont	= data_cont + sformat ("%1: %2\n", key, val);
+    });
+
+    // save the needed data to file
+    string data_path	= tmpdir + "/gen-key-data";
+    SCR::Write (.target.string, data_path, data_cont);
+
+    map out	= (map) SCR::Execute (.target.bash_output,
+	"gpg --batch --gen-key " + data_path);
+    if (out["exit"]:0 != 0)
+    {
+	y2warning ("error calling gpg: %1", out);
+	return "";
+    }
+
+    SCR::Execute (.target.remove, data_path);
+
+    gpg_keys	= read_secret_keys ();
+    return gpg_keys[size (gpg_keys) - 1]:"";
+}
+
+/**
+ * Initialize the settings for add-on-creator
+ * @return true on success
+ */
+global boolean Read() {
+
+    gpg_keys	= read_secret_keys ();
+    gpg_key	= gpg_keys[0]:"";
+
+    // fill uninitialized values in content descriptions
+    integer i	= 0;
+
+    foreach (string key, map entry, content_descr, {
+	if (entry["allowed_values"]:nil == nil)
+	{
+	    // TODO add a handlers for filling the values
+	    if (key == "LANGUAGE")
+		content_descr[key,"allowed_values"] = GetLangCodes (true);
+	    else
+		content_descr[key,"allowed_values"] = [];
+	}
+	i	= i + 1;
+    });
+
+    tmpdir	= Directory::tmpdir;
+
+    return true;
+}
+
+// FIXME this won't work for other architectures...
+global string ValueForArchitecture (string arch_dir) {
+
+    string val = "";
+    foreach (string arch, allowed_archs, {
+	if (arch == arch_dir)
+	    val	= arch;
+	else if (val != "")
+	    val = val + " " + arch;
+    });
+    return val;
+}
+
+// read the content file given by file name
+global list<map> ReadContentFile (string file_path) {
+
+    list<map> ret	= [];
+
+    y2milestone ("Importing content file '%1'", file_path);
+
+    SCR::RegisterAgent (.content, `ag_ini (`IniAgent (file_path,
+	$[
+	    "options" : ["global_values", "flat"],
+	    "comments" : [ "^#.*", "^[ \t]*$", ],
+	    "params" : [ $[
+		"match" : [
+		    "^[ \t]*([a-zA-Z0-9_\.]+)[ \t]+(.*[^ \t]|)[ \t]*$",
+		    "%s %s",
+		]
+	    ] ]
+	]
+    )));
+
+    list<string> keys	= (list<string>) SCR::Dir (.content);
+    foreach (string key, keys, {
+	string val = (string) SCR::Read (add (.content, key));
+	if (val == nil) return;
+	map entry	= content_descr[key]:$[];
+	if (entry == $[] && issubstring (key, "."))
+	{
+	    entry	=
+		content_specials[substring (key,0,findfirstof (key,"."))]:$[];
+	}
+	if (entry != $[])
+	{
+	    entry["key"]	= key;
+	    entry["value"]	= val;
+	    ret	= add (ret, entry);
+	    content_map[key]	= val;
+	}
+    });
+    SCR::UnregisterAgent (.content);
+
+    // + fill the rest
+    foreach (string key, map entry, content_descr, {
+	if (!contains (keys, key))
+	    ret = add (ret, entry);
+    });
+
+    return ret;
+}
+
+
+// read the pattern given by file name
+global map ReadPatternFile (string file_path) {
+
+    y2milestone ("Importing pattern '%1'", file_path);
+
+    map ret	= $[];
+    map pt	= (map) SCR::Read (.pattern, file_path);
+
+    foreach (string key, any val, (map<string,any>) pt, {
+	if (pattern_descr[key,"type"]:"" == "package-list")
+	{
+	    ret[key]	= splitstring (sformat ("%1", val), "\n");
+	    // make the packages included in imported pattern available for UI
+	    available_packages["ZZZ_imported"] = union (
+		available_packages["ZZZ_imported"]:[], ret[key]:[]);
+	}
+	else
+	    ret[key]	= val;
+    });
+    return ret;
+}
+
+// read the package description (package.lang) file
+global map ReadPackagesFile (string file_path) {
+
+    y2milestone ("Importing package description '%1'", file_path);
+
+    map ret	= (map) SCR::Read (.packages_descr, file_path);
+    return ret;
+}
+
+/**
+ * import the data from existing add-on
+ * @param path to existing addon directory
+ */
+global boolean ImportExistingProduct (string dir_path) {
+
+    content	= ReadContentFile (dir_path + "/content");
+
+    rpm_path = sformat("%1/%2", dir_path, content_map["DATADIR"]:"");
+
+    // - read patterns
+    string descr_path = sformat ("%1/%2", dir_path, content_map["DESCRDIR"]:"");
+
+    map out = (map) SCR::Execute (.target.bash_output,
+	sformat ("ls -A1 %1/*.pat 2>/dev/null", descr_path));
+    foreach (string f, splitstring(out["stdout"]:"", "\n"), {
+	if (f == "") return;
+	map pat	= ReadPatternFile (f);
+	if (pat != $[])
+	{
+	    list<string> pt	= splitstring (pat["Pat"]:"", " ");
+	    string name		= pt[0]:"";
+	    if (name != "")
+	    {
+		pat["name"]	= name;
+		pat["version"]	= pt[1]:"";
+		pat["release"]	= pt[2]:"";
+		pat["arch"]	= pt[3]:"";
+		patterns[name]	= pat;
+	    }
+	}
+    });
+
+    if (!generate_descriptions)
+    {
+	SCR::Execute (.target.bash, sformat("/bin/rm -f %1/packages*", tmpdir));
+	// save packages* files to tmpdir, they will be imported later
+	SCR::Execute (.target.bash,
+	    sformat ("/bin/cp %1/packages* %2", descr_path, tmpdir));
+    }
+
+    // read README
+    foreach (string readme, ["README", "README.DOS", "LIESMICH","LIESMICH.DOS"],
+    {
+	string readme_path	= dir_path + "/" + readme;
+	if (FileUtils::Exists (readme_path))
+	{
+	    y2milestone ("Importing readme file '%1'", readme_path);
+	    readme_files[readme]=(string)SCR::Read(.target.string, readme_path);
+	}
+    });
+
+    // read the license files
+    string license_path	= dir_path + "/media.1/license.zip";
+    if (FileUtils::Exists (license_path))
+    {
+	SCR::Execute (.target.bash_output,
+	    sformat ("/usr/bin/unzip -o %1 -d %2", license_path, tmpdir));
+	map out = (map) SCR::Execute (.target.bash_output,
+	    sformat ("ls -A1 %1/license*.txt 2>/dev/null", tmpdir));
+	foreach (string f, splitstring(out["stdout"]:"", "\n"), {
+	    if (f == "") return;
+	    string name	= substring (f, findlastof (f, "/") + 1);
+	    if (issubstring (name, ".txt"))
+		name	= regexpsub (name, "^(.*)\.txt$", "\\1");
+	    y2milestone ("Importing license file '%1'", f);
+	    license_files[name]	= (string) SCR::Read (.target.string, f);
+	});
+    }
+
+    out = (map) SCR::Execute (.target.bash_output,
+	sformat ("ls -A1 %1/COPYING* 2>/dev/null", dir_path));
+    foreach (string f, splitstring(out["stdout"]:"", "\n"), {
+	if (f == "") return;
+	string name	= substring (f, findlastof (f, "/") + 1);
+	y2milestone ("Importing COPYING file '%1'", f);
+	copying_files[name]	= (string) SCR::Read (.target.string, f);
+    });
+
+    out = (map) SCR::Execute (.target.bash_output,
+	sformat ("ls -A1 %1/COPYRIGHT* 2>/dev/null", dir_path));
+    foreach (string f, splitstring(out["stdout"]:"", "\n"), {
+	if (f == "") return;
+	string name	= substring (f, findlastof (f, "/") + 1);
+	y2milestone ("Importing COPYRIGHT file '%1'", f);
+	copyright_files[name]	= (string) SCR::Read (.target.string, f);
+    });
+
+    // FIXME autorun
+
+    // read the content of media.n dirs
+    out = (map) SCR::Execute (.target.bash_output,
+	sformat ("ls -A1 -d %1/media.* 2>/dev/null", dir_path));
+    if (out["stdout"]:"" != "")
+    {
+	foreach (string d, splitstring(out["stdout"]:"", "\n"), {
+	    if (d == "") return;
+	    string products_path	= d + "/products";
+	    if (FileUtils::Exists (products_path))
+	    {
+		y2milestone ("Importing products file '%1'", products_path);
+		products_files	= add (products_files,
+		    (string) SCR::Read (.target.string, products_path));
+	    }
+	    else products_files  = add (products_files, "");
+	    string media_path	= d + "/media";
+	    if (FileUtils::Exists (media_path))
+	    {
+		y2milestone ("Importing media file '%1'", media_path);
+		media_files	= add (media_files,
+		    (string) SCR::Read (.target.string, media_path));
+	    }
+	    else media_files	= add (media_files, "");
+	    string patches_path	= d + "/patches";
+	    if (FileUtils::Exists (patches_path))
+	    {
+		y2milestone ("Importing patches file '%1'", patches_path);
+		patches_files	= add (patches_files,
+		    (string) SCR::Read (.target.string, patches_path));
+	    }
+	    else patches_files	= add (patches_files, "");
+	});
+    }
+
+    string desc_path	= dir_path + "/installation.xml";
+    if (FileUtils::Exists (desc_path))
+    {
+	workflow_path	= desc_path;
+    }
+
+    string workflow_packages_path	= dir_path + "/y2update.tgz";
+    if (FileUtils::Exists (workflow_packages_path))
+    {
+	y2update_path	= workflow_packages_path;
+    }
+
+    return true;
+}
+
+/**
+ * converts the output of find command (=possibly big string with each file on one line),
+ * to the list of smaller strings (<128kB), each with space separated file names
+ * @param stdout output of find command
+ */
+list<string> create_argument_lists (string stdout) {
+
+    list<string> ret	= [];
+    // approximately maximum size of parameters list passed to rpm
+    integer kbytes		= 120;
+    // looks like pre-sorting helps to fasten rpm call
+    list<string> found	= sort (splitstring (stdout, "\n"));
+    if (size (stdout)/1024 <= kbytes)
+	ret	= [ mergestring (found, " ") ];
+    else
+    {
+	string line	= "";
+	foreach (string file, found, {
+	    line	= line + file + " ";
+	    if (size (line) / 1024 > kbytes)
+	    {
+		ret	= add (ret, line);
+		line	= "";
+	    }
+	});
+	if (size (line) / 1024 <= kbytes)
+	    ret	= add (ret, line);
+    }
+    return ret;
+}
+
+// this is used during the workflow, not in the write!
+// TODO change name...
+global void FillContentDefaults () {
+
+    map<string,string> arch_map	= $[];
+
+    // 1. set the values for ARCH.*
+    string cmd	= sformat ("cd %1; find -maxdepth 1 -type d", rpm_path);
+    map out	= (map) SCR::Execute (.target.bash_output, cmd);
+
+    arch_directories	= [];
+    foreach(string d, splitstring(out["stdout"]:"", "\n"), {
+	list splitdir = splitstring (d, "/");
+	string arch_dir	= splitdir[1]:"";
+	if (contains (allowed_archs, arch_dir))
+	{
+	    arch_map["ARCH." + arch_dir ] = ValueForArchitecture (arch_dir);
+	    arch_directories	= add (arch_directories, arch_dir);
+	}
+    });
+    if (!clone)
+    {
+	// 2. get the list of architectures from RPM's
+	out	= (map) SCR::Execute (.target.bash_output,
+	    sformat ("find %1 -name '*.rpm'", rpm_path));
+	y2milestone ("asking the RPM's for ARCH and NAME...");
+	foreach (string f, splitstring (out["stdout"]:"", "\n"), {
+	    if (f == "") return;
+
+	    out = (map) SCR::Execute (.target.bash_output,
+	        sformat ("rpm -q -p %1 --qf \"%%{ARCH}\n%%{NAME}\"", f));
+	    list lines  = splitstring (out["stdout"]:"", "\n");
+	    string arch = lines[0]:"";
+	    string name = lines[1]:"";
+	    if (name != "" && arch != "")
+	    {
+		available_packages[arch] = add (
+		    available_packages[arch]:[], name);
+		package2filename[name]	= f;
+	    }
+	});
+	y2milestone ("... done");
+
+	// 3. add 'guessed' ARCH.base values to the content file
+	if (content_map != $[] || arch_map != $[])
+	{
+	    content	= []; // new proposal
+	    foreach (string key, map entry, content_descr, {
+		if (content_map[key]:"" != "")
+		    entry["value"]	= content_map[key]:"";
+		content	= add (content, entry);
+	    });
+	    map arch_skel	= content_specials["ARCH"]:$[];
+	    foreach (string key, string val, arch_map, {
+		arch_skel["key"]	= key;
+		arch_skel["value"]	= val;
+		content = add (content, arch_skel);
+	    });
+	}
+
+	// 4. read the list of packages, not present on AddOn
+	if (required_rpm_path != "" && required_rpm_path != rpm_path)
+	{
+	    out	= (map) SCR::Execute (.target.bash_output,
+		sformat ("cd %1; find -name '*.rpm'", required_rpm_path));
+	    y2milestone ("asking the RPM's for NAME...");
+	    list<string> inputs		= create_argument_lists (out["stdout"]:"");
+	    string output	= "";
+	    foreach (string input, inputs, {
+		string cmd	= sformat ("cd %1; rpm --qf \"%%{NAME}\n\" -qp %2",
+		    required_rpm_path, input);
+		out	= (map) SCR::Execute (.target.bash_output, cmd);
+		output	= output + out["stdout"]:"" + "\n";
+	    });
+	    // remove empty strings and duplicates
+	    available_packages["ZZZ_required"] = toset (filter (
+		string name, splitstring (output, "\n"), ``(name != "")));
+	    y2milestone ("... done");
+	}
+    }
+
+    // generate tmp package descriptions...
+    // TODO move to other function?
+    if ((generate_descriptions || !clone) &&
+	FileUtils::Exists ("/usr/bin/create_package_descr"))
+    {
+	y2milestone ("creating packages descriptions...");
+	cmd	= sformat("/usr/bin/create_package_descr -d %1 -C -o %2",
+	    rpm_path, tmpdir);
+	SCR::Execute (.target.bash, cmd, $["LANG":"C"]);
+	y2milestone ("... done");
+    }
+    out = (map) SCR::Execute (.target.bash_output,
+	sformat ("ls -A1 %1/packages.* 2>/dev/null", tmpdir));
+    string lang	= "en";
+    foreach (string file, splitstring (out["stdout"]:"", "\n"), {
+	list f	= splitstring (file, ".");
+	lang	= f[size(f)-1]:"en";
+	if (file == "" || lang == "DU") return;
+	packages_descr[lang]	= ReadPackagesFile (file);
+    });
+
+    // we need the list of packages (for patterns), but asking
+    // rpm would be slow, so let's get it from (already existing) descriptions
+    if (clone)
+    {
+	y2milestone ("gathering available_packages from descriptions...");
+	foreach (string p, map d, (map<string,map>) packages_descr[lang]:$[], {
+	    if (p == "___global___") return;
+	    list pkg_list	= splitstring (d["Pkg"]:"", " ");
+	    string arch		= pkg_list[size (pkg_list) -1 ]:"noarch";
+	    available_packages[arch] = add (available_packages[arch]:[], p);
+	});
+    }
+
+}
+
+/**
+ * Update content_map with current value of 'content' list
+ */
+global map<string,string> UpdateContentMap () {
+
+    foreach (map entry, content, {
+	if (entry["value"]:"" != "")
+	    content_map[entry["key"]:""] = entry["value"]:"";
+    });
+    return content_map;
+}
+
+/**
+ * Write the content file
+ * @return success
+ */
+global boolean WriteContentFile (string base_path, list<map> content_data) {
+
+    if (!FileUtils::Exists (base_path))
+	return false;
+
+    string file	= "";
+    foreach (map entry, content_data, {
+	if (entry["value"]:"" != "")
+	{
+	    file = file + sformat ("%1 %2\n",entry["key"]:"",entry["value"]:"");
+	    content_map[entry["key"]:""] = entry["value"]:"";
+	}
+    });
+
+    return SCR::Write (.target.string, base_path + "/content", file);
+}
+
+/**
+ * Write the readme/COPYING/COPYRIGHT... files in base_path
+ * @return success
+ */
+global boolean WriteStringFiles (string base_path, map<string,string> files) {
+
+    boolean ret	= true;
+    foreach (string file, string cont, files, {
+	if (cont != "")
+	    ret = ret && SCR::Write(.target.string, base_path +"/"+ file, cont);
+    });
+    return ret;
+}
+
+
+/**
+ * Create the directory structure of the Add-On
+ * @return success
+ */
+global boolean CreateAddOnStructure (string base_path) {
+
+    if (!FileUtils::Exists (base_path))
+	return false;
+
+    // create the media's directories
+    integer i = 1;
+    integer no_of_medias	= 1; // FIXME layout is different for more media
+    while (i <= no_of_medias)
+    {
+	string media_path	= sformat ("%1/media.%2", base_path, i);
+	full_media_paths	= add (full_media_paths, media_path);
+	SCR::Execute (.target.mkdir, media_path);
+	i = i + 1;
+    }
+
+    // create the data dir
+    if (content_map["DATADIR"]:"" == "")
+    {
+	y2error ("DATADIR is : %1", content_map["DATADIR"]:"");
+	return false;
+    }
+
+    full_data_path =sformat("%1/%2",base_output_path,content_map["DATADIR"]:"");
+    SCR::Execute (.target.mkdir, full_data_path);
+
+    // create the dirs for packages
+    if (arch_directories == [])
+    {
+	foreach (string arch_dir, list pa, available_packages, {
+	    SCR::Execute (.target.mkdir, full_data_path + "/" + arch_dir);
+	});
+    }
+
+    full_descr_path = sformat ("%1/%2", base_path, content_map["DESCRDIR"]:"");
+    SCR::Execute (.target.mkdir, full_descr_path);
+
+    return true;
+}
+
+// generate the package descriptions using create_package_descr
+global boolean GeneratePackageDescriptions () {
+
+    if (!FileUtils::Exists ("/usr/bin/create_package_descr"))
+	return false;
+    string command = sformat ("/usr/bin/create_package_descr -d %1 -C -o %2",
+	full_data_path, full_descr_path);
+    SCR::Execute (.target.bash_output, command, $["LANG":"C"]);
+    return true;
+
+}
+
+// write the package descriptions edited by user
+global boolean WritePackageDescriptions (string descr_path, map descr) {
+
+    boolean ret	= true;
+    foreach (string lang, map data, (map<string,map>)descr, {
+	string file_path	= descr_path + "/packages." + lang;
+	ret	= ret && SCR::Write (.packages_descr, [file_path, data]);
+    });
+    if (ret) // copy the rest of files, generated earlier
+    {
+	SCR::Execute (.target.bash,
+	    sformat ("/bin/rm -f %1/packages %1/packages.DU", descr_path));
+	string cmd = sformat("/bin/cp %1/packages %2", tmpdir, descr_path);
+	SCR::Execute (.target.bash, cmd, $["LANG":"C"]);
+	cmd	= sformat ("/bin/cp %1/packages.DU %2", tmpdir, descr_path);
+	SCR::Execute (.target.bash, cmd, $["LANG":"C"]);
+    }
+    return ret;
+}
+
+/**
+ * Generate ARCHIVES.gz, INDEX.gz and ls-lR.gz
+ */
+global boolean GenerateArchiveFiles (string base_path)
+{
+
+    if (!Package::Installed ("inst-source-utils") &&
+	!FileUtils::Exists ("/usr/bin/mk_listings"))
+    {
+	y2error ("inst-source-utils not installed and mk_listings not present");
+	return false;
+    }
+    map out = (map) SCR::Execute (.target.bash_output,
+	"mk_listings " + base_path);
+    if (out["stderr"]:"" != "")
+    {
+	y2warning ("mk_listings returns %1", out);
+    }
+    return true;
+}
+
+
+/**
+ * Create the patches files
+ * @param base_path path to base output directory
+ * @param list with patches file contents
+ * @return success
+ */
+global boolean WritePatchesFiles (string base_path, list<string> p_files)
+{
+    integer i	= 1;
+    foreach (string cont, p_files, {
+	string file_path = base_path + sformat ("/media.%1/patches", i);
+	if (cont != "")
+	{
+	    SCR::Write (.target.string, file_path, cont);
+	}
+	i	= i + 1;
+    });
+    return true;
+}
+/**
+ * Create the products file FIXME editor - see ExpertSettingsDialog3
+ * @param base_path path to base output directory
+ * @return success
+ */
+global boolean WriteProductsFiles (string base_path, list<string> p_files)
+{
+    integer i	= 1;
+    if (p_files == [])	p_files = [ "" ];
+    foreach (string cont, p_files, {
+	if (cont == "")
+	{
+	    cont = "/\t" +
+		content_map["DISTPRODUCT"]:"" + " " +
+		content_map["VERSION"]:"";
+	}
+	SCR::Write (.target.string,
+	    sformat ("%1/media.%2/products", base_path, i), cont);
+	i	= i + 1;
+    });
+    return true;
+}
+
+/**
+ * Write the media.n/media files
+ * @param base_path path to base output directory
+ * @param m_files list of media files contents
+ * @param next content of nextmedia file
+ * @return success
+ */
+global boolean WriteMediaFiles (string base_path, list<string> m_files,
+    string next)
+{
+    integer i	= 1;
+    if (m_files == [])	m_files = [ "" ];
+    foreach (string cont, m_files, {
+	string media_path = base_path + sformat ("/media.%1", i);
+	if (cont == "")
+	{
+	    string media_id	= "";
+	    map out = (map) SCR::Execute (.target.bash_output,
+		"date +%Y%m%d%H%M%S");
+	    media_id	= deletechars (out["stdout"]:"", "\n");
+	    cont = content_map["VENDOR"]:"" + "\n" + media_id;
+	    if (i == 1)
+		cont	= cont + "\n" + size (m_files);
+	}
+	SCR::Write (.target.string, media_path + "/media", cont);
+	// write nextmedia file if not empty
+	if (i == 1 && next != "")
+	    SCR::Write (.target.string, media_path + "/nextmedia", next);
+	i	= i + 1;
+    });
+    return true;
+}
+
+// write license.txt files in media.1 dir
+global boolean WriteLicensesFiles (string media_path, map<string,string> files){
+
+    if (!Package::Install ("zip"))
+	return false;
+    boolean ret	= true;
+    string cmd	= "";
+    foreach (string file, string cont, files, {
+	if (cont != "")
+	{
+	    integer pos	= findlastof (file, ".");
+	    if (pos == nil || substring (file, pos) != ".txt")
+		file	= file + ".txt";
+	    cmd	= cmd + " " + file;
+	    ret = ret && SCR::Write(.target.string, media_path +"/"+ file,cont);
+	}
+    });
+    if (ret && cmd != "")
+    {
+	cmd	= sformat ("cd %1; zip license.zip -m%2", media_path, cmd);
+	ret	= SCR::Execute (.target.bash, cmd) == 0;
+    }
+    return ret;
+}
+
+/**
+ * Write all files with patterns definitions
+ * TODO use agent...
+ */
+global boolean WritePatterns (string base_path) {
+
+    boolean ret		= true;
+    list<string> names	= [];
+    foreach (string name, map pattern, patterns, {
+	string filename	= CreatePatternFullName (pattern, true);
+	if (filename == "")
+	    return;
+	names		= add (names, filename);
+	string file	= "";
+	foreach (string key, any val, (map<string,any>) pattern, {
+	    map descr		= pattern_descr[key]:$[];
+	    // substring (key,0,3) is because of Des.lang, Sum.lang and Cat.lang
+	    string shortkey	= substring (key,0,3);
+	    if (pattern_descr[shortkey]:$[] != $[] &&
+		substring (key, 3, 1) == ".")
+		descr		= pattern_descr[shortkey]:$[];
+	    if (val == nil || val == "" || val == [] || descr["internal"]:false)
+		return;
+	    if (file != "")
+		file	= file + "\n";
+	    if (descr["type"]:"" == "boolean")
+		val	= (boolean) val ? "true" : "false";
+	    else if (descr["type"]:"" == "package-list")
+		val	= mergestring ((list<string>)val, "\n");
+	    if (descr["single_line"]:false)
+	    {
+		file = file + sformat ("=%1: %2\n", key, val);
+	    }
+	    else
+	    {
+		file = file + sformat ("+%1:\n%2\n-%1:\n", key, val);
+	    }
+	});
+	SCR::Write (.target.string, full_descr_path + "/" + filename, file);
+    });
+    if (names != [])
+	ret = SCR::Write (.target.string, full_descr_path + "/patterns",
+	    mergestring (names, "\n"));
+    return ret;
+}
+
+/**
+ * Copy the packages from the source directory to target
+ * @param in_path source path
+ * @param base_path destination directory
+ * @return success
+ */
+global boolean CopyRPMs (string in_path, string base_path) {
+
+    if (!FileUtils::Exists (base_path) || !FileUtils::Exists (in_path))
+	return false;
+    // packages in the directories with arch name
+    if (arch_directories != [])
+    {
+	foreach (string arch, arch_directories, {
+	    string dir	= in_path + "/" + arch;
+	    if (FileUtils::Exists (dir))
+	    {
+		string target = full_data_path + "/" + arch;
+		SCR::Execute (.target.mkdir, target);
+		y2milestone ("copying from %1 to %2...", dir, target);
+		SCR::Execute (.target.bash_output,
+		    sformat ("/bin/cp -r %1/*.rpm %2/", dir, target));
+	    }
+	});
+    }
+    // packages not in directories but we have asked them for arch's
+    else if (available_packages != $[])
+    {
+	foreach (string arch, list pa, available_packages, {
+	    string out_dir	= full_data_path + "/" + arch;
+	    if (arch != "ZZZ_imported" && arch != "ZZZ_required" &&
+		FileUtils::Exists (out_dir))
+	    {
+		if (size (package2filename) > 0)
+		{
+		    foreach (string p, (list<string>) pa, {
+			SCR::Execute (.target.bash, sformat (
+			    "/bin/cp %1 %2/", package2filename[p]:"", out_dir));
+		    });
+		}
+		else
+		{
+		    foreach (string p, (list<string>) pa, {
+			SCR::Execute (.target.bash, sformat (
+			    "/bin/cp %1/%2*.rpm %3/", in_path, p, out_dir));
+		    });
+		}
+	    }
+	});
+    }
+    return true;
+}
+
+
+/**
+ * Write the modification of installation workflow
+ * @param base_path path to base output directory
+ * @param desc_path path to workflow description file
+ * @param packages list with paths of packages to be included in y2update.tgz
+ * @param y2update path to existing y2update.tgz
+ */
+boolean WriteWorkflow (string base_path,string desc_path, list<string> packages,
+		       string y2update_p)
+{
+    boolean ret = true;
+    if (desc_path != "" && FileUtils::Exists (desc_path))
+    {
+	y2milestone ("writing %1 as %2/installation.xml", desc_path, base_path);
+	SCR::Execute (.target.bash, sformat ("cp %1 %2/installation.xml",
+	    desc_path, base_path));
+    }
+    if (y2update_p != "")
+    {
+	SCR::Execute (.target.bash, sformat ("cp %1 %2/y2update.tgz",
+	    y2update_p, base_path));
+    }
+    else if (packages != [])
+    {
+	string y2update_dir	= tmpdir + "/y2update";
+	SCR::Execute (.target.mkdir, y2update_dir);
+	foreach (string p, packages, {
+	    y2milestone ("extracting %1", p);
+	    string cmd = sformat ("cd %1; rpm2cpio %2 | cpio -imud 2>&1",
+		y2update_dir, p);
+	    y2debug ("extracting rpm: %1", cmd);
+	    map out = (map) SCR::Execute (.target.bash_output, cmd);
+	    if (out["stderr"]:"" != "")
+	    {
+		y2warning ("%1 returned %2", cmd, out);
+	    }
+	});
+	string cmd = sformat ("cd %2; tar -czf %1/y2update.tgz .",
+	    base_path, y2update_dir);
+	y2debug ("tar cmd: %1", cmd);
+	map out = (map) SCR::Execute (.target.bash_output, cmd);
+	if (out["stderr"]:"" != "")
+	{
+	    y2warning ("%1 returned %2", cmd, out);
+	    ret	= false;
+	}
+    }
+    return ret;
+}
+
+/**
+ * Generate servicepack.tar.gz archive for bootable media
+ * @param base_path base output path
+ */
+boolean WriteServicepackArchive (string base_path)
+{
+    boolean ret = true;
+    if (!bootable) return ret;
+
+    string spdir	= tmpdir + "/servicepack";
+    SCR::Execute (.target.mkdir, spdir);
+
+    SCR::Execute (.target.bash,
+	sformat ("cp %1/content* %2/", base_path, spdir));
+
+    SCR::Execute (.target.bash,
+	sformat ("cp %1/gpg-pubkey* %2/", base_path, spdir));
+
+    SCR::Execute (.target.bash,
+	sformat ("cp -r %1/media.1 %2/", base_path,spdir));
+
+    // copy descriptions (with the stucture)
+    string descr_path = sformat ("%1/%2", spdir, content_map["DESCRDIR"]:"");
+    SCR::Execute (.target.mkdir, descr_path);
+    SCR::Execute (.target.bash,
+	sformat("cp %1/* %2/", full_descr_path, descr_path));
+
+    if (workflow_path != "")
+	SCR::Execute (.target.bash, sformat("cp %1/installation.xml %2/",
+	    base_path, spdir));
+    if (FileUtils::Exists (base_path + "/y2update.tgz"))
+	SCR::Execute (.target.bash, sformat("cp %1/y2update.tgz %2",
+	    base_path, spdir));
+
+    // finally, create the archive
+    string cmd = sformat ("cd %1; tar -czf %2/servicepack.tar.gz .",
+	spdir, base_path);
+    y2debug ("tar cmd: %1", cmd);
+    map out = (map) SCR::Execute (.target.bash_output, cmd);
+    if (out["stderr"]:"" != "")
+    {
+	y2warning ("%1 returned %2", cmd, out);
+	ret	= false;
+    }
+    return ret;
+}
+
+// helper to check if directory contains any files (-type f)
+boolean dir_has_files (string dir) {
+
+    if (!FileUtils::Exists (dir))
+	return false;
+    map out = (map) SCR::Execute (.target.bash_output,
+	sformat ("cd %1; find -maxdepth 1 -type f | wc -l", dir));
+    integer count = tointeger(deletechars(out["stdout"]:"0","\n"));
+    return count > 0;
+}
+
+/**
+ * Create MD5SUMS files
+ * @return success
+ */
+global boolean CreateMD5SUMS (string base_path) {
+
+    // after CopyRPMs, arch_directories contains list of directories with RPM's
+    list<string> dirs_for_md5 = maplist (string arch_dir, arch_directories, {
+	return full_data_path + "/" + arch_dir;
+    });
+    dirs_for_md5	= add (dirs_for_md5, full_descr_path);
+    foreach (string full_path, dirs_for_md5, {
+	if (dir_has_files (full_path))
+	{
+	    string command = sformat("cd %1; md5sum * > MD5SUMS", full_path);
+	    map out =
+		(map)SCR::Execute (.target.bash_output, command, $["LANG":"C"]);
+	    if (out["exit"]:0 != 0)
+		y2error ("%1 failed: %2", command, out);
+	}
+    });
+
+    // sha1sums of descriptions
+    map out = (map) SCR::Execute (.target.bash_output,
+	"ls -A1 " + full_descr_path);
+    foreach (string file, splitstring (out["stdout"]:"", "\n"), {
+	if (file == "") return;
+	out = (map) SCR::Execute (.target.bash_output,
+	    sformat ("cd %1 && sha1sum %2", full_descr_path, file),
+	    $["LANG" : "C"]);
+	string command	= sformat ("echo 'META SHA1 %1' >> %2/content",
+	    deletechars (out["stdout"]:"", "\n"), base_path);
+	SCR::Execute (.target.bash, command, $["LANG" : "C"]);
+    });
+
+    return true;
+}
+
+/**
+ * Sign the add-on
+ */
+global boolean SignAddOn (string base_path, string key) {
+
+    if (key == "")
+    {
+	y2warning ("No GPG key provided - signing skipped");
+	return true;
+    }
+
+    string command = sformat ("gpg --list-secret-keys %1|grep '^sec'|sed -e 's/.*\\///;s/ .*//g;'|head -n 1", key);
+    map out = (map)SCR::Execute (.target.bash_output, command, $["LANG" : "C"]);
+    string local_key	= deletechars (out["stdout"]:"0","\n");
+
+    out = (map)SCR::Execute (.target.bash_output, sformat ("gpg --list-secret-keys --with-colons %1| grep %2 | gawk -F: '{print $5}'| sed 's/........$//g'", key, local_key));
+    string big_key	= deletechars (out["stdout"]:"0","\n");
+
+    // first, export the key:
+    command = sformat ("gpg --export -a %1 > %2/gpg-pubkey-%3-%1.asc",
+	local_key, base_path, big_key);
+    SCR::Execute (.target.bash, command, $["LANG" : "C"]);
+
+    // than, make a sha1 sum of that key (content file is modified last time)
+    // TODO move this out?
+    out = (map) SCR::Execute (.target.bash_output,
+	sformat ("cd %1; ls -A1 gpg-pubkey*", base_path));
+
+    foreach (string file, splitstring (out["stdout"]:"", "\n"), {
+	if (file == "") return;
+	out = (map) SCR::Execute (.target.bash_output,
+	    sformat ("cd %1 && sha1sum %2", base_path, file),
+	    $["LANG" : "C"]);
+	string command	= sformat ("echo 'KEY SHA1 %1' >> %2/content",
+	    deletechars (out["stdout"]:"", "\n"), base_path);
+	SCR::Execute (.target.bash, command, $["LANG" : "C"]);
+    });
+
+    // save the passphrase
+    string pw_path	= tmpdir + "/pw";
+    SCR::Write (.target.string, pw_path, passphrase);
+
+    // sign the content file
+    SCR::Execute (.target.bash, sformat ("rm -f %1/content.asc", base_path));
+    if (passphrase != "")
+	SCR::Execute (.target.bash, sformat("
+	    gpg --passphrase-fd 0 --detach-sign -u %1 -a %2/content < %3",
+	    local_key, base_path, pw_path));
+    else
+	SCR::Execute (.target.bash, sformat("
+	    gpg --detach-sign -u %1 -a %2/content", local_key, base_path));
+
+    SCR::Execute (.target.bash,
+	sformat("gpg --export -a -u %1 > %2/content.key",local_key, base_path));
+
+    // sign products file
+    string products_path = full_media_paths[0]:"" + "/products";
+    if (FileUtils::Exists (products_path))
+    {
+	SCR::Execute (.target.bash, sformat ("rm -f %1.asc", products_path));
+	SCR::Execute (.target.bash,
+	    sformat("gpg --passphrase-fd 0 --detach-sign -u %1 -a %2 < %3",
+	    local_key, products_path, pw_path));
+	SCR::Execute (.target.bash,
+	    sformat("gpg --export -a -u %1 > %2.key", local_key,products_path));
+    }
+    SCR::Execute (.target.remove, pw_path);
+    return true;
+}
+
+/**
+ * Create directory.yast files (the last step)
+ * @return success
+ */
+global boolean CreateDirectoryYaSTFiles (string base_path) {
+
+    foreach (string dir, (list<string>) merge (
+	[base_path, full_descr_path], full_media_paths),
+    {
+	SCR::Execute (.target.bash_output, sformat ("cd %1; ls -A1 -p | grep -v 'directory.yast' > directory.yast", dir), $["LANG" : "C"]);
+    });
+    return true;
+}
+
+/**
+ * Create an ISO image of the product
+ */
+global boolean CreateISOImage (string dir_path, string iso_p, string name) {
+
+    if (!iso) return true;
+
+    if (name == "")
+	name	= sformat ("%1-%2-%3",
+	    tolower (content_map["DISTPRODUCT"]:content_map["PRODUCT"]:"addon"),
+	    content_map["DISTVERSION"]:"", content_map["DEFAULTBASE"]:"");
+
+    if (!issubstring (name, ".iso"))
+	name	= name + ".iso";
+
+    // possible options -allow-leading-dots
+    string cmd	= sformat("mkisofs -r -J -l -o %1/%2 %3",iso_p, name, dir_path);
+    map out	= (map) SCR::Execute (.target.bash_output, cmd);
+    if (out["exit"]:0 != 0)
+    {
+	y2warning ("%1 returned %2", cmd, out);
+    }
+    return true;
+}
+
+
+/**
+ * Write all add-on-creator settings
+ * @return true on success
+ */
+global boolean Write() {
+
+    /* AddOnCreator read dialog caption */
+    string caption	= _("Creating the Add-On");
+
+    list<string> stages	= [
+	    // Progress stage
+	    _("Write the content file"),
+	    // Progress stage
+	    _("Create the structure of the add-on"),
+	    // Progress stage
+	    _("Write the patterns"),
+	    // Progress stage
+	    _("Copy the packages"),
+	    // Progress stage
+	    _("Create MD5 sums"),
+    ];
+    list<string> steps	= [
+	    // Progress step
+	    _("Writing the content file..."),
+	    // Progress step
+	    _("Creating the structure of the add-on..."),
+	    // Progress stage
+	    _("Writing the patterns..."),
+	    // Progress step
+	    _("Copying the packages..."),
+	    // Progress step
+	    _("Creating MD5 sums..."),
+    ];
+
+    if (iso)
+    {
+	// Progress stage
+	stages	= add (stages, _("Create ISO image"));
+	// Progress step
+	steps	= add (steps, _("Creating ISO image..."));
+    }
+    // Progress finished
+    steps   = add (steps, _("Finished"));
+
+    Progress::New (caption, " ", size (stages), stages, steps, "");
+
+    Progress::NextStage();
+
+    if (iso)
+    {
+	iso_path	= base_output_path;
+	base_output_path= tmpdir + "/output";
+	SCR::Execute (.target.mkdir, base_output_path);
+    }
+
+    if (!WriteContentFile (base_output_path, content))
+    {
+	// Error message (do not translate 'content'
+	Report::Error (_("Cannot write content file."));
+    }
+
+    WriteStringFiles (base_output_path, readme_files);
+    WriteStringFiles (base_output_path, copying_files);
+    WriteStringFiles (base_output_path, copyright_files);
+
+    Progress::NextStage();
+
+    if (!CreateAddOnStructure (base_output_path))
+    {
+	// Error message
+	Report::Error (_("Cannot create the output directory structure."));
+    }
+
+    WritePatchesFiles (base_output_path, patches_files);
+
+    WriteProductsFiles (base_output_path, products_files);
+
+    WriteMediaFiles (base_output_path, media_files, nextmedia);
+
+    WriteLicensesFiles (full_media_paths[0]:"", license_files);
+
+    if (info != "")
+	SCR::Write (.target.string, full_media_paths[0]:"" + "/info.txt", info);
+
+    Progress::NextStage();
+
+    WritePatterns (base_output_path);
+
+    Progress::NextStage();
+
+    CopyRPMs (rpm_path, base_output_path);
+
+    WritePackageDescriptions (full_descr_path, packages_descr);
+
+    WriteWorkflow (
+	base_output_path, workflow_path, y2update_packages, y2update_path);
+
+    Progress::NextStage();
+
+    GenerateArchiveFiles (base_output_path);
+
+    CreateMD5SUMS (base_output_path);
+
+    SignAddOn (base_output_path, gpg_key);
+
+    WriteServicepackArchive (base_output_path);
+
+    CreateDirectoryYaSTFiles (base_output_path);
+
+    if (iso)
+    {
+	Progress::NextStage();
+	CreateISOImage (base_output_path, iso_path, iso_name);
+    }
+
+    Progress::NextStage();
+
+    return true;
+}
+
+/* EOF */
+}

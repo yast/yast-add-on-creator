@@ -1,0 +1,85 @@
+-------------------------------------------------------------------
+Wed Jan 31 08:58:24 CET 2007 - jsuchome@suse.cz
+
+- initial version for STABLE
+- 2.15.0 
+
+-------------------------------------------------------------------
+Tue Jan 30 10:52:26 CET 2007 - jsuchome@suse.cz
+
+- fixed pattern aggent to read language specific keys (#239828)
+- do not sign theproduct when key was not provided (#238282)
+- 2.13.11
+
+-------------------------------------------------------------------
+Thu Dec 14 11:31:53 CET 2006 - jsuchome@suse.cz
+
+- optimize the speed of reading package names (#220535)
+- 2.13.10
+
+-------------------------------------------------------------------
+Wed Nov 15 12:31:02 CET 2006 - jsuchome@suse.cz
+
+- configure iso image file name (#220534)
+- always generate ARCHIVES.gz, INDEX.gz and ls-lR.gz (#221220)
+- offer additional path to packages for editing patterns (#220535)
+- 2.13.9
+
+-------------------------------------------------------------------
+Mon Oct 23 14:00:54 CEST 2006 - jsuchome@suse.cz
+
+- used existing yast-addon.png icon (#213875)
+- 2.13.8
+
+-------------------------------------------------------------------
+Mon Oct 23 10:53:42 CEST 2006 - jsuchome@suse.cz
+
+- support for generating servicepack.tar.gz
+- import 'patches' file
+- minor performance improvements
+- fixed desktop file (#213878)
+- 2.13.7
+
+-------------------------------------------------------------------
+Tue Oct  3 09:17:44 CEST 2006 - jsuchome@suse.cz
+
+- merged proofread texts 
+- 2.13.6
+
+-------------------------------------------------------------------
+Wed Sep 20 14:11:22 CEST 2006 - jsuchome@suse.cz
+
+- added generation of GPG keys
+- 2.13.5 
+
+-------------------------------------------------------------------
+Mon Sep 11 16:30:29 CEST 2006 - jsuchome@suse.cz
+
+- removed SL10.1 from the list of offered products
+- text fixes from rwalter@suse.de 
+- 2.13.4
+
+-------------------------------------------------------------------
+Thu Aug 24 13:36:00 CEST 2006 - jsuchome@suse.cz
+
+- dialog configuration for workflow
+- simple (=not bootable) ISO creating
+- updated help texts
+- 2.13.3
+
+-------------------------------------------------------------------
+Tue Aug 22 11:18:29 CEST 2006 - jsuchome@suse.cz
+
+- added reading (importing) of media files (in media.n directories)
+- 2.13.2 
+
+-------------------------------------------------------------------
+Wed Aug 16 08:22:31 CEST 2006 - jsuchome@suse.cz
+
+- removed agent for content file (already exists in yast2 package) 
+- 2.13.1
+
+-------------------------------------------------------------------
+Thu Aug 10 16:36:55 2006 - jsuchome@suse.cz
+
+- initial version

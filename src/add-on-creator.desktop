@@ -1,0 +1,24 @@
+[Desktop Entry]
+Type=Application
+Categories=Qt;X-SuSE-YaST;X-SuSE-YaST-Misc;
+
+X-KDE-ModuleType=Library
+X-KDE-RootOnly=true
+X-KDE-HasReadOnlyMode=true
+X-KDE-Library=yast2
+X-SuSE-YaST-Call=add-on-creator
+
+X-SuSE-YaST-Group=Misc
+X-SuSE-YaST-Argument=
+X-SuSE-YaST-RootOnly=true
+X-SuSE-YaST-AutoInst=
+X-SuSE-YaST-Geometry=
+X-SuSE-YaST-SortKey=
+X-SuSE-YaST-AutoInstResource=add-on-creator
+
+Icon=yast-addon
+Exec=/sbin/yast2 add-on-creator 
+
+Name=Add-On Creator
+GenericName=Create Add-On product
+X-KDE-SubstituteUID=true
