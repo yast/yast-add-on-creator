@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Mar  5 15:37:53 CET 2007 - jsuchome@suse.cz
+
+- do not require autoyast2-utils, there is inst-source-utils (#250860)
+- 2.13.12 
+
+-------------------------------------------------------------------
 Tue Jan 30 10:52:26 CET 2007 - jsuchome@suse.cz
 
 - fixed pattern aggent to read language specific keys (#239828)
