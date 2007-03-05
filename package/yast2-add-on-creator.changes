@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Mar  5 15:36:31 CET 2007 - jsuchome@suse.cz
+
+- do not require autoyast2-utils, there is inst-source-utils (#250860)
+- 2.15.1
+
+-------------------------------------------------------------------
 Wed Jan 31 08:58:24 CET 2007 - jsuchome@suse.cz
 
 - initial version for STABLE
