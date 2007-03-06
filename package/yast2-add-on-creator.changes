@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Mar  6 13:24:15 CET 2007 - jsuchome@suse.cz
+
+- do not allow special characters in pattern names (#251317)
+- 2.15.2
+
+-------------------------------------------------------------------
 Mon Mar  5 15:36:31 CET 2007 - jsuchome@suse.cz
 
 - do not require autoyast2-utils, there is inst-source-utils (#250860)
