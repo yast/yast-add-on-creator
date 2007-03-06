@@ -13,6 +13,7 @@ textdomain "add-on-creator";
 
 import "Label";
 import "Popup";
+import "String";
 import "Wizard";
 import "AddOnCreator";
 
@@ -55,6 +56,7 @@ string AddPattern (list<string> conflicts) {
 	`HSpacing(1)
     ));
     UI::SetFocus (`id(`patname));
+    UI::ChangeWidget (`id (`patname), `ValidChars, String::CAlnum () + "-_=.");
     while (true)
     {
 	any result = UI::UserInput ();

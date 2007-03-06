@@ -41,6 +41,7 @@ import "Package";
 import "Popup";
 import "Progress";
 import "Report";
+import "String";
 
 
 // variables from content file, + their description
@@ -1555,7 +1556,7 @@ global boolean CreateMD5SUMS (string base_path) {
     foreach (string full_path, dirs_for_md5, {
 	if (dir_has_files (full_path))
 	{
-	    string command = sformat("cd %1; md5sum * > MD5SUMS", full_path);
+	    string command = sformat("cd %1; md5sum -- * > MD5SUMS", full_path);
 	    map out =
 		(map)SCR::Execute (.target.bash_output, command, $["LANG":"C"]);
 	    if (out["exit"]:0 != 0)
@@ -1569,7 +1570,7 @@ global boolean CreateMD5SUMS (string base_path) {
     foreach (string file, splitstring (out["stdout"]:"", "\n"), {
 	if (file == "") return;
 	out = (map) SCR::Execute (.target.bash_output,
-	    sformat ("cd %1 && sha1sum %2", full_descr_path, file),
+	    sformat ("cd %1 && sha1sum -- %2", full_descr_path, String::Quote (file)),
 	    $["LANG" : "C"]);
 	string command	= sformat ("echo 'META SHA1 %1' >> %2/content",
 	    deletechars (out["stdout"]:"", "\n"), base_path);
@@ -1584,7 +1585,7 @@ global boolean CreateMD5SUMS (string base_path) {
  */
 global boolean SignAddOn (string base_path, string key) {
 
-    if (key == "")
+    if (key == "" || passphrase == "")
     {
 	y2warning ("No GPG key provided - signing skipped");
 	return true;
@@ -1610,7 +1611,7 @@ global boolean SignAddOn (string base_path, string key) {
     foreach (string file, splitstring (out["stdout"]:"", "\n"), {
 	if (file == "") return;
 	out = (map) SCR::Execute (.target.bash_output,
-	    sformat ("cd %1 && sha1sum %2", base_path, file),
+	    sformat ("cd %1 && sha1sum -- %2", base_path, String::Quote (file)),
 	    $["LANG" : "C"]);
 	string command	= sformat ("echo 'KEY SHA1 %1' >> %2/content",
 	    deletechars (out["stdout"]:"", "\n"), base_path);
