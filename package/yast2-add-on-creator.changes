@@ -1,4 +1,13 @@
 -------------------------------------------------------------------
+Thu Apr  5 10:27:32 CEST 2007 - jsuchome@suse.cz
+
+- added basic Export functionality to support calls from other
+  modules (F301945)
+- added command line interface (F302049)
+- report error if gpg fails (#260588)
+- 2.15.3
+
+-------------------------------------------------------------------
 Tue Mar  6 13:24:15 CET 2007 - jsuchome@suse.cz
 
 - do not allow special characters in pattern names (#251317)
