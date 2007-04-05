@@ -23,7 +23,7 @@ Summary:	YaST module for creating Add-On product
 %defattr(-,root,root)
 %dir @yncludedir@/add-on-creator
 @yncludedir@/add-on-creator/*
-@clientdir@/add-on-creator.ycp
+@clientdir@/add-on-creator*.ycp
 @moduledir@/AddOnCreator.*
 @desktopdir@/add-on-creator.desktop
 #agents:

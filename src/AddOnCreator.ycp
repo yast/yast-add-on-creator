@@ -703,7 +703,7 @@ global boolean Read() {
     });
 
     tmpdir	= Directory::tmpdir;
-
+    media_files	= []; // reset due to calls from cd-creator?
     return true;
 }
 
@@ -1106,8 +1106,7 @@ global map<string,string> UpdateContentMap () {
  */
 global boolean WriteContentFile (string base_path, list<map> content_data) {
 
-    if (!FileUtils::Exists (base_path))
-	return false;
+    if (!FileUtils::Exists (base_path)) return false;
 
     string file	= "";
     foreach (map entry, content_data, {
@@ -1127,6 +1126,8 @@ global boolean WriteContentFile (string base_path, list<map> content_data) {
  */
 global boolean WriteStringFiles (string base_path, map<string,string> files) {
 
+    if (!FileUtils::Exists (base_path)) return false;
+
     boolean ret	= true;
     foreach (string file, string cont, files, {
 	if (cont != "")
@@ -1142,8 +1143,7 @@ global boolean WriteStringFiles (string base_path, map<string,string> files) {
  */
 global boolean CreateAddOnStructure (string base_path) {
 
-    if (!FileUtils::Exists (base_path))
-	return false;
+    if (!FileUtils::Exists (base_path)) return false;
 
     // create the media's directories
     integer i = 1;
@@ -1163,7 +1163,7 @@ global boolean CreateAddOnStructure (string base_path) {
 	return false;
     }
 
-    full_data_path =sformat("%1/%2",base_output_path,content_map["DATADIR"]:"");
+    full_data_path =sformat("%1/%2", base_path,content_map["DATADIR"]:"");
     SCR::Execute (.target.mkdir, full_data_path);
 
     // create the dirs for packages
@@ -1183,8 +1183,8 @@ global boolean CreateAddOnStructure (string base_path) {
 // generate the package descriptions using create_package_descr
 global boolean GeneratePackageDescriptions () {
 
-    if (!FileUtils::Exists ("/usr/bin/create_package_descr"))
-	return false;
+    if (!FileUtils::Exists ("/usr/bin/create_package_descr")) return false;
+
     string command = sformat ("/usr/bin/create_package_descr -d %1 -C -o %2",
 	full_data_path, full_descr_path);
     SCR::Execute (.target.bash_output, command, $["LANG":"C"]);
@@ -1194,6 +1194,8 @@ global boolean GeneratePackageDescriptions () {
 
 // write the package descriptions edited by user
 global boolean WritePackageDescriptions (string descr_path, map descr) {
+
+    if (!FileUtils::Exists (descr_path)) return false;
 
     boolean ret	= true;
     foreach (string lang, map data, (map<string,map>)descr, {
@@ -1217,13 +1219,14 @@ global boolean WritePackageDescriptions (string descr_path, map descr) {
  */
 global boolean GenerateArchiveFiles (string base_path)
 {
-
     if (!Package::Installed ("inst-source-utils") &&
 	!FileUtils::Exists ("/usr/bin/mk_listings"))
     {
 	y2error ("inst-source-utils not installed and mk_listings not present");
 	return false;
     }
+    if (!FileUtils::Exists (base_path)) return false;
+
     map out = (map) SCR::Execute (.target.bash_output,
 	"mk_listings " + base_path);
     if (out["stderr"]:"" != "")
@@ -1242,6 +1245,8 @@ global boolean GenerateArchiveFiles (string base_path)
  */
 global boolean WritePatchesFiles (string base_path, list<string> p_files)
 {
+    if (!FileUtils::Exists (base_path)) return false;
+
     integer i	= 1;
     foreach (string cont, p_files, {
 	string file_path = base_path + sformat ("/media.%1/patches", i);
@@ -1260,6 +1265,8 @@ global boolean WritePatchesFiles (string base_path, list<string> p_files)
  */
 global boolean WriteProductsFiles (string base_path, list<string> p_files)
 {
+    if (!FileUtils::Exists (base_path)) return false;
+
     integer i	= 1;
     if (p_files == [])	p_files = [ "" ];
     foreach (string cont, p_files, {
@@ -1283,9 +1290,10 @@ global boolean WriteProductsFiles (string base_path, list<string> p_files)
  * @param next content of nextmedia file
  * @return success
  */
-global boolean WriteMediaFiles (string base_path, list<string> m_files,
-    string next)
+global boolean WriteMediaFiles (string base_path, list<string> m_files, string next)
 {
+    if (!FileUtils::Exists (base_path)) return false;
+
     integer i	= 1;
     if (m_files == [])	m_files = [ "" ];
     foreach (string cont, m_files, {
@@ -1312,8 +1320,9 @@ global boolean WriteMediaFiles (string base_path, list<string> m_files,
 // write license.txt files in media.1 dir
 global boolean WriteLicensesFiles (string media_path, map<string,string> files){
 
-    if (!Package::Install ("zip"))
+    if (!Package::Install ("zip") || !FileUtils::Exists (media_path))
 	return false;
+
     boolean ret	= true;
     string cmd	= "";
     foreach (string file, string cont, files, {
@@ -1339,6 +1348,8 @@ global boolean WriteLicensesFiles (string media_path, map<string,string> files){
  * TODO use agent...
  */
 global boolean WritePatterns (string base_path) {
+
+    if (!FileUtils::Exists (base_path)) return false;
 
     boolean ret		= true;
     list<string> names	= [];
@@ -1444,6 +1455,8 @@ global boolean CopyRPMs (string in_path, string base_path) {
 boolean WriteWorkflow (string base_path,string desc_path, list<string> packages,
 		       string y2update_p)
 {
+    if (!FileUtils::Exists (base_path)) return false;
+
     boolean ret = true;
     if (desc_path != "" && FileUtils::Exists (desc_path))
     {
@@ -1490,6 +1503,8 @@ boolean WriteWorkflow (string base_path,string desc_path, list<string> packages,
  */
 boolean WriteServicepackArchive (string base_path)
 {
+    if (!FileUtils::Exists (base_path)) return false;
+
     boolean ret = true;
     if (!bootable) return ret;
 
@@ -1534,8 +1549,8 @@ boolean WriteServicepackArchive (string base_path)
 // helper to check if directory contains any files (-type f)
 boolean dir_has_files (string dir) {
 
-    if (!FileUtils::Exists (dir))
-	return false;
+    if (!FileUtils::Exists (dir)) return false;
+
     map out = (map) SCR::Execute (.target.bash_output,
 	sformat ("cd %1; find -maxdepth 1 -type f | wc -l", dir));
     integer count = tointeger(deletechars(out["stdout"]:"0","\n"));
@@ -1547,6 +1562,8 @@ boolean dir_has_files (string dir) {
  * @return success
  */
 global boolean CreateMD5SUMS (string base_path) {
+
+    if (!FileUtils::Exists (base_path)) return false;
 
     // after CopyRPMs, arch_directories contains list of directories with RPM's
     list<string> dirs_for_md5 = maplist (string arch_dir, arch_directories, {
@@ -1656,6 +1673,8 @@ global boolean SignAddOn (string base_path, string key) {
  */
 global boolean CreateDirectoryYaSTFiles (string base_path) {
 
+    if (!FileUtils::Exists (base_path)) return false;
+
     foreach (string dir, (list<string>) merge (
 	[base_path, full_descr_path], full_media_paths),
     {
@@ -1670,6 +1689,8 @@ global boolean CreateDirectoryYaSTFiles (string base_path) {
 global boolean CreateISOImage (string dir_path, string iso_p, string name) {
 
     if (!iso) return true;
+
+    if (!FileUtils::Exists (dir_path) || !FileUtils::Exists (iso_p)) return false;
 
     if (name == "")
 	name	= sformat ("%1-%2-%3",
@@ -1808,6 +1829,26 @@ global boolean Write() {
     Progress::NextStage();
 
     return true;
+}
+
+/**
+ * Export the settings about current Add-On product
+ */
+global map Export () {
+
+    return $[
+	"base_output_path"	: base_output_path,
+	"iso"			: iso,
+	"iso_name"		: iso_name,
+	"iso_path"		: iso_path,
+	"product_path"		: iso ? (iso_path + "/" + iso_name) : base_output_path,
+    ];
+}
+
+global boolean Import (map settings) {
+
+    y2warning ("not implemented");
+    return false;
 }
 
 /* EOF */
