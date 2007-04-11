@@ -41,10 +41,297 @@ textdomain "add-on-creator";
 y2milestone ("----------------------------------------");
 y2milestone ("AddOnCreator module started");
 
+import "AddOnCreator";
 import "CommandLine";
+import "Directory";
+import "FileUtils";
 import "PackageSystem";
 
 include "add-on-creator/wizards.ycp";
+
+void ReportMissingFile (string file) {
+    // error message, %1 is path
+    Report::Error (sformat (_("File %1 does not exists"), file));
+}
+
+void ReportMissingDir (string dir) {
+    // error message, %1 is path
+    Report::Error (sformat (_("Directory %1 does not exists"), dir));
+}
+
+// helper for parsing command line data regarding iso creation
+void ParseISOData (map<string,any> options) {
+
+    AddOnCreator::iso	= haskey (options, "create_iso");
+    if (haskey (options, "iso_name"))
+    {
+	AddOnCreator::iso	= true;
+	AddOnCreator::iso_name	= options["iso_name"]:"";
+    }
+    if (haskey (options, "iso_output_dir"))
+    {
+	AddOnCreator::iso	= true;
+	AddOnCreator::iso_path	= options["iso_output_dir"]:"";
+    }
+}
+
+// helper for parsing command line data regarding product signing
+void ParseGPGData (map<string,any> options) {
+
+    if (haskey (options, "gpg_key"))
+	AddOnCreator::gpg_key	= options["gpg_key"]:AddOnCreator::gpg_key;
+    if (haskey (options, "passphrase"))
+	AddOnCreator::passphrase	= options["passphrase"]:"";
+    else if (haskey (options, "passphrase_file"))
+    {
+	string file = options["passphrase_file"]:"";
+	if (FileUtils::Exists (file))
+	{
+	    string passphrase	= (string) SCR::Read (.target.string, file);
+	    if (passphrase != nil)	AddOnCreator::passphrase = passphrase;
+	}
+	else
+	{
+	    ReportMissingFile (file);
+	}
+    }
+    else
+	AddOnCreator::passphrase	=
+	    // question on command line
+	    CommandLine::PasswordInput(sformat (_("Passphrase for key %1:"),AddOnCreator::gpg_key));
+}
+
+/**
+ * General function for creating new add-on
+ */
+boolean Create (map<string,any> options ) {
+
+    if (!haskey (options, "output_dir"))
+    {
+	// error message
+	Report::Error (_("Path to output directory is missing."));
+	return false;
+    }
+    else
+	AddOnCreator::base_output_path	= options["output_dir"]:"";
+
+    // now we can import different content file if it was provided
+    if (haskey (options, "content"))
+    {
+	string file	= options["content"]:"";
+	if (FileUtils::Exists (file))
+	{
+	    list<map> content = AddOnCreator::ReadContentFile (file);
+	    if (content != nil)
+	    {
+		AddOnCreator::content	= content;
+		AddOnCreator::UpdateContentMap ();
+	    }
+	}
+	else
+	{
+	    ReportMissingFile (file);
+	    if (!AddOnCreator::clone)
+		return false;
+	}
+    }
+    if (haskey (options, "package_descriptions_dir"))
+    {
+	string dir	= options["package_descriptions_dir"]:"";
+	if (FileUtils::Exists (dir))
+	{
+	    // find all packages.langcode in dir and import them
+	    map out = (map) SCR::Execute (.target.bash_output,
+		sformat ("ls -A1 %1/packages.* 2>/dev/null", dir));
+	    foreach (string file, splitstring (out["stdout"]:"", "\n"), {
+		list f		= splitstring (file, ".");
+		string lang	= f[size(f)-1]:"en";
+		if (file == "" || lang == "DU") return;
+		AddOnCreator::packages_descr[lang] = AddOnCreator::ReadPackagesFile (file);
+	    });
+	}
+	else
+	{
+	    ReportMissingDir (dir);
+	}
+    }
+    if (haskey (options, "patterns_dir"))
+    {
+	string dir	= options["patterns_dir"]:"";
+	if (FileUtils::Exists (dir))
+	{
+	    // find all packages.langcode in dir and import them
+	    map out = (map) SCR::Execute (.target.bash_output,
+		sformat ("ls -A1 %1/*.pat 2>/dev/null", dir));
+	    foreach (string f, splitstring(out["stdout"]:"", "\n"), {
+		if (f == "") return;
+		map pat	= AddOnCreator::ReadPatternFile (f);
+		if (pat != $[])
+		{
+		    list<string> pt	= splitstring (pat["Pat"]:"", " ");
+		    string name		= pt[0]:"";
+		    if (name != "")
+		    {
+			pat["name"]	= name;
+			pat["version"]	= pt[1]:"";
+			pat["release"]	= pt[2]:"";
+			pat["arch"]	= pt[3]:"";
+			AddOnCreator::patterns[name]	= pat;
+		    }
+		}
+	    });
+	}
+	else
+	{
+	    ReportMissingDir (dir);
+	}
+    }
+    ParseISOData (options);
+
+    if (haskey (options, "license"))
+    {
+	string file	= options["license"]:"";
+	if (!FileUtils::Exists ("/usr/bin/unzip"))
+	{
+	    // error message, missing tool
+	    Report::Error (_("/usr/bin/unzip does not exists"));
+	}
+	else if (FileUtils::Exists (file))
+	{
+	    string tmpdir	= Directory::tmpdir;
+	    SCR::Execute (.target.bash_output,
+		sformat ("/usr/bin/unzip -o %1 -d %2", file, tmpdir));
+	    map out = (map) SCR::Execute (.target.bash_output,
+		sformat ("ls -A1 %1/license*.txt 2>/dev/null", tmpdir));
+	    foreach (string f, splitstring(out["stdout"]:"", "\n"), {
+		if (f == "") return;
+		string name	= substring (f, findlastof (f, "/") + 1);
+		if (issubstring (name, ".txt"))
+		    name	= regexpsub (name, "^(.*)\.txt$", "\\1");
+		y2milestone ("Importing license file '%1'", f);
+		AddOnCreator::license_files[name] = (string) SCR::Read (.target.string, f);
+	    });
+	}
+	else
+	{
+	    ReportMissingFile (file);
+	}
+    }
+
+    if (haskey (options, "workflow"))
+    {
+	string file	= options["workflow"]:"";
+	if (FileUtils::Exists (file))
+	{
+	    AddOnCreator::workflow_path	= file;
+	}
+	else
+	{
+	    ReportMissingFile (file);
+	}
+    }
+
+    if (haskey (options, "y2update"))
+    {
+	string file	= options["y2update"]:"";
+	if (FileUtils::Exists (file))
+	{
+	    AddOnCreator::y2update_path	= file;
+	}
+	else
+	{
+	    ReportMissingFile (file);
+	}
+    }
+    else if (haskey (options, "y2update_packages_dir"))
+    {
+	string dir = options["y2update"]:"";
+	if (FileUtils::Exists (dir))
+	{
+	    map out = (map) SCR::Execute (.target.bash_output,
+		sformat ("ls -A1 %1/*.rpm 2>/dev/null", dir));
+	    AddOnCreator::y2update_packages = filter (string f, splitstring(out["stdout"]:"", "\n"),
+		``(f != ""));
+	}
+	else
+	{
+	    ReportMissingDir (dir);
+	}
+    }
+
+    if (!haskey (options, "do_not_sign"))
+    {
+	ParseGPGData (options);
+    }
+    return true;
+}
+
+/**
+ * Command line handler for creating new add-on from scratch
+ */
+boolean CreateAddOn (map<string,any> options) {
+
+    AddOnCreator::clone	= false;
+    AddOnCreator::rpm_path	= options["rpm_dir"]:"";
+    if (AddOnCreator::rpm_path == "")
+    {
+	// error message
+	Report::Error (_("Path to directory with packages is missing."));
+	return false;
+    }
+    if (!haskey (options, "content"))
+    {
+	// error message
+	Report::Error (_("Path to content file is missing."));
+	return false;
+    }
+    AddOnCreator::FillContentDefaults ();
+    return Create (options);
+}
+
+/**
+ * Command line handler for clonig existing add-on
+ */
+boolean CloneAddOn (map<string,any> options) {
+
+    AddOnCreator::clone	= true;
+    AddOnCreator::import_path	= options["existing"]:"";
+    if (AddOnCreator::import_path == "")
+    {
+	// error message
+	Report::Error (_("Path to existing Add-On is missing."));
+	return false;
+    }
+    AddOnCreator::generate_descriptions	= options["generate_descriptions"]:false;
+    AddOnCreator::ImportExistingProduct (AddOnCreator::import_path);
+    AddOnCreator::FillContentDefaults (); // TODO not necessary when content is provided?
+    return Create (options);
+}
+
+/**
+ * Command line handler for signing existing Add-On
+ */
+boolean SignAddOn (map<string,any> options) {
+
+    AddOnCreator::only_sign_product	= false;
+    if (!haskey (options, "addon_dir"))
+    {
+	// error message
+	Report::Error (_("Path to directory with Add-On is missing."));
+	return false;
+    }
+    else
+	AddOnCreator::base_output_path	= options["addon_dir"]:"";
+
+    // we need to import same data from existing add-on (e.g. for iso name)
+    AddOnCreator::ImportExistingProduct (AddOnCreator::base_output_path);
+    AddOnCreator::FillContentDefaults ();
+
+    ParseGPGData (options);
+    ParseISOData (options);
+    AddOnCreator::only_sign_product	= true;
+    return true;
+}
 
 map cmdline_description = $[
     "id"	: "add-on-creator",
@@ -54,10 +341,129 @@ map cmdline_description = $[
     "initialize"        : AddOnCreator::Read,
     "finish"            : AddOnCreator::Write,
     "actions"           : $[
+	"create"	: $[
+	    "handler"	: CreateAddOn,
+	    // command line help text for 'create' action
+	    "help"	: _("Create new Add-On Product"),
+	],
+	"clone"		: $[
+	    "handler"	: CloneAddOn,
+	    // command line help text for 'create' action
+	    "help"	: _("Create an Add-On Product based on an existing one"),
+	],
+	"sign"		: $[
+	    "handler"	: SignAddOn,
+	    // command line help text for 'create' action
+	    "help"	: _("Sign unsigned Add-On Product"),
+	],
     ],
     "options"		: $[
+	"rpm_dir"	: $[
+	    // command line help text for 'rpm_dir' option
+	    "help"	: _("Path to directory with packages"),
+	    "type"	: "string"
+	],
+	"content"	: $[
+	    // command line help text for 'content' option (do not translate 'content', it's a name)
+	    "help"	: _("Path to content file"),
+	    "type"	: "string"
+	],
+	"existing"	: $[
+	    // command line help text for 'existing' option
+	    "help"	: _("Path to directory with existing Add-On Product"),
+	    "type"	: "string"
+	],
+	"generate_descriptions"	: $[
+	    // command line help text for 'generate_descriptions' option
+	    "help"	: _("Generate new package descriptions (do not copy)"),
+	],
+	"package_descriptions_dir"	: $[
+	    // command line help text for 'package_descriptions_dir' option
+	    "help"	: _("Path to directory with package descriptions"),
+	    "type"	: "string"
+	],
+	"patterns_dir"	: $[
+	    // command line help text for 'patterns_dir' option
+	    "help"	: _("Path to directory with patterns definitions"),
+	    "type"	: "string"
+	],
+	"output_dir"	: $[
+	    // command line help text for 'output_dir' option
+	    "help"	: _("Path to the output directory"),
+	    "type"	: "string"
+	],
+	"create_iso"	: $[
+	    // command line help text for 'create_iso' option
+	    "help"	: _("Create the ISO image"),
+	],
+	"iso_name"	: $[
+	    // command line help text for 'iso_name' option
+	    "help"	: _("Name of the output ISO image"),
+	    "type"	: "string",
+	],
+	"iso_output_dir"	: $[
+	    // command line help text for 'output_dir' option
+	    "help"	: _("Path to the output directory for ISO image"),
+	    "type"	: "string"
+	],
+	"do_not_sign"	: $[
+	    // command line help text for 'do_not_sign' option
+	    "help"	: _("Do not sign the product"),
+	],
+	"gpg_key"	: $[
+	    // command line help text for 'gpg_key' option
+	    "help"	: _("GPG key ID used to sign a product"),
+	    "type"	: "string",
+	],
+	"passphrase"	: $[
+	    // command line help text for 'passphrase' option
+	    "help"	: _("Passphrase to unlock GPG key"),
+	    "type"	: "string",
+	],
+	"passphrase_file"	: $[
+	    // command line help text for 'passphrase_file' option
+	    "help"	: _("Path to file with the passphrase for GPG key"),
+	    "type"	: "string",
+	],
+	"workflow"	: $[
+	    // command line help text for 'workflow' option
+	    "help"	: _("Path to workflow definition file (installation.xml)"),
+	    "type"	: "string",
+	],
+	"y2update"	: $[
+	    // command line help text for 'y2update' option
+	    "help"	: _("Path to workflow dialogs archive (y2update.tgz)"),
+	    "type"	: "string",
+	],
+	"y2update_packages_dir"	: $[
+	    // command line help text for 'y2update_packages_dir' option
+	    "help"	: _("Path to directory with YaST packages to form the workflow"),
+	    "type"	: "string",
+	],
+	"license"	: $[
+	    // command line help text for 'license' option
+	    "help"	: _("Path to file with license texts (license.zip)"),
+	    "type"      : "string",
+	],
+	"addon_dir"	: $[
+	    // command line help text for 'addon-dir' option
+	    "help"	: _("Path to directory with Add-On Product"),
+	    "type"	: "string"
+	],
     ],
     "mappings"		: $[
+	"create"	: [ "content", "rpm_dir", "package_descriptions_dir",
+	    "patterns_dir", "output_dir", "create_iso", "iso_name", "gpg_key", "passphrase",
+	    "passphrase_file", "workflow", "y2update", "y2update_packages_dir", "license",
+	    "do_not_sign", "iso_output_dir"
+	],
+	"clone"		: [ "existing", "generate_descriptions", "content",
+	    "package_descriptions_dir", "patterns_dir", "output_dir", "create_iso", "iso_name",
+	    "gpg_key", "passphrase", "passphrase_file", "workflow", "y2update",
+	    "y2update_packages_dir", "license", "do_not_sign", "iso_output_dir"
+	],
+	"sign"		: [ "addon_dir", "gpg_key", "passphrase", "passphrase_file", "create_iso",
+	    "iso_name", "iso_output_dir" ]
     ]
 ];
 
