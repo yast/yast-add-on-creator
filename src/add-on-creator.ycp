@@ -59,12 +59,52 @@ void ReportMissingDir (string dir) {
     Report::Error (sformat (_("Directory %1 does not exists"), dir));
 }
 
+// helper for parsing command line data regarding iso creation
+void ParseISOData (map<string,any> options) {
+
+    AddOnCreator::iso	= haskey (options, "create_iso");
+    if (haskey (options, "iso_name"))
+    {
+	AddOnCreator::iso	= true;
+	AddOnCreator::iso_name	= options["iso_name"]:"";
+    }
+    if (haskey (options, "iso_output_dir"))
+    {
+	AddOnCreator::iso	= true;
+	AddOnCreator::iso_path	= options["iso_output_dir"]:"";
+    }
+}
+
+// helper for parsing command line data regarding product signing
+void ParseGPGData (map<string,any> options) {
+
+    if (haskey (options, "gpg_key"))
+	AddOnCreator::gpg_key	= options["gpg_key"]:AddOnCreator::gpg_key;
+    if (haskey (options, "passphrase"))
+	AddOnCreator::passphrase	= options["passphrase"]:"";
+    else if (haskey (options, "passphrase_file"))
+    {
+	string file = options["passphrase_file"]:"";
+	if (FileUtils::Exists (file))
+	{
+	    string passphrase	= (string) SCR::Read (.target.string, file);
+	    if (passphrase != nil)	AddOnCreator::passphrase = passphrase;
+	}
+	else
+	{
+	    ReportMissingFile (file);
+	}
+    }
+    else
+	AddOnCreator::passphrase	=
+	    // question on command line
+	    CommandLine::PasswordInput(sformat (_("Passphrase for key %1:"),AddOnCreator::gpg_key));
+}
+
 /**
  * General function for creating new add-on
  */
 boolean Create (map<string,any> options ) {
-
-y2internal ("options: %1", options);
 
     if (!haskey (options, "output_dir"))
     {
@@ -146,12 +186,7 @@ y2internal ("options: %1", options);
 	    ReportMissingDir (dir);
 	}
     }
-    AddOnCreator::iso	= haskey (options, "create_iso");
-    if (haskey (options, "iso_name"))
-    {
-	AddOnCreator::iso	= true;
-	AddOnCreator::iso_name	= options["iso_name"]:"";
-    }
+    ParseISOData (options);
 
     if (haskey (options, "license"))
     {
@@ -224,27 +259,10 @@ y2internal ("options: %1", options);
 	}
     }
 
-    if (haskey (options, "gpg_key"))
-	AddOnCreator::gpg_key	= options["gpg_key"]:AddOnCreator::gpg_key;
-    if (haskey (options, "passphrase"))
-	AddOnCreator::passphrase	= options["passphrase"]:"";
-    else if (haskey (options, "passphrase_file"))
+    if (!haskey (options, "do_not_sign"))
     {
-	string file = options["passphrase_file"]:"";
-	if (FileUtils::Exists (file))
-	{
-	    string passphrase	= (string) SCR::Read (.target.string, file);
-	    if (passphrase != nil)	AddOnCreator::passphrase = passphrase;
-	}
-	else
-	{
-	    ReportMissingFile (file);
-	}
+	ParseGPGData (options);
     }
-    else
-	AddOnCreator::passphrase	=
-	    // question on command line
-	    CommandLine::PasswordInput(sformat (_("Passphrase for key %1:"),AddOnCreator::gpg_key));
     return true;
 }
 
@@ -290,6 +308,31 @@ boolean CloneAddOn (map<string,any> options) {
     return Create (options);
 }
 
+/**
+ * Command line handler for signing existing Add-On
+ */
+boolean SignAddOn (map<string,any> options) {
+
+    AddOnCreator::only_sign_product	= false;
+    if (!haskey (options, "addon_dir"))
+    {
+	// error message
+	Report::Error (_("Path to directory with Add-On is missing."));
+	return false;
+    }
+    else
+	AddOnCreator::base_output_path	= options["addon_dir"]:"";
+
+    // we need to import same data from existing add-on (e.g. for iso name)
+    AddOnCreator::ImportExistingProduct (AddOnCreator::base_output_path);
+    AddOnCreator::FillContentDefaults ();
+
+    ParseGPGData (options);
+    ParseISOData (options);
+    AddOnCreator::only_sign_product	= true;
+    return true;
+}
+
 map cmdline_description = $[
     "id"	: "add-on-creator",
     // Command line help text for the add-on-creator module
@@ -307,6 +350,11 @@ map cmdline_description = $[
 	    "handler"	: CloneAddOn,
 	    // command line help text for 'create' action
 	    "help"	: _("Create an Add-On Product based on an existing one"),
+	],
+	"sign"		: $[
+	    "handler"	: SignAddOn,
+	    // command line help text for 'create' action
+	    "help"	: _("Sign unsigned Add-On Product"),
 	],
     ],
     "options"		: $[
@@ -353,6 +401,15 @@ map cmdline_description = $[
 	    "help"	: _("Name of the output ISO image"),
 	    "type"	: "string",
 	],
+	"iso_output_dir"	: $[
+	    // command line help text for 'output_dir' option
+	    "help"	: _("Path to the output directory for ISO image"),
+	    "type"	: "string"
+	],
+	"do_not_sign"	: $[
+	    // command line help text for 'do_not_sign' option
+	    "help"	: _("Do not sign the product"),
+	],
 	"gpg_key"	: $[
 	    // command line help text for 'gpg_key' option
 	    "help"	: _("GPG key ID used to sign a product"),
@@ -387,18 +444,26 @@ map cmdline_description = $[
 	    // command line help text for 'license' option
 	    "help"	: _("Path to file with license texts (license.zip)"),
 	    "type"      : "string",
-	]
+	],
+	"addon_dir"	: $[
+	    // command line help text for 'addon-dir' option
+	    "help"	: _("Path to directory with Add-On Product"),
+	    "type"	: "string"
+	],
     ],
     "mappings"		: $[
 	"create"	: [ "content", "rpm_dir", "package_descriptions_dir",
 	    "patterns_dir", "output_dir", "create_iso", "iso_name", "gpg_key", "passphrase",
-	    "passphrase_file", "workflow", "y2update", "y2update_packages_dir", "license"
+	    "passphrase_file", "workflow", "y2update", "y2update_packages_dir", "license",
+	    "do_not_sign", "iso_output_dir"
 	],
 	"clone"		: [ "existing", "generate_descriptions", "content",
 	    "package_descriptions_dir", "patterns_dir", "output_dir", "create_iso", "iso_name",
 	    "gpg_key", "passphrase", "passphrase_file", "workflow", "y2update",
-	    "y2update_packages_dir", "license"
-	]
+	    "y2update_packages_dir", "license", "do_not_sign", "iso_output_dir"
+	],
+	"sign"		: [ "addon_dir", "gpg_key", "passphrase", "passphrase_file", "create_iso",
+	    "iso_name", "iso_output_dir" ]
     ]
 ];
 

@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Apr 11 13:37:11 CEST 2007 - jsuchome@suse.cz
+
+- really report error if gpg fails (#260588)
+- added 'sign' command for CLI (F302049)
+- 2.15.4 
+
+-------------------------------------------------------------------
 Thu Apr  5 10:27:32 CEST 2007 - jsuchome@suse.cz
 
 - added basic Export functionality to support calls from other

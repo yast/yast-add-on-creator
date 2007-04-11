@@ -37,6 +37,7 @@ textdomain "add-on-creator";
 
 import "Directory";
 import "FileUtils";
+import "Mode";
 import "Package";
 import "Popup";
 import "Progress";
@@ -557,7 +558,8 @@ global boolean clone	= false;
 // tmp directory
 string tmpdir	= "";
 
-list full_media_paths	= [];
+// full paths to media directories (media.n)
+list<string> full_media_paths	= [];
 
 // architecture specific directory names of target product
 list<string> arch_directories = [];
@@ -589,6 +591,9 @@ global map<string,list> available_packages = $[];
 
 // mapping of package name to full file name
 global map<string,string> package2filename = $[];
+
+// if we want only to sign existing product (and possibly create iso of it)
+global boolean only_sign_product		= false;
 
 /**
  * Data was modified?
@@ -1136,6 +1141,22 @@ global boolean WriteStringFiles (string base_path, map<string,string> files) {
     return ret;
 }
 
+/**
+ * generate the paths of media, data and description dirs
+ */
+global void GenerateDirectories (string base_path) {
+
+    integer i = 1;
+    integer no_of_medias	= 1; // FIXME layout is different for more media
+    while (i <= no_of_medias)
+    {
+	string media_path	= sformat ("%1/media.%2", base_path, i);
+	full_media_paths	= add (full_media_paths, media_path);
+	i = i + 1;
+    }
+    full_data_path =sformat("%1/%2", base_path,content_map["DATADIR"]:"");
+    full_descr_path = sformat ("%1/%2", base_path, content_map["DESCRDIR"]:"");
+}
 
 /**
  * Create the directory structure of the Add-On
@@ -1145,16 +1166,11 @@ global boolean CreateAddOnStructure (string base_path) {
 
     if (!FileUtils::Exists (base_path)) return false;
 
+    GenerateDirectories (base_path);
     // create the media's directories
-    integer i = 1;
-    integer no_of_medias	= 1; // FIXME layout is different for more media
-    while (i <= no_of_medias)
-    {
-	string media_path	= sformat ("%1/media.%2", base_path, i);
-	full_media_paths	= add (full_media_paths, media_path);
-	SCR::Execute (.target.mkdir, media_path);
-	i = i + 1;
-    }
+    foreach (string dir, full_media_paths, {
+	SCR::Execute (.target.mkdir, dir);
+    });
 
     // create the data dir
     if (content_map["DATADIR"]:"" == "")
@@ -1163,7 +1179,6 @@ global boolean CreateAddOnStructure (string base_path) {
 	return false;
     }
 
-    full_data_path =sformat("%1/%2", base_path,content_map["DATADIR"]:"");
     SCR::Execute (.target.mkdir, full_data_path);
 
     // create the dirs for packages
@@ -1174,7 +1189,6 @@ global boolean CreateAddOnStructure (string base_path) {
 	});
     }
 
-    full_descr_path = sformat ("%1/%2", base_path, content_map["DESCRDIR"]:"");
     SCR::Execute (.target.mkdir, full_descr_path);
 
     return true;
@@ -1615,13 +1629,32 @@ global boolean SignAddOn (string base_path, string key) {
     out = (map)SCR::Execute (.target.bash_output, sformat ("gpg --list-secret-keys --with-colons %1| grep %2 | gawk -F: '{print $5}'| sed 's/........$//g'", key, local_key));
     string big_key	= deletechars (out["stdout"]:"0","\n");
 
-    // first, export the key:
+    // save the passphrase
+    string pw_path	= tmpdir + "/pw";
+    SCR::Write (.target.string, pw_path, passphrase);
+
+    // sign the content file
+    SCR::Execute (.target.bash, sformat ("rm -f %1/content.asc", base_path));
+    out	= (map) SCR::Execute (.target.bash_output, sformat("
+	gpg --passphrase-fd 0 --detach-sign -u %1 -a %2/content < %3",
+	local_key, base_path, pw_path)
+    );
+    if (out["exit"]:0 != 0)
+    {
+	if (Mode::commandline ())
+	    Report::Error (out["stderr"]:"");
+	else
+	    // error message
+	    Popup::ErrorDetails (_("Signing of the product failed."), out["stderr"]:"");
+	return false;
+    }
+
+    // export the key:
     command = sformat ("gpg --export -a %1 > %2/gpg-pubkey-%3-%1.asc",
 	local_key, base_path, big_key);
     SCR::Execute (.target.bash, command, $["LANG" : "C"]);
 
     // than, make a sha1 sum of that key (content file is modified last time)
-    // TODO move this out?
     out = (map) SCR::Execute (.target.bash_output,
 	sformat ("cd %1; ls -A1 gpg-pubkey*", base_path));
 
@@ -1634,20 +1667,6 @@ global boolean SignAddOn (string base_path, string key) {
 	    deletechars (out["stdout"]:"", "\n"), base_path);
 	SCR::Execute (.target.bash, command, $["LANG" : "C"]);
     });
-
-    // save the passphrase
-    string pw_path	= tmpdir + "/pw";
-    SCR::Write (.target.string, pw_path, passphrase);
-
-    // sign the content file
-    SCR::Execute (.target.bash, sformat ("rm -f %1/content.asc", base_path));
-    if (passphrase != "")
-	SCR::Execute (.target.bash, sformat("
-	    gpg --passphrase-fd 0 --detach-sign -u %1 -a %2/content < %3",
-	    local_key, base_path, pw_path));
-    else
-	SCR::Execute (.target.bash, sformat("
-	    gpg --detach-sign -u %1 -a %2/content", local_key, base_path));
 
     SCR::Execute (.target.bash,
 	sformat("gpg --export -a -u %1 > %2/content.key",local_key, base_path));
@@ -1696,7 +1715,6 @@ global boolean CreateISOImage (string dir_path, string iso_p, string name) {
 	name	= sformat ("%1-%2-%3",
 	    tolower (content_map["DISTPRODUCT"]:content_map["PRODUCT"]:"addon"),
 	    content_map["DISTVERSION"]:"", content_map["DEFAULTBASE"]:"");
-
     if (!issubstring (name, ".iso"))
 	name	= name + ".iso";
     iso_name	= name;
@@ -1762,60 +1780,79 @@ global boolean Write() {
 
     if (iso)
     {
-	iso_path	= base_output_path;
-	base_output_path= tmpdir + "/output";
-	SCR::Execute (.target.mkdir, base_output_path);
+	if (iso_path == "")
+	{
+	    iso_path	= base_output_path;
+	    if (!only_sign_product)
+	    {
+		base_output_path= tmpdir + "/output";
+		SCR::Execute (.target.mkdir, base_output_path);
+	    }
+	}
+	else if (!FileUtils::Exists (iso_path))
+	    SCR::Execute (.target.mkdir, iso_path);
     }
 
-    if (!WriteContentFile (base_output_path, content))
+    if (only_sign_product)
     {
-	// Error message (do not translate 'content'
-	Report::Error (_("Cannot write content file."));
+	GenerateDirectories (base_output_path);
+	Progress::NextStage();
+	Progress::NextStage();
+	Progress::NextStage();
+	Progress::NextStage();
     }
-
-    WriteStringFiles (base_output_path, readme_files);
-    WriteStringFiles (base_output_path, copying_files);
-    WriteStringFiles (base_output_path, copyright_files);
-
-    Progress::NextStage();
-
-    if (!CreateAddOnStructure (base_output_path))
+    else
     {
-	// Error message
-	Report::Error (_("Cannot create the output directory structure."));
+	if (!WriteContentFile (base_output_path, content))
+	{
+	    // Error message (do not translate 'content'
+	    Report::Error (_("Cannot write content file."));
+	}
+
+	WriteStringFiles (base_output_path, readme_files);
+	WriteStringFiles (base_output_path, copying_files);
+	WriteStringFiles (base_output_path, copyright_files);
+
+	Progress::NextStage();
+
+	if (!CreateAddOnStructure (base_output_path))
+	{
+	    // Error message
+	    Report::Error (_("Cannot create the output directory structure."));
+	}
+
+	WritePatchesFiles (base_output_path, patches_files);
+
+	WriteProductsFiles (base_output_path, products_files);
+
+	WriteMediaFiles (base_output_path, media_files, nextmedia);
+
+	WriteLicensesFiles (full_media_paths[0]:"", license_files);
+
+	if (info != "")
+	    SCR::Write (.target.string, full_media_paths[0]:"" + "/info.txt", info);
+
+	Progress::NextStage();
+
+	WritePatterns (base_output_path);
+
+	Progress::NextStage();
+
+	CopyRPMs (rpm_path, base_output_path);
+
+	WritePackageDescriptions (full_descr_path, packages_descr);
+
+	WriteWorkflow (base_output_path, workflow_path, y2update_packages, y2update_path);
+
+	Progress::NextStage();
+
+	GenerateArchiveFiles (base_output_path);
+
+	CreateMD5SUMS (base_output_path);
     }
 
-    WritePatchesFiles (base_output_path, patches_files);
-
-    WriteProductsFiles (base_output_path, products_files);
-
-    WriteMediaFiles (base_output_path, media_files, nextmedia);
-
-    WriteLicensesFiles (full_media_paths[0]:"", license_files);
-
-    if (info != "")
-	SCR::Write (.target.string, full_media_paths[0]:"" + "/info.txt", info);
-
-    Progress::NextStage();
-
-    WritePatterns (base_output_path);
-
-    Progress::NextStage();
-
-    CopyRPMs (rpm_path, base_output_path);
-
-    WritePackageDescriptions (full_descr_path, packages_descr);
-
-    WriteWorkflow (
-	base_output_path, workflow_path, y2update_packages, y2update_path);
-
-    Progress::NextStage();
-
-    GenerateArchiveFiles (base_output_path);
-
-    CreateMD5SUMS (base_output_path);
-
-    SignAddOn (base_output_path, gpg_key);
+    if (!SignAddOn (base_output_path, gpg_key))
+	return false;
 
     WriteServicepackArchive (base_output_path);
 
