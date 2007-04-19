@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Thu Apr 19 13:58:07 CEST 2007 - jsuchome@suse.cz
+
+- tell GPG to not access tty (#266115)
+- set reasonable default value for LABEL (#265493) 
+- 2.15.5
+
+-------------------------------------------------------------------
 Wed Apr 11 13:37:11 CEST 2007 - jsuchome@suse.cz
 
 - really report error if gpg fails (#260588)

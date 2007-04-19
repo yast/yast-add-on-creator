@@ -622,6 +622,18 @@ any ContentFileDialog() {
 		    "value": AddOnCreator::ValueForArchitecture (default_base)
 		], AddOnCreator::content_specials["ARCH"]:$[]));
 	    }
+	    integer i		= 0;
+	    integer index	= -1;
+	    string distproduct		= "";
+	    foreach (map entry, content, {
+		if (entry["key"]:"" == "LABEL" && entry["value"]:"" == "")
+		    index	= i;
+		if (entry["key"]:"" == "DISTPRODUCT")
+		    distproduct		= entry["value"]:"";
+		i = i + 1;
+	    });
+	    if (index != -1)
+		content[index,"value"]	= distproduct;
 	    AddOnCreator::content	= content;
 	    AddOnCreator::UpdateContentMap ();
 	    break;
