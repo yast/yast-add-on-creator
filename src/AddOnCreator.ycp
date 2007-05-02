@@ -1219,10 +1219,10 @@ global boolean WritePackageDescriptions (string descr_path, map descr) {
     if (ret) // copy the rest of files, generated earlier
     {
 	SCR::Execute (.target.bash,
-	    sformat ("/bin/rm -f %1/packages %1/packages.DU", descr_path));
-	string cmd = sformat("/bin/cp %1/packages %2", tmpdir, descr_path);
+	    sformat ("/bin/rm -f '%1/packages' '%1/packages.DU'", descr_path));
+	string cmd = sformat("/bin/cp %1/packages '%2'", tmpdir, descr_path);
 	SCR::Execute (.target.bash, cmd, $["LANG":"C"]);
-	cmd	= sformat ("/bin/cp %1/packages.DU %2", tmpdir, descr_path);
+	cmd	= sformat ("/bin/cp %1/packages.DU '%2'", tmpdir, descr_path);
 	SCR::Execute (.target.bash, cmd, $["LANG":"C"]);
     }
     return ret;
@@ -1241,8 +1241,7 @@ global boolean GenerateArchiveFiles (string base_path)
     }
     if (!FileUtils::Exists (base_path)) return false;
 
-    map out = (map) SCR::Execute (.target.bash_output,
-	"mk_listings " + base_path);
+    map out = (map) SCR::Execute (.target.bash_output, sformat ("cd '%1';mk_listings .",base_path));
     if (out["stderr"]:"" != "")
     {
 	y2warning ("mk_listings returns %1", out);
@@ -1426,7 +1425,7 @@ global boolean CopyRPMs (string in_path, string base_path) {
 		SCR::Execute (.target.mkdir, target);
 		y2milestone ("copying from %1 to %2...", dir, target);
 		SCR::Execute (.target.bash_output,
-		    sformat ("/bin/cp -r %1/*.rpm %2/", dir, target));
+		    sformat ("/bin/cp -r %1/*.rpm '%2/'", dir, target));
 	    }
 	});
     }
@@ -1442,14 +1441,14 @@ global boolean CopyRPMs (string in_path, string base_path) {
 		{
 		    foreach (string p, (list<string>) pa, {
 			SCR::Execute (.target.bash, sformat (
-			    "/bin/cp %1 %2/", package2filename[p]:"", out_dir));
+			    "/bin/cp %1 '%2/'", package2filename[p]:"", out_dir));
 		    });
 		}
 		else
 		{
 		    foreach (string p, (list<string>) pa, {
 			SCR::Execute (.target.bash, sformat (
-			    "/bin/cp %1/%2*.rpm %3/", in_path, p, out_dir));
+			    "/bin/cp %1/%2*.rpm '%3/'", in_path, p, out_dir));
 		    });
 		}
 	    }
@@ -1475,12 +1474,12 @@ boolean WriteWorkflow (string base_path,string desc_path, list<string> packages,
     if (desc_path != "" && FileUtils::Exists (desc_path))
     {
 	y2milestone ("writing %1 as %2/installation.xml", desc_path, base_path);
-	SCR::Execute (.target.bash, sformat ("cp %1 %2/installation.xml",
+	SCR::Execute (.target.bash, sformat ("cp '%1' '%2/installation.xml'",
 	    desc_path, base_path));
     }
     if (y2update_p != "")
     {
-	SCR::Execute (.target.bash, sformat ("cp %1 %2/y2update.tgz",
+	SCR::Execute (.target.bash, sformat ("cp '%1' '%2/y2update.tgz'",
 	    y2update_p, base_path));
     }
     else if (packages != [])
@@ -1489,7 +1488,7 @@ boolean WriteWorkflow (string base_path,string desc_path, list<string> packages,
 	SCR::Execute (.target.mkdir, y2update_dir);
 	foreach (string p, packages, {
 	    y2milestone ("extracting %1", p);
-	    string cmd = sformat ("cd %1; rpm2cpio %2 | cpio -imud 2>&1",
+	    string cmd = sformat ("cd '%1'; rpm2cpio %2 | cpio -imud 2>&1",
 		y2update_dir, p);
 	    y2debug ("extracting rpm: %1", cmd);
 	    map out = (map) SCR::Execute (.target.bash_output, cmd);
@@ -1498,7 +1497,7 @@ boolean WriteWorkflow (string base_path,string desc_path, list<string> packages,
 		y2warning ("%1 returned %2", cmd, out);
 	    }
 	});
-	string cmd = sformat ("cd %2; tar -czf %1/y2update.tgz .",
+	string cmd = sformat ("cd '%2'; tar -czf '%1/y2update.tgz' .",
 	    base_path, y2update_dir);
 	y2debug ("tar cmd: %1", cmd);
 	map out = (map) SCR::Execute (.target.bash_output, cmd);
@@ -1526,29 +1525,29 @@ boolean WriteServicepackArchive (string base_path)
     SCR::Execute (.target.mkdir, spdir);
 
     SCR::Execute (.target.bash,
-	sformat ("cp %1/content* %2/", base_path, spdir));
+	sformat ("cp %1/content* '%2/'", base_path, spdir));
 
     SCR::Execute (.target.bash,
-	sformat ("cp %1/gpg-pubkey* %2/", base_path, spdir));
+	sformat ("cp %1/gpg-pubkey* '%2/'", base_path, spdir));
 
     SCR::Execute (.target.bash,
-	sformat ("cp -r %1/media.1 %2/", base_path,spdir));
+	sformat ("cp -r %1/media.1 '%2/'", base_path,spdir));
 
     // copy descriptions (with the stucture)
     string descr_path = sformat ("%1/%2", spdir, content_map["DESCRDIR"]:"");
     SCR::Execute (.target.mkdir, descr_path);
     SCR::Execute (.target.bash,
-	sformat("cp %1/* %2/", full_descr_path, descr_path));
+	sformat("cp %1/* '%2/'", full_descr_path, descr_path));
 
     if (workflow_path != "")
-	SCR::Execute (.target.bash, sformat("cp %1/installation.xml %2/",
+	SCR::Execute (.target.bash, sformat("cp '%1/installation.xml' '%2/'",
 	    base_path, spdir));
     if (FileUtils::Exists (base_path + "/y2update.tgz"))
-	SCR::Execute (.target.bash, sformat("cp %1/y2update.tgz %2",
+	SCR::Execute (.target.bash, sformat("cp '%1/y2update.tgz' '%2'",
 	    base_path, spdir));
 
     // finally, create the archive
-    string cmd = sformat ("cd %1; tar -czf %2/servicepack.tar.gz .",
+    string cmd = sformat ("cd '%1'; tar -czf '%2/servicepack.tar.gz' .",
 	spdir, base_path);
     y2debug ("tar cmd: %1", cmd);
     map out = (map) SCR::Execute (.target.bash_output, cmd);
@@ -1566,7 +1565,7 @@ boolean dir_has_files (string dir) {
     if (!FileUtils::Exists (dir)) return false;
 
     map out = (map) SCR::Execute (.target.bash_output,
-	sformat ("cd %1; find -maxdepth 1 -type f | wc -l", dir));
+	sformat ("cd '%1'; find -maxdepth 1 -type f | wc -l", dir));
     integer count = tointeger(deletechars(out["stdout"]:"0","\n"));
     return count > 0;
 }
@@ -1587,7 +1586,7 @@ global boolean CreateMD5SUMS (string base_path) {
     foreach (string full_path, dirs_for_md5, {
 	if (dir_has_files (full_path))
 	{
-	    string command = sformat("cd %1; md5sum -- * > MD5SUMS", full_path);
+	    string command = sformat("cd '%1'; md5sum -- * > MD5SUMS", full_path);
 	    map out =
 		(map)SCR::Execute (.target.bash_output, command, $["LANG":"C"]);
 	    if (out["exit"]:0 != 0)
@@ -1596,14 +1595,13 @@ global boolean CreateMD5SUMS (string base_path) {
     });
 
     // sha1sums of descriptions
-    map out = (map) SCR::Execute (.target.bash_output,
-	"ls -A1 " + full_descr_path);
+    map out = (map) SCR::Execute (.target.bash_output, sformat ("ls -A1 '%1'", full_descr_path));
     foreach (string file, splitstring (out["stdout"]:"", "\n"), {
 	if (file == "") return;
 	out = (map) SCR::Execute (.target.bash_output,
-	    sformat ("cd %1 && sha1sum -- %2", full_descr_path, String::Quote (file)),
+	    sformat ("cd '%1' && sha1sum -- %2", full_descr_path, String::Quote (file)),
 	    $["LANG" : "C"]);
-	string command	= sformat ("echo 'META SHA1 %1' >> %2/content",
+	string command	= sformat ("echo 'META SHA1 %1' >> '%2/content'",
 	    deletechars (out["stdout"]:"", "\n"), base_path);
 	SCR::Execute (.target.bash, command, $["LANG" : "C"]);
     });
@@ -1634,9 +1632,9 @@ global boolean SignAddOn (string base_path, string key) {
     SCR::Write (.target.string, pw_path, passphrase);
 
     // sign the content file
-    SCR::Execute (.target.bash, sformat ("rm -f %1/content.asc", base_path));
+    SCR::Execute (.target.bash, sformat ("rm -f '%1/content.asc'", base_path));
     out	= (map) SCR::Execute (.target.bash_output, sformat("
-	gpg --no-tty --passphrase-fd 0 --detach-sign -u %1 -a %2/content < %3",
+	gpg --no-tty --passphrase-fd 0 --detach-sign -u %1 -a '%2/content' < %3",
 	local_key, base_path, pw_path)
     );
     if (out["exit"]:0 != 0)
@@ -1650,37 +1648,37 @@ global boolean SignAddOn (string base_path, string key) {
     }
 
     // export the key:
-    command = sformat ("gpg --export -a %1 > %2/gpg-pubkey-%3-%1.asc",
+    command = sformat ("gpg --export -a %1 > '%2/gpg-pubkey-%3-%1.asc'",
 	local_key, base_path, big_key);
     SCR::Execute (.target.bash, command, $["LANG" : "C"]);
 
     // than, make a sha1 sum of that key (content file is modified last time)
     out = (map) SCR::Execute (.target.bash_output,
-	sformat ("cd %1; ls -A1 gpg-pubkey*", base_path));
+	sformat ("cd '%1'; ls -A1 gpg-pubkey*", base_path));
 
     foreach (string file, splitstring (out["stdout"]:"", "\n"), {
 	if (file == "") return;
 	out = (map) SCR::Execute (.target.bash_output,
-	    sformat ("cd %1 && sha1sum -- %2", base_path, String::Quote (file)),
+	    sformat ("cd '%1' && sha1sum -- %2", base_path, String::Quote (file)),
 	    $["LANG" : "C"]);
-	string command	= sformat ("echo 'KEY SHA1 %1' >> %2/content",
+	string command	= sformat ("echo 'KEY SHA1 %1' >> '%2/content'",
 	    deletechars (out["stdout"]:"", "\n"), base_path);
 	SCR::Execute (.target.bash, command, $["LANG" : "C"]);
     });
 
     SCR::Execute (.target.bash,
-	sformat("gpg --export -a -u %1 > %2/content.key",local_key, base_path));
+	sformat("gpg --export -a -u %1 > '%2/content.key'",local_key, base_path));
 
     // sign products file
     string products_path = full_media_paths[0]:"" + "/products";
     if (FileUtils::Exists (products_path))
     {
-	SCR::Execute (.target.bash, sformat ("rm -f %1.asc", products_path));
+	SCR::Execute (.target.bash, sformat ("rm -f '%1.asc'", products_path));
 	SCR::Execute (.target.bash,
-	    sformat("gpg --no-tty --passphrase-fd 0 --detach-sign -u %1 -a %2 < %3",
+	    sformat("gpg --no-tty --passphrase-fd 0 --detach-sign -u %1 -a '%2' < %3",
 	    local_key, products_path, pw_path));
 	SCR::Execute (.target.bash,
-	    sformat("gpg --export -a -u %1 > %2.key", local_key,products_path));
+	    sformat("gpg --export -a -u %1 > '%2.key'", local_key,products_path));
     }
     SCR::Execute (.target.remove, pw_path);
     return true;
@@ -1697,7 +1695,7 @@ global boolean CreateDirectoryYaSTFiles (string base_path) {
     foreach (string dir, (list<string>) merge (
 	[base_path, full_descr_path], full_media_paths),
     {
-	SCR::Execute (.target.bash_output, sformat ("cd %1; ls -A1 -p | grep -v 'directory.yast' > directory.yast", dir), $["LANG" : "C"]);
+	SCR::Execute (.target.bash_output, sformat ("cd '%1'; ls -A1 -p | grep -v 'directory.yast' > directory.yast", dir), $["LANG" : "C"]);
     });
     return true;
 }
@@ -1719,7 +1717,7 @@ global boolean CreateISOImage (string dir_path, string iso_p, string name) {
 	name	= name + ".iso";
 
     // possible options -allow-leading-dots
-    string cmd	= sformat("mkisofs -r -J -l -o %1/%2 %3",iso_p, name, dir_path);
+    string cmd	= sformat("mkisofs -r -J -l -o '%1/%2' '%3'",iso_p, name, dir_path);
     map out	= (map) SCR::Execute (.target.bash_output, cmd);
     if (out["exit"]:0 != 0)
     {
