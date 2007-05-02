@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed May  2 13:35:22 CEST 2007 - jsuchome@suse.cz
+
+- enable usage of spaces in output path
+- 2.15.6 
+
+-------------------------------------------------------------------
 Thu Apr 19 13:58:07 CEST 2007 - jsuchome@suse.cz
 
 - tell GPG to not access tty (#266115)
