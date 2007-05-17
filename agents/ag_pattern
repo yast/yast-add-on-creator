@@ -19,6 +19,7 @@ my %multiple		= (
 sub parse_file {
 
     my $file	= shift;
+    %pattern	= ();
     my $i = open PATTERN, "< $file";
     if (!defined $i) {
 	y2error ("$file cannot be opened for reading!");
