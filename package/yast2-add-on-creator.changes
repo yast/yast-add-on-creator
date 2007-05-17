@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu May 17 16:44:59 CEST 2007 - jsuchome@suse.cz
+
+- clear pattern data map before importing next one (#273528)
+- 2.13.18 
+
+-------------------------------------------------------------------
 Fri Apr 27 16:08:39 CEST 2007 - jsuchome@suse.cz
 
 - enable usage of spaces in output path
