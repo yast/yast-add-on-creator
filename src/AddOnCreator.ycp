@@ -1631,6 +1631,25 @@ global boolean SignAddOn (string base_path, string key) {
     string pw_path	= tmpdir + "/pw";
     SCR::Write (.target.string, pw_path, passphrase);
 
+    // export the key:
+    command = sformat ("gpg --export -a %1 > '%2/gpg-pubkey-%3-%1.asc'",
+	local_key, base_path, big_key);
+    SCR::Execute (.target.bash, command, $["LANG" : "C"]);
+
+    // make a sha1 sum of that key (content file is modified last time)
+    out = (map) SCR::Execute (.target.bash_output,
+	sformat ("cd '%1'; ls -A1 gpg-pubkey*", base_path));
+
+    foreach (string file, splitstring (out["stdout"]:"", "\n"), {
+	if (file == "") return;
+	out = (map) SCR::Execute (.target.bash_output,
+	    sformat ("cd '%1' && sha1sum -- %2", base_path, String::Quote (file)),
+	    $["LANG" : "C"]);
+	string command	= sformat ("echo 'KEY SHA1 %1' >> '%2/content'",
+	    deletechars (out["stdout"]:"", "\n"), base_path);
+	SCR::Execute (.target.bash, command, $["LANG" : "C"]);
+    });
+
     // sign the content file
     SCR::Execute (.target.bash, sformat ("rm -f '%1/content.asc'", base_path));
     out	= (map) SCR::Execute (.target.bash_output, sformat("
@@ -1647,27 +1666,8 @@ global boolean SignAddOn (string base_path, string key) {
 	return false;
     }
 
-    // export the key:
-    command = sformat ("gpg --export -a %1 > '%2/gpg-pubkey-%3-%1.asc'",
-	local_key, base_path, big_key);
-    SCR::Execute (.target.bash, command, $["LANG" : "C"]);
-
-    // than, make a sha1 sum of that key (content file is modified last time)
-    out = (map) SCR::Execute (.target.bash_output,
-	sformat ("cd '%1'; ls -A1 gpg-pubkey*", base_path));
-
-    foreach (string file, splitstring (out["stdout"]:"", "\n"), {
-	if (file == "") return;
-	out = (map) SCR::Execute (.target.bash_output,
-	    sformat ("cd '%1' && sha1sum -- %2", base_path, String::Quote (file)),
-	    $["LANG" : "C"]);
-	string command	= sformat ("echo 'KEY SHA1 %1' >> '%2/content'",
-	    deletechars (out["stdout"]:"", "\n"), base_path);
-	SCR::Execute (.target.bash, command, $["LANG" : "C"]);
-    });
-
     SCR::Execute (.target.bash,
-	sformat("gpg --export -a -u %1 > '%2/content.key'",local_key, base_path));
+	sformat("gpg --export -a %1 > '%2/content.key'",local_key, base_path));
 
     // sign products file
     string products_path = full_media_paths[0]:"" + "/products";
@@ -1678,7 +1678,7 @@ global boolean SignAddOn (string base_path, string key) {
 	    sformat("gpg --no-tty --passphrase-fd 0 --detach-sign -u %1 -a '%2' < %3",
 	    local_key, products_path, pw_path));
 	SCR::Execute (.target.bash,
-	    sformat("gpg --export -a -u %1 > '%2.key'", local_key,products_path));
+	    sformat("gpg --export -a %1 > '%2.key'", local_key,products_path));
     }
     SCR::Execute (.target.remove, pw_path);
     return true;
