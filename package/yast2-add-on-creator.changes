@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Mon May 21 13:21:12 CEST 2007 - jsuchome@suse.cz
+
+- fixed signing content file (#275883)
+- fixed exporting gpg key (#275900)
+- 2.15.8 
+
+-------------------------------------------------------------------
 Thu May 17 16:42:33 CEST 2007 - jsuchome@suse.cz
 
 - clear pattern data map before importing next one (#273528)
