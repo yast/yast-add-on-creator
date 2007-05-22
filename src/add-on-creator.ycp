@@ -272,13 +272,16 @@ boolean Create (map<string,any> options ) {
 boolean CreateAddOn (map<string,any> options) {
 
     AddOnCreator::clone	= false;
-    AddOnCreator::rpm_path	= options["rpm_dir"]:"";
-    if (AddOnCreator::rpm_path == "")
+    string rpm_dir	= options["rpm_dir"]:"";
+    if (rpm_dir == "")
     {
 	// error message
 	Report::Error (_("Path to directory with packages is missing."));
 	return false;
     }
+    if (substring (rpm_dir, size (rpm_dir) - 1, 1) != "/")
+	rpm_dir	= rpm_dir + "/";
+    AddOnCreator::rpm_path	= rpm_dir;
     if (!haskey (options, "content"))
     {
 	// error message

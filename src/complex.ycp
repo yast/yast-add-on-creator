@@ -330,7 +330,11 @@ any SourcesDialog() {
 		UI::SetFocus (`id(`required_rpm_path));
 		continue;
 	    }
+	    if (substring (dir, size (dir) - 1, 1) != "/")
+		dir	=	dir + "/";
 	    AddOnCreator::rpm_path		= dir;
+	    if (req_dir != "" && substring (req_dir, size (req_dir) - 1, 1) != "/")
+		req_dir	=	req_dir + "/";
 	    AddOnCreator::required_rpm_path	= req_dir;
 	    if (requires == "")
 		requires = (string) UI::QueryWidget (`id(`other_val), `Value);
