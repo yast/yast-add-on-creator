@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue May 22 10:42:36 CEST 2007 - jsuchome@suse.cz
+
+- enable rpm directory with .rpm extension (#276861)
+- 2.15.9 
+
+-------------------------------------------------------------------
 Mon May 21 13:21:12 CEST 2007 - jsuchome@suse.cz
 
 - fixed signing content file (#275883)
