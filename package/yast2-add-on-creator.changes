@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed May 30 10:09:52 CEST 2007 - jsuchome@suse.cz
+
+- added support for source rpm's (#279004)
+- 2.15.10 
+
+-------------------------------------------------------------------
 Tue May 22 10:42:36 CEST 2007 - jsuchome@suse.cz
 
 - enable rpm directory with .rpm extension (#276861)
