@@ -592,6 +592,9 @@ global map<string,list> available_packages = $[];
 // mapping of package name to full file name
 global map<string,string> package2filename = $[];
 
+// mapping of source package name to full file name
+global map<string,string> srcpackage2filename = $[];
+
 // if we want only to sign existing product (and possibly create iso of it)
 global boolean only_sign_product		= false;
 
@@ -1004,17 +1007,23 @@ global void FillContentDefaults () {
 	y2milestone ("asking the RPM's for ARCH and NAME...");
 	foreach (string f, splitstring (out["stdout"]:"", "\n"), {
 	    if (f == "") return;
-
 	    out = (map) SCR::Execute (.target.bash_output,
-	        sformat ("rpm -q -p %1 --qf \"%%{ARCH}\n%%{NAME}\"", f));
+	        sformat ("rpm -q -p %1 --qf \"%%{ARCH}\n%%{NAME}\n%%|SOURCERPM?{bin}:{src}|\"",f));
 	    list lines  = splitstring (out["stdout"]:"", "\n");
 	    string arch = lines[0]:"";
 	    string name = lines[1]:"";
+	    string sourcerpm	= lines[2]:"";
+	    // 'arch' is directory where to put final package
+	    if (sourcerpm == "src")
+		arch	= "src";
 	    if (name != "" && arch != "")
 	    {
 		available_packages[arch] = add (
 		    available_packages[arch]:[], name);
-		package2filename[name]	= f;
+		if (arch != "src")
+		    package2filename[name]	= f;
+		else
+		    srcpackage2filename[name]      = f;
 	    }
 	});
 	y2milestone ("... done");
@@ -1437,11 +1446,18 @@ global boolean CopyRPMs (string in_path, string base_path) {
 	    if (arch != "ZZZ_imported" && arch != "ZZZ_required" &&
 		FileUtils::Exists (out_dir))
 	    {
-		if (size (package2filename) > 0)
+		if (size (package2filename) > 0 && arch != "src")
 		{
 		    foreach (string p, (list<string>) pa, {
 			SCR::Execute (.target.bash, sformat (
 			    "/bin/cp %1 '%2/'", package2filename[p]:"", out_dir));
+		    });
+		}
+		else if (size (srcpackage2filename) > 0 && arch == "src")
+		{
+		    foreach (string p, (list<string>) pa, {
+			SCR::Execute (.target.bash, sformat (
+			    "/bin/cp %1 '%2/'", srcpackage2filename[p]:"", out_dir));
 		    });
 		}
 		else
