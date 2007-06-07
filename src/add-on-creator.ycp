@@ -45,7 +45,6 @@ import "AddOnCreator";
 import "CommandLine";
 import "Directory";
 import "FileUtils";
-import "PackageSystem";
 
 include "add-on-creator/wizards.ycp";
 
@@ -470,12 +469,7 @@ map cmdline_description = $[
     ]
 ];
 
-any ret	= nil;
-
-if (!PackageSystem::CheckAndInstallPackagesInteractive (["inst-source-utils"]))
-    ret	= `cancel;
-else
-    ret = CommandLine::Run(cmdline_description);
+any ret = CommandLine::Run(cmdline_description);
 
 /* Finish */
 y2milestone("AddOnCreator module finished with %1", ret);

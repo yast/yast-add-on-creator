@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu Jun  7 13:12:31 CEST 2007 - jsuchome@suse.cz
+
+- fix installation of inst-source-utils in CLI mode (#281792)
+- 2.15.11 
+
+-------------------------------------------------------------------
 Wed May 30 10:09:52 CEST 2007 - jsuchome@suse.cz
 
 - added support for source rpm's (#279004)
