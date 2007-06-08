@@ -1289,7 +1289,12 @@ any SigningDialog() {
 
     // dialog caption
     string caption	= _("Signing the Add-On Product");
-    list gpg_keys	= AddOnCreator::gpg_keys;
+    list gpg_keys	= maplist (string key, AddOnCreator::gpg_keys, {
+	map out		= (map) SCR::Execute (.target.bash_output,
+	    sformat ("gpg --list-secret-keys %1 | grep uid | sed -e 's/^uid[ ]*//'", key));
+	string name	= deletechars (out["stdout"]:"", "\n");
+	return `item (`id (key), name != "" ? sformat ("%1 (%2)", key, name) : key);
+    });
 
     term contents = `HBox (`HSpacing (), `VBox (
 	`HBox (

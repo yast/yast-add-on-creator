@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Jun  8 15:41:19 CEST 2007 - jsuchome@suse.cz
+
+- show ID for GPG key (#275885)
+- 2.15.12 
+
+-------------------------------------------------------------------
 Thu Jun  7 13:12:31 CEST 2007 - jsuchome@suse.cz
 
 - fix installation of inst-source-utils in CLI mode (#281792)
