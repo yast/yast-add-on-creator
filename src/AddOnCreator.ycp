@@ -39,6 +39,7 @@ import "Directory";
 import "FileUtils";
 import "Mode";
 import "Package";
+import "PackageSystem";
 import "Popup";
 import "Progress";
 import "Report";
@@ -691,6 +692,9 @@ global string GenerateGPGKey (map<string,string> data) {
  * @return true on success
  */
 global boolean Read() {
+
+    if (!PackageSystem::CheckAndInstallPackagesInteractive (["inst-source-utils"]))
+	return false;
 
     gpg_keys	= read_secret_keys ();
     gpg_key	= gpg_keys[0]:"";
