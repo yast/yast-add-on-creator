@@ -98,8 +98,11 @@ An additional dialog informs whether it is safe to do so.
 	_("<p>Use <b>New</b> to create a new pattern or <b>Import</b> to import an existing one.</p>") +
 
 	// help text for patterns, cont.
-	_("<p>Use <b>Add</b> and <b>Edit</b> in the second table to modify pattern attributes.</p>"),
+	_("<p>Use <b>Add</b> and <b>Edit</b> in the second table to modify pattern attributes.</p>")
+ +
 
+	// help text for patterns, cont.
+	_("<p>Check <b>Required pattern</b> if you want to set selected pattern as required for the add-on product. Such pattern will be automatically preselected when the installation of the add-on product is started.</p>"),
 
     // help text for the 'various settings' dialog
     "output"	: _("<p>Specify the path to the directory in which the add-on product should be created. Select <b>Create ISO Image</b> to create the ISO image of the product in the output directory.</p>") +

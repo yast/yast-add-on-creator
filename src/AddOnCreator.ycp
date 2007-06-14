@@ -67,6 +67,7 @@ map<string,map> content_descr	= $[
 	    "label"	: _("Product version and release"),
 	    // help text for content file 'VERSION' key
 	    "help"	: _("Product version and release as in RPM <tt>major.minor-release</tt>."),
+	    "value"	: "1",
 	    "mandatory"	: true,
     ],
     "DISTPRODUCT"	: $[
@@ -83,6 +84,7 @@ map<string,map> content_descr	= $[
 	    "label"	: _("Distribution version"),
 	    // help text for content file 'DISTVERSION' key
 	    "help"	: _("Distribution version (vendor specific)."),
+	    "value"	: "1",
 	    "mandatory"	: true,
     ],
     "VENDOR"		: $[

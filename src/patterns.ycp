@@ -178,6 +178,7 @@ Choose a different one."));
 any PatternsDialog() {
 
     map<string,map> patterns	= AddOnCreator::patterns;
+    string requires		= AddOnCreator::content_map["REQUIRES"]:"";
 
     // helper for generation of table items
     list get_pattern_items (map pattern) {
@@ -238,7 +239,9 @@ any PatternsDialog() {
         `HBox (
             `PushButton (`id(`add), `opt(`key_F6), Label::AddButton ()),
             `PushButton (`id(`edit), `opt(`key_F7), Label::EditButton ()),
-            `HStretch ()
+            `HStretch (),
+	    // check box label
+	    `CheckBox (`id (`required), `opt (`notify, `key_F8), _("R&equired pattern"), false)
 	),
 	`VSpacing (0.5)
     ), `HSpacing ());
@@ -252,6 +255,8 @@ any PatternsDialog() {
     {
 	UI::ChangeWidget (`id(`pattern), `Items,
 	    get_pattern_items (patterns[current_pattern]:$[]));
+	UI::ChangeWidget (`id(`required), `Value,
+	    issubstring (requires, "pattern:" + current_pattern));
     }
     UI::ChangeWidget (`id(`delete_pt), `Enabled, patterns != $[]);
     UI::ChangeWidget (`id(`edit), `Enabled, patterns != $[]);
@@ -320,6 +325,7 @@ any PatternsDialog() {
 		current_pattern	= sel;
 		UI::ChangeWidget (`id(`pattern), `Items,
 		    get_pattern_items (patterns[current_pattern]:$[]));
+		UI::ChangeWidget (`id(`required), `Value, issubstring (requires, "pattern:" + sel));
 	    }
 	}
 	else if (ret == `add) {
@@ -331,6 +337,7 @@ any PatternsDialog() {
 		patterns[sel,new_val["key"]:""]	= new_val["value"]:"";
 		UI::ChangeWidget (`id(`pattern), `Items,
 		    get_pattern_items (patterns[sel]:$[]));
+		UI::ChangeWidget (`id(`required), `Value, false);
 	    }
 	    UI::SetFocus (`id(`pattern));
 	}
@@ -363,8 +370,31 @@ any PatternsDialog() {
 	    }
 	    UI::SetFocus (`id(`pattern));
 	}
+	else if (ret == `required)
+	{
+	    if (UI::QueryWidget (`id (`required), `Value) == true)
+	    {
+		if (!issubstring (requires, "pattern:" + sel))
+		    requires = requires + " pattern:" + sel;
+	    }
+	    else if (issubstring (requires, "pattern:" + sel))
+	    {
+		list<string> req = splitstring (requires, " ");
+		requires = mergestring (filter (string r, req, ``(r != "pattern:" + sel)), " ");
+	    }
+	}
         else if (ret == `next) {
-	    AddOnCreator::patterns	= patterns;
+	    AddOnCreator::patterns			= patterns;
+	    if (AddOnCreator::content_map["REQUIRES"]:"" != requires)
+	    {
+		integer i		= 0;
+		foreach (map entry, AddOnCreator::content, {
+		    if (entry["key"]:"" == "REQUIRES")
+			AddOnCreator::content[i,"value"]	= requires;
+		    i	= i + 1;
+		});
+		AddOnCreator::content_map["REQUIRES"]	= requires;
+	    }
 	    break;
 	}
 	else if (ret == `back) {

@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu Jun 14 14:15:55 CEST 2007 - jsuchome@suse.cz
+
+- checkbox for marking pattern as required (#224342)
+- 2.15.13 
+
+-------------------------------------------------------------------
 Fri Jun  8 15:41:19 CEST 2007 - jsuchome@suse.cz
 
 - show ID for GPG key (#275885)
