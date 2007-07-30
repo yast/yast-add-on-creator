@@ -1311,6 +1311,11 @@ any SigningDialog() {
 	),
 	// password entry label
 	`Password (`id(`pw), _("&Passphrase"), AddOnCreator::passphrase),
+	// checkbox label
+	`Left (`CheckBox (`id (`resign),
+	    _("Re&sign all packages with selected key"),
+	    AddOnCreator::resign_packages)
+	),
 	`VSpacing (0.7)
     ), `HSpacing ());
 
@@ -1337,8 +1342,15 @@ any SigningDialog() {
 	    }
 	}
         else if (ret == `next) {
+	    boolean resign = (boolean) UI::QueryWidget(`id(`resign), `Value);
+	    if (resign && !Package::Install ("expect"))
+	    {
+		UI::ChangeWidget (`id (`resign), `Value, false);
+		continue;
+	    }
 	    AddOnCreator::gpg_key	= key;
 	    AddOnCreator::passphrase = (string)UI::QueryWidget(`id(`pw),`Value);
+	    AddOnCreator::resign_packages = resign;
 	    break;
 	}
 	else if (ret == `abort || ret == `cancel) {

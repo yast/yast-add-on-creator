@@ -485,6 +485,32 @@ global map<string,map> description_descr	= $[
     ],
 ];
 
+// script used for signing rpm's
+string expect_script =
+"#!/usr/bin/expect --
+exp_internal 0
+
+set stat 0
+foreach rpm $argv {
+    spawn -noecho rpm --delsign $rpm
+    expect {
+	eof {}
+    }
+    spawn -noecho rpm --define \"_signature gpg\" --define \"_gpg_name %1\" --define \"_gpgbin /usr/bin/gpg\" --resign $rpm
+    expect \"pass phrase:\" {send \"%2\r\"}
+    expect {
+	\"is good.\" {send \"\n\"}
+	eof {}
+    }
+    wait
+    spawn -noecho rpm --define \"_signature gpg\" --define \"_gpg_name %1\" --define \"_gpgbin /usr/bin/gpg\" --checksig $rpm
+    expect {
+	-re \": .*(gpg|pgp).*OK\" {continue;}
+	eof      {set stat 1;}
+    }
+}
+exit $stat";
+
 // just key:value mapping
 global map<string,string> content_map	= $[];
 
@@ -596,10 +622,13 @@ global map<string,list> available_packages = $[];
 global map<string,string> package2filename = $[];
 
 // mapping of source package name to full file name
-global map<string,string> srcpackage2filename = $[];
+global map<string,string> srcpackage2filename	= $[];
 
 // if we want only to sign existing product (and possibly create iso of it)
 global boolean only_sign_product		= false;
+
+// also sign all rpm's (see bug #287447)
+global boolean resign_packages			= false;
 
 /**
  * Data was modified?
@@ -1452,6 +1481,10 @@ global boolean CopyRPMs (string in_path, string base_path) {
 	    if (arch != "ZZZ_imported" && arch != "ZZZ_required" &&
 		FileUtils::Exists (out_dir))
 	    {
+		// arch_directories will be needed later for CreateMD5SUMS and
+		// resign_packages
+		arch_directories	= (list<string>)
+		    union (arch_directories, [arch]);
 		if (size (package2filename) > 0 && arch != "src")
 		{
 		    foreach (string p, (list<string>) pa, {
@@ -1671,6 +1704,25 @@ global boolean SignAddOn (string base_path, string key) {
 	    deletechars (out["stdout"]:"", "\n"), base_path);
 	SCR::Execute (.target.bash, command, $["LANG" : "C"]);
     });
+
+    // sign the packages
+    if (resign_packages)
+    {
+	string expect	= tmpdir + "/sign.ex";
+	SCR::Write (.target.string, expect,
+	    sformat (expect_script, key, passphrase));
+	list<string> dirs = maplist (string arch_dir, arch_directories, {
+	    return full_data_path + "/" + arch_dir;
+	});
+	foreach (string full_path, dirs, {
+	    if (dir_has_files (full_path))
+	    {
+		string cmd = sformat ("LANG=C expect %1 %2/*.rpm", expect, full_path);
+		out = (map) SCR::Execute (.target.bash_output, cmd);
+	    }
+	});
+	SCR::Execute (.target.bash, sformat ("rm %1", expect));
+    }
 
     // sign the content file
     SCR::Execute (.target.bash, sformat ("rm -f '%1/content.asc'", base_path));

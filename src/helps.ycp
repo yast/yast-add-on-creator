@@ -131,7 +131,10 @@ An additional dialog informs whether it is safe to do so.
     "signing"	: _("<p>Here, configure the signing of the add-on product. Choose a secret key from the list of keys available or create a new one with <b>Create</b>.</p>") +
 
 	// help text for signing dialog, cont.
-	_("<p>Enter the passphrase needed to unlock the secret key.</p>"),
+	_("<p>Enter the passphrase needed to unlock the secret key.</p>") +
+
+	// help text for signing dialog, cont.
+	_("<p>Select if you want to <b>sign all packages</b> of the add-on product with selected key. All previous package signatures will be removed.</p>"),
 
     // help text for generating new key dialog
     "generate"	: _("<p>Enter the values necessary for generating the new primary key pair.</p>") +
