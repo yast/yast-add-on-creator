@@ -1,4 +1,18 @@
 -------------------------------------------------------------------
+Thu Aug  2 14:42:45 CEST 2007 - jsuchome@suse.cz
+
+- tag for suggested packages in pattern is Psg, not Prs
+- licenses saved in /media.1/license directory and not compressed,
+  license.txt duplicated as EULA.txt (F302018)
+- added button for importing package license text
+- 2.15.14
+
+-------------------------------------------------------------------
+Tue Jul 31 11:37:23 CEST 2007 - jsuchome@suse.cz
+
+- offered SLE10SP1 products as a base for new AddOn
+
+-------------------------------------------------------------------
 Thu Jun 14 14:15:55 CEST 2007 - jsuchome@suse.cz
 
 - enable resigning of the packages (#287447)

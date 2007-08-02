@@ -340,7 +340,7 @@ global map pattern_descr	= $[
 	"type"		: "package-list",
 	"defval"	: [],
     ],
-    "Prs"	: $[
+    "Psg"	: $[
 	// label for 'Prs' pattern key
 	"label"		: _("Suggested packages"),
 	// help text for 'Prs' pattern key
@@ -898,12 +898,30 @@ global boolean ImportExistingProduct (string dir_path) {
 
     // read the license files
     string license_path	= dir_path + "/media.1/license.zip";
+    out	= $[];
     if (FileUtils::Exists (license_path))
     {
 	SCR::Execute (.target.bash_output,
 	    sformat ("/usr/bin/unzip -o %1 -d %2", license_path, tmpdir));
-	map out = (map) SCR::Execute (.target.bash_output,
+	out = (map) SCR::Execute (.target.bash_output,
 	    sformat ("ls -A1 %1/license*.txt 2>/dev/null", tmpdir));
+    }
+    else if (FileUtils::IsDirectory (dir_path + "/media.1/license") == true)
+    {
+	license_path	= dir_path + "/media.1/license";
+	out = (map) SCR::Execute (.target.bash_output,
+	    sformat ("ls -A1 %1/media.1/license/license*.txt 2>/dev/null",
+	    dir_path));
+    }
+    else if (FileUtils::Exists (dir_path + "/EULA.txt"))
+    {
+	SCR::Execute (.target.bash,
+	    sformat ("/bin/cp %1/EULA.txt %2/license.txt", dir_path, tmpdir));
+	out = (map) SCR::Execute (.target.bash_output,
+	    sformat ("ls -A1 %1/license*.txt 2>/dev/null", tmpdir));
+    }
+    if (out != $[])
+    {
 	foreach (string f, splitstring(out["stdout"]:"", "\n"), {
 	    if (f == "") return;
 	    string name	= substring (f, findlastof (f, "/") + 1);
@@ -1377,11 +1395,13 @@ global boolean WriteMediaFiles (string base_path, list<string> m_files, string n
 // write license.txt files in media.1 dir
 global boolean WriteLicensesFiles (string media_path, map<string,string> files){
 
-    if (!Package::Install ("zip") || !FileUtils::Exists (media_path))
+    if (!FileUtils::Exists (media_path))
 	return false;
 
     boolean ret	= true;
     string cmd	= "";
+    if (size (files) > 0)
+	SCR::Execute (.target.mkdir, media_path +"/license");
     foreach (string file, string cont, files, {
 	if (cont != "")
 	{
@@ -1389,14 +1409,12 @@ global boolean WriteLicensesFiles (string media_path, map<string,string> files){
 	    if (pos == nil || substring (file, pos) != ".txt")
 		file	= file + ".txt";
 	    cmd	= cmd + " " + file;
-	    ret = ret && SCR::Write(.target.string, media_path +"/"+ file,cont);
+	    ret = ret &&
+		SCR::Write (.target.string, media_path +"/license/"+ file,cont);
+	    if (file == "license.txt")
+		SCR::Write (.target.string, base_output_path+"/EULA.txt", cont);
 	}
     });
-    if (ret && cmd != "")
-    {
-	cmd	= sformat ("cd %1; zip license.zip -m%2", media_path, cmd);
-	ret	= SCR::Execute (.target.bash, cmd) == 0;
-    }
     return ret;
 }
 
@@ -1465,11 +1483,9 @@ global boolean CopyRPMs (string in_path, string base_path) {
 	    string dir	= in_path + "/" + arch;
 	    if (FileUtils::Exists (dir))
 	    {
-		string target = full_data_path + "/" + arch;
-		SCR::Execute (.target.mkdir, target);
-		y2milestone ("copying from %1 to %2...", dir, target);
+		y2milestone ("copying from %1 to %2...", dir, full_data_path);
 		SCR::Execute (.target.bash_output,
-		    sformat ("/bin/cp -r %1/*.rpm '%2/'", dir, target));
+		    sformat ("/bin/cp -r %1 '%2/'", dir, full_data_path));
 	    }
 	});
     }

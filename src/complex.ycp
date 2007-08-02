@@ -922,6 +922,8 @@ map AddDescriptionValue (list existing) {
 	    `HBox(
 		`PushButton(`id(`ok),`opt(`default,`key_F10),Label::OKButton()),
 		`PushButton(`id(`cancel),`opt (`key_F9), Label::CancelButton()),
+		// push button label
+		`PushButton(`id(`import),`opt (`key_F3), _("I&mport")),
 		`PushButton(`id(`help),`opt (`key_F2), Label::HelpButton())
 	    )
 	),
@@ -940,6 +942,20 @@ map AddDescriptionValue (list existing) {
 	if (result == `help)
 	{
 	    Wizard::ShowHelp (help);
+	}
+	if (result == `import)
+	{
+	    string file = UI::AskForExistingFile (
+		AddOnCreator::base_output_path, "",
+		// popup for file selection dialog
+		_("Choose the file with the text to be imported")
+	    );
+	    if (file != nil)
+	    {
+		string  text = (string) SCR::Read (.target.string, file);
+		if (text != nil)
+		    UI::ChangeWidget (`id(`val), `Value, text);
+	    }
 	}
 	if (result == `ok)
 	{
