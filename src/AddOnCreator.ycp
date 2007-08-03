@@ -40,6 +40,7 @@ import "FileUtils";
 import "Mode";
 import "Package";
 import "PackageSystem";
+import "PackagesDescr";
 import "Popup";
 import "Progress";
 import "Report";
@@ -517,7 +518,7 @@ global map<string,string> content_map	= $[];
 global map<string,map> patterns	= $[];
 
 // path to directory with RPM's
-global string rpm_path	= "";
+global string rpm_path	= nil;
 
 // path to directory with RPM's, used only for building patterns
 // and not present on AddOn
@@ -840,8 +841,7 @@ global map ReadPackagesFile (string file_path) {
 
     y2milestone ("Importing package description '%1'", file_path);
 
-    map ret	= (map) SCR::Read (.packages_descr, file_path);
-    return ret;
+    return PackagesDescr::Read (file_path);
 }
 
 /**
@@ -1040,7 +1040,9 @@ global void FillContentDefaults () {
 
     // 1. set the values for ARCH.*
     string cmd	= sformat ("cd %1; find -maxdepth 1 -type d", rpm_path);
-    map out	= (map) SCR::Execute (.target.bash_output, cmd);
+    map out	= $[];
+    if (rpm_path != "")
+	out	= (map) SCR::Execute (.target.bash_output, cmd);
 
     arch_directories	= [];
     foreach(string d, splitstring(out["stdout"]:"", "\n"), {
@@ -1055,8 +1057,9 @@ global void FillContentDefaults () {
     if (!clone)
     {
 	// 2. get the list of architectures from RPM's
-	out	= (map) SCR::Execute (.target.bash_output,
-	    sformat ("find %1 -name '*.rpm'", rpm_path));
+	if (rpm_path != "")
+	    out	= (map) SCR::Execute (.target.bash_output,
+		sformat ("find %1 -name '*.rpm'", rpm_path));
 	y2milestone ("asking the RPM's for ARCH and NAME...");
 	foreach (string f, splitstring (out["stdout"]:"", "\n"), {
 	    if (f == "") return;
@@ -1118,6 +1121,7 @@ global void FillContentDefaults () {
 	    y2milestone ("... done");
 	}
     }
+    if (rpm_path == "") return;
 
     // generate tmp package descriptions...
     // TODO move to other function?
@@ -1247,7 +1251,8 @@ global boolean CreateAddOnStructure (string base_path) {
     if (arch_directories == [])
     {
 	foreach (string arch_dir, list pa, available_packages, {
-	    SCR::Execute (.target.mkdir, full_data_path + "/" + arch_dir);
+	    if (arch_dir != "ZZZ_imported" && arch_dir != "ZZZ_required")
+		SCR::Execute (.target.mkdir, full_data_path + "/" + arch_dir);
 	});
     }
 
@@ -1274,9 +1279,10 @@ global boolean WritePackageDescriptions (string descr_path, map descr) {
     if (!FileUtils::Exists (descr_path)) return false;
 
     boolean ret	= true;
+    if (descr == $[]) return ret;
     foreach (string lang, map data, (map<string,map>)descr, {
 	string file_path	= descr_path + "/packages." + lang;
-	ret	= ret && SCR::Write (.packages_descr, [file_path, data]);
+	ret	= ret && PackagesDescr::Write (file_path,(map<string,any>)data);
     });
     if (ret) // copy the rest of files, generated earlier
     {
@@ -1473,6 +1479,9 @@ global boolean WritePatterns (string base_path) {
  * @return success
  */
 global boolean CopyRPMs (string in_path, string base_path) {
+
+    if (in_path == "")
+	return true;
 
     if (!FileUtils::Exists (base_path) || !FileUtils::Exists (in_path))
 	return false;

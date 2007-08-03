@@ -199,6 +199,8 @@ any SourcesDialog() {
     if (requires == "")
 	requires	= "sles-release-10";
     string old_dir	= AddOnCreator::rpm_path;
+    if (AddOnCreator::rpm_path == nil)
+	AddOnCreator::rpm_path	= "";
     string old_requires	= requires;
 
     // dialog caption
@@ -332,14 +334,7 @@ any SourcesDialog() {
 	    UI::ChangeWidget (`id(`other_val), `Enabled, true);
 	}
         else if (ret == `next) {
-	    if (dir == "")
-	    {
-		// error popup
-		Popup::Error (_("Enter the path to the directory with packages."));
-		UI::SetFocus (`id(`rpm_path));
-		continue;
-	    }
-	    if (!FileUtils::Exists (dir))
+	    if (dir != "" && !FileUtils::Exists (dir))
 	    {
 		// error popup
 		Popup::Error(sformat(_("Directory %1 is not accessible."),dir));
@@ -354,7 +349,7 @@ any SourcesDialog() {
 		UI::SetFocus (`id(`required_rpm_path));
 		continue;
 	    }
-	    if (substring (dir, size (dir) - 1, 1) != "/")
+	    if (dir != "" && substring (dir, size (dir) - 1, 1) != "/")
 		dir	=	dir + "/";
 	    AddOnCreator::rpm_path		= dir;
 	    if (req_dir != "" && substring (req_dir, size (req_dir) - 1, 1) != "/")
@@ -1033,7 +1028,7 @@ any PackagesDialog() {
 		)
 	    )
 	);
-	UI::ChangeWidget (`id(`add_lang),`Enabled,
+	UI::ChangeWidget (`id(`add_lang),`Enabled, size (descr) != 0 &&
 	    size(descr) < size (allowed_langs));
     }
 
@@ -1097,11 +1092,15 @@ any PackagesDialog() {
 
     // do not allow to add new description key when all are present
     integer full_descr	= size (description_descr);
-    UI::ChangeWidget (`id(`add), `Enabled,
+    UI::ChangeWidget (`id(`add), `Enabled, descr[current_lang]:$[] != $[] &&
 	size (descr[current_lang, current_package]:$[]) < full_descr);
 
     // do not delete default language file
-    UI::ChangeWidget (`id(`delete_lang),`Enabled, current_lang != def_lang);
+    UI::ChangeWidget (`id(`delete_lang),`Enabled, current_lang != def_lang &&
+	descr[current_lang]:$[] != $[]);
+
+    UI::ChangeWidget (`id(`import_lang), `Enabled, descr[current_lang]:$[] != $[]);
+    UI::ChangeWidget (`id(`edit), `Enabled, descr[current_lang]:$[] != $[]);
 
     replace_language_widgets (current_lang);
 
@@ -1351,6 +1350,9 @@ any SigningDialog() {
 	),
 	// password entry label
 	`Password (`id(`pw), _("&Passphrase"), AddOnCreator::passphrase),
+	// password entry label (verification)
+	`Password (`id(`pw2), _("&Passphrase Verification"),
+	    AddOnCreator::passphrase),
 	// checkbox label
 	`Left (`CheckBox (`id (`resign),
 	    _("Re&sign all packages with selected key"),
@@ -1382,6 +1384,15 @@ any SigningDialog() {
 	    }
 	}
         else if (ret == `next) {
+	    string pw	= (string)UI::QueryWidget(`id(`pw),`Value);
+	    if (pw != (string)UI::QueryWidget(`id(`pw2), `Value))
+	    {
+		// error message
+		Popup::Error (_("Passwords do not match. Try again."));
+		UI::SetFocus (`id (`pw));
+		continue;
+	    }
+
 	    boolean resign = (boolean) UI::QueryWidget(`id(`resign), `Value);
 	    if (resign && !Package::Install ("expect"))
 	    {
@@ -1389,7 +1400,7 @@ any SigningDialog() {
 		continue;
 	    }
 	    AddOnCreator::gpg_key	= key;
-	    AddOnCreator::passphrase = (string)UI::QueryWidget(`id(`pw),`Value);
+	    AddOnCreator::passphrase	= pw;
 	    AddOnCreator::resign_packages = resign;
 	    break;
 	}

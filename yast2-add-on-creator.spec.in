@@ -25,6 +25,7 @@ Summary:	YaST module for creating Add-On product
 @yncludedir@/add-on-creator/*
 @clientdir@/add-on-creator*.ycp
 @moduledir@/AddOnCreator.*
+@moduledir@/PackagesDescr.pm
 @desktopdir@/add-on-creator.desktop
 #agents:
 @scrconfdir@/*.scr

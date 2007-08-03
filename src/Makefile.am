@@ -17,7 +17,8 @@ desktop_DATA =			\
 	add-on-creator.desktop
 
 module_DATA =			\
-	AddOnCreator.ycp
+	AddOnCreator.ycp	\
+	PackagesDescr.pm
 
 # create a symlink for local build, #145327
 add-on-creator:
