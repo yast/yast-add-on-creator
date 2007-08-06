@@ -1,7 +1,7 @@
 -------------------------------------------------------------------
 Fri Aug  3 15:24:36 CEST 2007 - jsuchome@suse.cz
 
-- do not require rpm's for acreating AddOn (#297165)
+- do not require rpms for creating AddOn (#297165)
 - password verification entry (#297168)
 - new PackagesDescr.pm module instead of ag_packages_descr
   (Perl agent cannot handle large amount of data on input)
