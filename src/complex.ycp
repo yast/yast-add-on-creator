@@ -203,10 +203,23 @@ any SourcesDialog() {
 	AddOnCreator::rpm_path	= "";
     string old_requires	= requires;
 
+    string product	= AddOnCreator::content_map["PRODUCT"]:"";
+    string old_product	= product == "" ? nil : product;
+
+    string version	= AddOnCreator::content_map["VERSION"]:"";
+    string old_version	= version;
+
     // dialog caption
     string caption = _("Add-On Product Creator");
 
     term contents = `HBox (`HSpacing (), `VBox (
+	`HBox (
+	    // textentry label
+	    `TextEntry (`id (`product), _("&Add-On Product Name"), product),
+	    // textentry label
+	    `TextEntry (`id (`version), _("&Version"), version)
+	),
+	`VSpacing (0.7),
 	`Frame (_("Required Product"), `HBox (`HSpacing (0.5), `VBox (
 	    `VSpacing (0.4),
 	    `RadioButtonGroup (`id(`rd),
@@ -268,7 +281,7 @@ any SourcesDialog() {
 
     Wizard::SetContentsButtons(caption, contents, HELPS["sources"]:"",
 	    Label::BackButton(), Label::NextButton());
-    UI::SetFocus (`id(`rpm_path));
+    UI::SetFocus (`id(`product));
 
     if (UI::QueryWidget (`id(`rd), `Value) == nil)
     {
@@ -286,6 +299,8 @@ any SourcesDialog() {
 	string dir	= (string) UI::QueryWidget (`id(`rpm_path), `Value);
 	string req_dir	= (string)
 	    UI::QueryWidget (`id(`required_rpm_path), `Value);
+	product		= (string) UI::QueryWidget (`id(`product), `Value);
+	version		= (string) UI::QueryWidget (`id(`version), `Value);
 
 	if (ret == `browse_rpm) {
 	    dir = UI::AskForExistingDirectory (dir, "");
@@ -358,8 +373,17 @@ any SourcesDialog() {
 	    if (requires == "")
 		requires = (string) UI::QueryWidget (`id(`other_val), `Value);
 	    AddOnCreator::content_map["REQUIRES"]	= requires;
+	    AddOnCreator::content_map["PRODUCT"]	= product;
+	    AddOnCreator::content_map["VERSION"]	= version;
+	    if (product != "" &&
+		AddOnCreator::content_map["DISTPRODUCT"]:"" == "")
+		AddOnCreator::content_map["DISTPRODUCT"]	= product;
+	    if (version != "" &&
+		AddOnCreator::content_map["DISTVERSION"]:"" == "")
+		AddOnCreator::content_map["DISTVERSION"]	= version;
 
-	    if (requires == old_requires && dir == old_dir)
+	    if (requires == old_requires && dir == old_dir &&
+		product == old_product && version == old_version)
 		ret	= `skip_gen;
 	    break;
 	}

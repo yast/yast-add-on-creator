@@ -58,7 +58,13 @@ An additional dialog informs whether it is safe to do so.
 	_("<p>When basing the new product on an existing product, check <b>Generate Package Descriptions</b> to generate new descriptions of packages in the existing product.</p>"),
 
     // help text for initial data (paragraph title)
-    "sources"	: _("<p><b>Required Product</b></p>") +
+    "sources"	: _("<p><b>Name and Version</b></p>") +
+
+	// help text for initial data, cont.
+	_("<p>Enter the name and version of add-on product.</p>") +
+
+	// help text for initial data, cont.
+	_("<p><b>Required Product</b></p>") +
 
 	// help text for initial data, cont.
 	_("<p>Select the product to which the new add-on product can be applied. This selection forms the <b>REQUIRES</b> value of the <tt>content</tt> file.</p>") +

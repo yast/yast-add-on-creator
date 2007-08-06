@@ -35,6 +35,7 @@
 module "AddOnCreator";
 textdomain "add-on-creator";
 
+import "Arch";
 import "Directory";
 import "FileUtils";
 import "Mode";
@@ -743,6 +744,8 @@ global boolean Read() {
 	    else
 		content_descr[key,"allowed_values"] = [];
 	}
+	if (key == "DEFAULTBASE")
+	    content_descr[key,"value"]	= Arch::architecture ();
 	i	= i + 1;
     });
 
