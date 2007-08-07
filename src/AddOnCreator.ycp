@@ -1409,11 +1409,11 @@ global boolean WriteLicensesFiles (string media_path, map<string,string> files){
 
     boolean ret	= true;
     string cmd	= "";
-    if (size (files) > 0)
-	SCR::Execute (.target.mkdir, media_path +"/license");
     foreach (string file, string cont, files, {
 	if (cont != "")
 	{
+	    if (!FileUtils::Exists (media_path +"/license"))
+		SCR::Execute (.target.mkdir, media_path +"/license");
 	    integer pos	= findlastof (file, ".");
 	    if (pos == nil || substring (file, pos) != ".txt")
 		file	= file + ".txt";
@@ -1421,9 +1421,21 @@ global boolean WriteLicensesFiles (string media_path, map<string,string> files){
 	    ret = ret &&
 		SCR::Write (.target.string, media_path +"/license/"+ file,cont);
 	    if (file == "license.txt")
-		SCR::Write (.target.string, base_output_path+"/EULA.txt", cont);
+		SCR::Write (.target.string, tmpdir + "/EULA.txt", cont);
 	}
     });
+    if (!FileUtils::Exists (tmpdir + "/EULA.txt"))
+	SCR::Execute (.target.bash, sformat ("touch %1/EULA.txt", tmpdir));
+    if (FileUtils::Exists ("/usr/bin/packages2eula.pl"))
+    {
+	SCR::Execute (.target.bash_output, sformat(
+	"/usr/bin/packages2eula.pl -p %1/packages.en -o %2/EULA.txt 2>/dev/null"
+	, full_descr_path, tmpdir));
+    }
+    if (FileUtils::GetSize (tmpdir + "/EULA.txt") > 0)
+	SCR::Execute (.target.bash, sformat ("cp %1/EULA.txt %2/", tmpdir,
+	    base_output_path));
+
     return ret;
 }
 
@@ -1927,8 +1939,6 @@ global boolean Write() {
 
 	WriteMediaFiles (base_output_path, media_files, nextmedia);
 
-	WriteLicensesFiles (full_media_paths[0]:"", license_files);
-
 	if (info != "")
 	    SCR::Write (.target.string, full_media_paths[0]:"" + "/info.txt", info);
 
@@ -1941,6 +1951,8 @@ global boolean Write() {
 	CopyRPMs (rpm_path, base_output_path);
 
 	WritePackageDescriptions (full_descr_path, packages_descr);
+
+	WriteLicensesFiles (full_media_paths[0]:"", license_files);
 
 	WriteWorkflow (base_output_path, workflow_path, y2update_packages, y2update_path);
 
