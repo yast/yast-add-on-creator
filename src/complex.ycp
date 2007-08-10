@@ -1082,7 +1082,7 @@ any PackagesDialog() {
 	    // table header
 	    _("Package")), []
 	),
-        `VSpacing (0.5),
+        `VSpacing (0.4),
 	`Table (`id(`description), `opt(`notify), `header(
 	    // table header 1/2
 	    _("Attribute"),
@@ -1095,7 +1095,15 @@ any PackagesDialog() {
             `PushButton (`id(`edit), `opt(`key_F7), Label::EditButton ()),
             `HStretch ()
 	),
-	`VSpacing (0.5)
+	`VSpacing (0.4),
+	`HBox (
+	    // textentry label
+	    `TextEntry (`id (`extra_prov), _("Location of the File with Additional &Dependencies"), AddOnCreator::extra_prov_file),
+	    `VBox (
+		`Label (""),
+		`PushButton (`id (`browse), Label::BrowseButton ())
+	    )
+	)
     ), `HSpacing ());
 
     Wizard::SetContentsButtons(caption, contents, HELPS["packages"]:"",
@@ -1241,8 +1249,29 @@ Choose another one."));
 	    }
 	    UI::SetFocus (`id(`description));
 	}
+	else if (ret == `browse)
+	{
+	    string file = UI::AskForExistingFile (
+		AddOnCreator::rpm_path, "",
+		// popup for file selection dialog
+		_("Choose the Path to EXTRA_PROV File")
+	    );
+	    if (file != nil)
+		UI::ChangeWidget (`id (`extra_prov), `Value, file);
+	}
         else if(ret == `next) {
 	    AddOnCreator::packages_descr	= descr;
+	    string extra = (string) UI::QueryWidget (`id (`extra_prov), `Value);
+	    if (extra != "" && !FileUtils::Exists (extra))
+	    {
+		// error popup
+		Report::Error (sformat(_("The file '%1' does not exist.
+Choose another one."), extra));
+		UI::SetFocus (`id (`extra_prov));
+		continue;
+	    }
+	    else
+		AddOnCreator::extra_prov_file	= extra;
             break;
         }
 	else if (ret == `back) {

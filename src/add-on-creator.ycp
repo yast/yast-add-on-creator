@@ -50,12 +50,12 @@ include "add-on-creator/wizards.ycp";
 
 void ReportMissingFile (string file) {
     // error message, %1 is path
-    Report::Error (sformat (_("File %1 does not exists"), file));
+    Report::Error (sformat (_("File %1 does not exist."), file));
 }
 
 void ReportMissingDir (string dir) {
     // error message, %1 is path
-    Report::Error (sformat (_("Directory %1 does not exists"), dir));
+    Report::Error (sformat (_("Directory %1 does not exist."), dir));
 }
 
 // helper for parsing command line data regarding iso creation
@@ -188,19 +188,55 @@ boolean Create (map<string,any> options ) {
     }
     ParseISOData (options);
 
+    if (haskey (options, "info"))
+    {
+	string file	= options["info"]:"";
+	if (FileUtils::Exists (file))
+	{
+	    string info	= (string) SCR::Read (.target.string, file);
+	    if (info != nil)
+		AddOnCreator::info	= info;
+	}
+	else
+	    ReportMissingFile (file);
+    }
+    if (haskey (options, "extra_prov"))
+    {
+	string file	= options["extra_prov"]:"";
+	if (FileUtils::Exists (file))
+	{
+	    string extra	= (string) SCR::Read (.target.string, file);
+	    if (extra != nil)
+		AddOnCreator::extra_prov	= extra;
+	}
+	else
+	    ReportMissingFile (file);
+    }
     if (haskey (options, "license"))
     {
 	string file	= options["license"]:"";
-	if (!FileUtils::Exists ("/usr/bin/unzip"))
+	if (FileUtils::Exists (file))
 	{
-	    // error message, missing tool
-	    Report::Error (_("/usr/bin/unzip does not exists"));
-	}
-	else if (FileUtils::Exists (file))
-	{
+	    integer pos = findlastof (file, ".");
 	    string tmpdir	= Directory::tmpdir;
-	    SCR::Execute (.target.bash_output,
-		sformat ("/usr/bin/unzip -o %1 -d %2", file, tmpdir));
+	    if (substring (file, pos) == ".zip")
+	    {
+		if (!FileUtils::Exists ("/usr/bin/unzip"))
+		{
+		    // error message, missing tool
+		    Report::Error (_("/usr/bin/unzip does not exists"));
+		}
+		else
+		{
+		    SCR::Execute (.target.bash_output,
+			sformat ("/usr/bin/unzip -o %1 -d %2", file, tmpdir));
+		}
+	    }
+	    else // let's try to unzip without checking file name and type...
+	    {
+		SCR::Execute (.target.bash_output,
+		    sformat ("/bin/tar -zxf %1 -C %2", file, tmpdir));
+	    }
 	    map out = (map) SCR::Execute (.target.bash_output,
 		sformat ("ls -A1 %1/license*.txt 2>/dev/null", tmpdir));
 	    foreach (string f, splitstring(out["stdout"]:"", "\n"), {
@@ -452,7 +488,17 @@ map cmdline_description = $[
 	],
 	"license"	: $[
 	    // command line help text for 'license' option
-	    "help"	: _("Path to file with license texts (license.zip)"),
+	    "help"	: _("Path to file with license texts (license.zip or license.tar.gz)"),
+	    "type"      : "string",
+	],
+	"info"	: $[
+	    // command line help text for 'info' option
+	    "help"	: _("Path to file with 'info' text (media.1/info.txt)"),
+	    "type"      : "string",
+	],
+	"extra_prov"	: $[
+	    // command line help text for 'extra_prov' option
+	    "help"	: _("Path to file with additional dependencies (EXTRA_PROV)"),
 	    "type"      : "string",
 	],
 	"addon_dir"	: $[
@@ -466,14 +512,14 @@ map cmdline_description = $[
 	    "patterns_dir", "output_dir", "create_iso", "iso_name", "gpg_key",
 	    "passphrase", "passphrase_file", "workflow", "y2update",
 	    "y2update_packages_dir", "license", "do_not_sign", "iso_output_dir",
-	    "resign_packages",
+	    "resign_packages", "info", "extra_prov"
 	],
 	"clone"		: [ "existing", "generate_descriptions", "content",
 	    "package_descriptions_dir", "patterns_dir", "output_dir",
 	    "create_iso", "iso_name",
 	    "gpg_key", "passphrase", "passphrase_file", "workflow", "y2update",
 	    "y2update_packages_dir", "license", "do_not_sign", "iso_output_dir",
-	    "resign_packages",
+	    "resign_packages", "info", "extra_prov",
 	],
 	"sign"		: [ "addon_dir", "gpg_key", "passphrase",
 	    "passphrase_file", "create_iso", "iso_name", "iso_output_dir",

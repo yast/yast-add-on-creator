@@ -543,6 +543,12 @@ global list<string> patches_files	= [];
 // the contents of info.txt file
 global string info		= "";
 
+// the contents of EXTRA_PROV file
+global string extra_prov	= "";
+
+// path to the file with EXTRA_PROV data
+global string extra_prov_file	= "";
+
 // the contents of nextmedia file
 global string nextmedia		= "";
 
@@ -754,6 +760,7 @@ global boolean Read() {
     return true;
 }
 
+// proposal for ARCH.* values (of content file)
 // FIXME this won't work for other architectures...
 global string ValueForArchitecture (string arch_dir) {
 
@@ -902,6 +909,7 @@ global boolean ImportExistingProduct (string dir_path) {
     // read the license files
     string license_path	= dir_path + "/media.1/license.zip";
     out	= $[];
+    // license.zip is obsolete
     if (FileUtils::Exists (license_path))
     {
 	SCR::Execute (.target.bash_output,
@@ -909,13 +917,21 @@ global boolean ImportExistingProduct (string dir_path) {
 	out = (map) SCR::Execute (.target.bash_output,
 	    sformat ("ls -A1 %1/license*.txt 2>/dev/null", tmpdir));
     }
+    else if (FileUtils::Exists (dir_path + "/license.tar.gz"))
+    {
+	SCR::Execute (.target.bash_output,
+	    sformat ("/bin/tar -zxf %1/license.tar.gz -C %2", dir_path,tmpdir));
+	out = (map) SCR::Execute (.target.bash_output,
+	    sformat ("ls -A1 %1/license*.txt 2>/dev/null", tmpdir));
+    }
     else if (FileUtils::IsDirectory (dir_path + "/media.1/license") == true)
     {
-	license_path	= dir_path + "/media.1/license";
 	out = (map) SCR::Execute (.target.bash_output,
 	    sformat ("ls -A1 %1/media.1/license/license*.txt 2>/dev/null",
 	    dir_path));
     }
+    // extract license.txt from EULA.txt
+    // (no other need to read EULA, it should be just license.txt + packages)
     else if (FileUtils::Exists (dir_path + "/EULA.txt"))
     {
 	SCR::Execute (.target.bash,
@@ -954,6 +970,14 @@ global boolean ImportExistingProduct (string dir_path) {
     });
 
     // FIXME autorun
+
+    // read the info.txt
+    string info_path	= dir_path + "/media.1/info.txt";
+    if (FileUtils::Exists (info_path))
+    {
+	info	= (string) SCR::Read (.target.string, info_path);
+	if (info == nil) info = "";
+    }
 
     // read the content of media.n dirs
     out = (map) SCR::Execute (.target.bash_output,
@@ -1264,7 +1288,9 @@ global boolean CreateAddOnStructure (string base_path) {
     return true;
 }
 
-// generate the package descriptions using create_package_descr
+/**
+ * Generate the package descriptions using create_package_descr
+ */
 global boolean GeneratePackageDescriptions () {
 
     if (!FileUtils::Exists ("/usr/bin/create_package_descr")) return false;
@@ -1276,7 +1302,11 @@ global boolean GeneratePackageDescriptions () {
 
 }
 
-// write the package descriptions edited by user
+/**
+ * Write the package descriptions edited by user
+ * @path descr_path full path to directory with package descriptions (DESCRDIR)
+ * @path map with package descriptions
+ */
 global boolean WritePackageDescriptions (string descr_path, map descr) {
 
     if (!FileUtils::Exists (descr_path)) return false;
@@ -1296,11 +1326,20 @@ global boolean WritePackageDescriptions (string descr_path, map descr) {
 	cmd	= sformat ("/bin/cp %1/packages.DU '%2'", tmpdir, descr_path);
 	SCR::Execute (.target.bash, cmd, $["LANG":"C"]);
     }
+
+
+    if (extra_prov_file != "" && FileUtils::Exists (extra_prov_file))
+	extra_prov	= (string) SCR::Read (.target.string, extra_prov_file);
+
+    if (extra_prov != "" && extra_prov != nil)
+	SCR::Write (.target.string, descr_path + "/EXTRA_PROV",extra_prov);
+
     return ret;
 }
 
 /**
  * Generate ARCHIVES.gz, INDEX.gz and ls-lR.gz
+ * @param base_path path to base output directory
  */
 global boolean GenerateArchiveFiles (string base_path)
 {
@@ -1401,51 +1440,75 @@ global boolean WriteMediaFiles (string base_path, list<string> m_files, string n
     return true;
 }
 
-// write license.txt files in media.1 dir
-global boolean WriteLicensesFiles (string media_path, map<string,string> files){
+/**
+ * Write the text of available licenses to correct places
+ * @path descr_path full path to directory with package descriptions (DESCRDIR)
+ * @param base_path full path to base output directory
+ * @patram files map of license files and their contents ($[ name : content ])
+ */
+global boolean WriteLicensesFiles (string descr_path, string base_path, map<string,string> files)
+{
 
-    if (!FileUtils::Exists (media_path))
+    if (!FileUtils::Exists (base_path))
+    {
+	y2warning ("no %1 directory exists...", base_path);
 	return false;
+    }
 
     boolean ret	= true;
     string cmd	= "";
     foreach (string file, string cont, files, {
 	if (cont != "")
 	{
-	    if (!FileUtils::Exists (media_path +"/license"))
-		SCR::Execute (.target.mkdir, media_path +"/license");
 	    integer pos	= findlastof (file, ".");
 	    if (pos == nil || substring (file, pos) != ".txt")
 		file	= file + ".txt";
 	    cmd	= cmd + " " + file;
-	    ret = ret &&
-		SCR::Write (.target.string, media_path +"/license/"+ file,cont);
+	    ret = ret && SCR::Write (.target.string, tmpdir + "/"+ file ,cont);
 	    if (file == "license.txt")
 		SCR::Write (.target.string, tmpdir + "/EULA.txt", cont);
 	}
     });
+    // tar + gzip the licenses into one file
+    if (ret && cmd != "")
+    {
+	cmd     = sformat ("cd %1; tar -czf %2/license.tar.gz license*.txt",
+	    tmpdir, base_path);
+	map out = (map) SCR::Execute (.target.bash_output, cmd);
+	if (out["stderr"]:"" != "")
+	{
+	    y2warning ("%1 returned %2", cmd, out);
+	    ret	= false;
+	}
+    }
+    // merge the license of packages into EULA.txt
     if (!FileUtils::Exists (tmpdir + "/EULA.txt"))
 	SCR::Execute (.target.bash, sformat ("touch %1/EULA.txt", tmpdir));
     if (FileUtils::Exists ("/usr/bin/packages2eula.pl"))
     {
 	SCR::Execute (.target.bash_output, sformat(
 	"/usr/bin/packages2eula.pl -p %1/packages.en -o %2/EULA.txt 2>/dev/null"
-	, full_descr_path, tmpdir));
+	, descr_path, tmpdir));
     }
     if (FileUtils::GetSize (tmpdir + "/EULA.txt") > 0)
 	SCR::Execute (.target.bash, sformat ("cp %1/EULA.txt %2/", tmpdir,
-	    base_output_path));
+	    base_path));
 
     return ret;
 }
 
 /**
  * Write all files with patterns definitions
- * TODO use agent...
+ * @path descr_path full path to directory with package descriptions (DESCRDIR)
+ * @param base_path path to base output directory
  */
-global boolean WritePatterns (string base_path) {
+global boolean WritePatterns (string descr_path, string base_path) {
 
-    if (!FileUtils::Exists (base_path)) return false;
+    if (!FileUtils::Exists (base_path) || !FileUtils::Exists (descr_path))
+    {
+	y2warning ("%1 or %2 directory not available...",base_path, descr_path);
+	return false;
+    }
 
     boolean ret		= true;
     list<string> names	= [];
@@ -1479,10 +1542,10 @@ global boolean WritePatterns (string base_path) {
 		file = file + sformat ("+%1:\n%2\n-%1:\n", key, val);
 	    }
 	});
-	SCR::Write (.target.string, full_descr_path + "/" + filename, file);
+	SCR::Write (.target.string, descr_path + "/" + filename, file);
     });
     if (names != [])
-	ret = SCR::Write (.target.string, full_descr_path + "/patterns",
+	ret = SCR::Write (.target.string, descr_path + "/patterns",
 	    mergestring (names, "\n"));
     return ret;
 }
@@ -1701,6 +1764,18 @@ global boolean CreateMD5SUMS (string base_path) {
 	SCR::Execute (.target.bash, command, $["LANG" : "C"]);
     });
 
+    // sha1sums of the rest of interesting files
+    foreach (string file, [ "installation.xml", "license.tar.gz", "media.1/info.txt"],
+    {
+	if (FileUtils::Exists (base_path + "/" + file))
+	{
+	    out = (map) SCR::Execute (.target.bash_output,
+		sformat ("cd '%1' && sha1sum -- %2", base_path, String::Quote (file)), $["LANG" : "C"]);
+	    string command = sformat ("echo 'HASH SHA1 %1' >> '%2/content'",
+		deletechars (out["stdout"]:"", "\n"), base_path);
+	    SCR::Execute (.target.bash, command, $["LANG" : "C"]);
+	}
+    });
     return true;
 }
 
@@ -1744,7 +1819,6 @@ global boolean SignAddOn (string base_path, string key) {
 	    deletechars (out["stdout"]:"", "\n"), base_path);
 	SCR::Execute (.target.bash, command, $["LANG" : "C"]);
     });
-
     // sign the packages
     if (resign_packages)
     {
@@ -1939,12 +2013,12 @@ global boolean Write() {
 
 	WriteMediaFiles (base_output_path, media_files, nextmedia);
 
-	if (info != "")
+	if (info != "" && info != nil)
 	    SCR::Write (.target.string, full_media_paths[0]:"" + "/info.txt", info);
 
 	Progress::NextStage();
 
-	WritePatterns (base_output_path);
+	WritePatterns (full_descr_path, base_output_path);
 
 	Progress::NextStage();
 
@@ -1952,7 +2026,7 @@ global boolean Write() {
 
 	WritePackageDescriptions (full_descr_path, packages_descr);
 
-	WriteLicensesFiles (full_media_paths[0]:"", license_files);
+	WriteLicensesFiles (full_descr_path, base_output_path, license_files);
 
 	WriteWorkflow (base_output_path, workflow_path, y2update_packages, y2update_path);
 

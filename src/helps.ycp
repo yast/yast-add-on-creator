@@ -95,7 +95,10 @@ An additional dialog informs whether it is safe to do so.
 	_("<p>Use <b>Add Language</b> to add a description file for a new language. The list of available languages is read from the <b>LINGUAS</b> value of the <tt>content</tt> file. Import an existing file with package descriptions with <b>Import</b>. Delete the description file with <b>Delete</b>.</p>") +
 
 	// help text for package description files, cont.
-	_("<p>Use <b>Add</b> and <b>Edit</b> in the second table to modify description entries for the selected package.</p>"),
+	_("<p>Use <b>Add</b> and <b>Edit</b> in the second table to modify description entries for the selected package.</p>") +
+
+	// help text for package description files, cont.
+	_("<p>Optionally, choose the path for the file providing <b>Additional Package Dependencies</b> (EXTRA_PROV).</p>"),
 
     // help text for patterns
     "patterns"	: _("<p>Here, create and edit the patterns for the add-on product.</p>") +
