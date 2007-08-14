@@ -187,6 +187,30 @@ boolean Create (map<string,any> options ) {
     }
     ParseISOData (options);
 
+    if (haskey (options, "info"))
+    {
+	string file	= options["info"]:"";
+	if (FileUtils::Exists (file))
+	{
+	    string info	= (string) SCR::Read (.target.string, file);
+	    if (info != nil)
+		AddOnCreator::info	= info;
+	}
+	else
+	    ReportMissingFile (file);
+    }
+    if (haskey (options, "extra_prov"))
+    {
+	string file	= options["extra_prov"]:"";
+	if (FileUtils::Exists (file))
+	{
+	    string extra	= (string) SCR::Read (.target.string, file);
+	    if (extra != nil)
+		AddOnCreator::extra_prov	= extra;
+	}
+	else
+	    ReportMissingFile (file);
+    }
     if (haskey (options, "license"))
     {
 	string file	= options["license"]:"";
@@ -445,6 +469,16 @@ map cmdline_description = $[
 	"license"	: $[
 	    // command line help text for 'license' option
 	    "help"	: _("Path to file with license texts (license.zip)"),
+	    "type"      : "string",
+	],
+	"info"	: $[
+	    // command line help text for 'info' option
+	    "help"	: _("Path to file with 'info' text (media.1/info.txt)"),
+	    "type"      : "string",
+	],
+	"extra_prov"	: $[
+	    // command line help text for 'extra_prov' option
+	    "help"	: _("Path to file with additional dependencies (EXTRA_PROV)"),
 	    "type"      : "string",
 	],
 	"addon_dir"	: $[

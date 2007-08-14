@@ -1,4 +1,14 @@
 -------------------------------------------------------------------
+Mon Aug  6 10:14:05 CEST 2007 - jsuchome@suse.cz
+
+- show ID for GPG key (#275885)
+- offered SLE10SP1 products as a base for new AddOn
+- tag for suggested packages in pattern is Psg, not Prs
+- do not require rpms for creating AddOn (#297165)
+- enable adding EXTRA_PROV file (#299233)
+- 2.13.23 
+
+-------------------------------------------------------------------
 Wed Jun 13 14:21:13 CEST 2007 - jsuchome@suse.cz
 
 - fix installation of inst-source-utils in CLI mode (#281792) 

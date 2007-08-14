@@ -199,6 +199,8 @@ any SourcesDialog() {
     if (requires == "")
 	requires	= "sles-release-10";
     string old_dir	= AddOnCreator::rpm_path;
+    if (AddOnCreator::rpm_path == nil)
+	AddOnCreator::rpm_path	= "";
     string old_requires	= requires;
 
     // dialog caption
@@ -213,10 +215,22 @@ any SourcesDialog() {
 			// radio button label
 			_("SUSE Linux &Enterprise Server 10"),
 			requires == "sles-release-10")),
+		    `Left (`RadioButton(`id(`sles10sp1), `opt (`notify),
+			// radio button label
+			_("SUSE &Linux Enterprise Server 10 SP1"),
+			requires == "product:SUSE_SLES = 10.1")),
 		    `Left (`RadioButton(`id(`sled10), `opt (`notify),
 			// radio button label
 			_("SUSE Linux Enterprise &Desktop 10"),
 			requires == "sled-release-10")),
+		    `Left (`RadioButton(`id(`sled10sp1), `opt (`notify),
+			// radio button label
+			_("SUSE L&inux Enterprise &Desktop 10 SP1"),
+			requires == "product:SUSE_SLED = 10.1")),
+		    `Left (`RadioButton(`id(`sle10sp1), `opt (`notify),
+			// radio button label
+			_("S&USE Linux Enterprise 10 SP1"),
+			requires == "product:SUSE_SLE = 10.1")),
 		    `HBox (
 			`Left(`RadioButton(`id(`other), `opt (`notify),
 			    // radio button label
@@ -295,8 +309,20 @@ any SourcesDialog() {
 	    requires	= "sles-release-10";
 	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
 	}
+	else if (ret == `sles10sp1) {
+	    requires	= "product:SUSE_SLES = 10.1";
+	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
+	}
 	else if (ret == `sled10) {
 	    requires	= "sled-release-10";
+	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
+	}
+	else if (ret == `sled10sp1) {
+	    requires	= "product:SUSE_SLED = 10.1";
+	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
+	}
+	else if (ret == `sle10sp1) {
+	    requires = "product:SUSE_SLE = 10.1";
 	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
 	}
 	else if (ret == `suse101) {
@@ -308,6 +334,7 @@ any SourcesDialog() {
 	    UI::ChangeWidget (`id(`other_val), `Enabled, true);
 	}
         else if (ret == `next) {
+	    /*
 	    if (dir == "")
 	    {
 		// error popup
@@ -315,7 +342,8 @@ any SourcesDialog() {
 		UI::SetFocus (`id(`rpm_path));
 		continue;
 	    }
-	    if (!FileUtils::Exists (dir))
+	    */
+	    if (dir != "" && !FileUtils::Exists (dir))
 	    {
 		// error popup
 		Popup::Error(sformat(_("Directory %1 is not accessible."),dir));
@@ -330,7 +358,7 @@ any SourcesDialog() {
 		UI::SetFocus (`id(`required_rpm_path));
 		continue;
 	    }
-	    if (substring (dir, size (dir) - 1, 1) != "/")
+	    if (dir != "" && substring (dir, size (dir) - 1, 1) != "/")
 		dir	=	dir + "/";
 	    AddOnCreator::rpm_path		= dir;
 	    if (req_dir != "" && substring (req_dir, size (req_dir) - 1, 1) != "/")
@@ -993,7 +1021,7 @@ any PackagesDialog() {
 		)
 	    )
 	);
-	UI::ChangeWidget (`id(`add_lang),`Enabled,
+	UI::ChangeWidget (`id(`add_lang),`Enabled, size (descr) != 0 &&
 	    size(descr) < size (allowed_langs));
     }
 
@@ -1023,7 +1051,7 @@ any PackagesDialog() {
 	    // table header
 	    _("Package")), []
 	),
-        `VSpacing (0.5),
+        `VSpacing (0.4),
 	`Table (`id(`description), `opt(`notify), `header(
 	    // table header 1/2
 	    _("Attribute"),
@@ -1036,7 +1064,15 @@ any PackagesDialog() {
             `PushButton (`id(`edit), `opt(`key_F7), Label::EditButton ()),
             `HStretch ()
 	),
-	`VSpacing (0.5)
+	`VSpacing (0.4),
+	`HBox (
+	    // textentry label
+	    `TextEntry (`id (`extra_prov), _("Location of the File with Additional &Dependencies"), AddOnCreator::extra_prov_file),
+	    `VBox (
+		`Label (""),
+		`PushButton (`id (`browse), Label::BrowseButton ())
+	    )
+	)
     ), `HSpacing ());
 
     Wizard::SetContentsButtons(caption, contents, HELPS["packages"]:"",
@@ -1057,11 +1093,15 @@ any PackagesDialog() {
 
     // do not allow to add new description key when all are present
     integer full_descr	= size (description_descr);
-    UI::ChangeWidget (`id(`add), `Enabled,
+    UI::ChangeWidget (`id(`add), `Enabled, descr[current_lang]:$[] != $[] &&
 	size (descr[current_lang, current_package]:$[]) < full_descr);
 
     // do not delete default language file
-    UI::ChangeWidget (`id(`delete_lang),`Enabled, current_lang != def_lang);
+    UI::ChangeWidget (`id(`delete_lang),`Enabled, current_lang != def_lang &&
+            descr[current_lang]:$[] != $[]);
+
+    UI::ChangeWidget (`id(`import_lang), `Enabled, descr[current_lang]:$[] != $[]);
+    UI::ChangeWidget (`id(`edit), `Enabled, descr[current_lang]:$[] != $[]);
 
     replace_language_widgets (current_lang);
 
@@ -1178,8 +1218,29 @@ Choose another one."));
 	    }
 	    UI::SetFocus (`id(`description));
 	}
+	else if (ret == `browse)
+	{
+	    string file = UI::AskForExistingFile (
+		AddOnCreator::rpm_path, "",
+		// popup for file selection dialog
+		_("Choose the Path to EXTRA_PROV File")
+	    );
+	    if (file != nil)
+		UI::ChangeWidget (`id (`extra_prov), `Value, file);
+	}
         else if(ret == `next) {
 	    AddOnCreator::packages_descr	= descr;
+	    string extra = (string) UI::QueryWidget (`id (`extra_prov), `Value);
+	    if (extra != "" && !FileUtils::Exists (extra))
+	    {
+		// error popup
+		Report::Error (sformat(_("The file '%1' does not exist.
+Choose another one."), extra));
+		UI::SetFocus (`id (`extra_prov));
+		continue;
+	    }
+	    else
+		AddOnCreator::extra_prov_file	= extra;
             break;
         }
 	else if (ret == `back) {
@@ -1289,7 +1350,12 @@ any SigningDialog() {
 
     // dialog caption
     string caption	= _("Signing the Add-On Product");
-    list gpg_keys	= AddOnCreator::gpg_keys;
+    list gpg_keys	= maplist (string key, AddOnCreator::gpg_keys, {
+	map out		= (map) SCR::Execute (.target.bash_output,
+	    sformat ("gpg --list-secret-keys %1 | grep uid | sed -e 's/^uid[ ]*//'", key));
+	string name	= deletechars (out["stdout"]:"", "\n");
+	return `item (`id (key), name != "" ? sformat ("%1 (%2)", key, name) : key);
+    });
 
     term contents = `HBox (`HSpacing (), `VBox (
 	`HBox (

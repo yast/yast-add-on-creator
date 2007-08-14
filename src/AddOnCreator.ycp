@@ -35,6 +35,7 @@
 module "AddOnCreator";
 textdomain "add-on-creator";
 
+import "Arch";
 import "Directory";
 import "FileUtils";
 import "Mode";
@@ -67,6 +68,7 @@ map<string,map> content_descr	= $[
 	    "label"	: _("Product version and release"),
 	    // help text for content file 'VERSION' key
 	    "help"	: _("Product version and release as in RPM <tt>major.minor-release</tt>."),
+	    "value"     : "1",
 	    "mandatory"	: true,
     ],
     "DISTPRODUCT"	: $[
@@ -83,6 +85,7 @@ map<string,map> content_descr	= $[
 	    "label"	: _("Distribution version"),
 	    // help text for content file 'DISTVERSION' key
 	    "help"	: _("Distribution version (vendor specific)."),
+	    "value"     : "1",
 	    "mandatory"	: true,
     ],
     "VENDOR"		: $[
@@ -338,7 +341,7 @@ global map pattern_descr	= $[
 	"type"		: "package-list",
 	"defval"	: [],
     ],
-    "Prs"	: $[
+    "Psg"	: $[
 	// label for 'Prs' pattern key
 	"label"		: _("Suggested packages"),
 	// help text for 'Prs' pattern key
@@ -489,7 +492,7 @@ global map<string,string> content_map	= $[];
 global map<string,map> patterns	= $[];
 
 // path to directory with RPM's
-global string rpm_path	= "";
+global string rpm_path	= nil;
 
 // path to directory with RPM's, used only for building patterns
 // and not present on AddOn
@@ -512,6 +515,12 @@ global list<string> patches_files	= [];
 
 // the contents of info.txt file
 global string info		= "";
+
+// the contents of EXTRA_PROV file
+global string extra_prov       = "";
+
+// path to the file with EXTRA_PROV data
+global string extra_prov_file  = "";
 
 // the contents of nextmedia file
 global string nextmedia		= "";
@@ -711,6 +720,8 @@ global boolean Read() {
 	    else
 		content_descr[key,"allowed_values"] = [];
 	}
+	if (key == "DEFAULTBASE")
+	    content_descr[key,"value"]  = Arch::architecture ();
 	i	= i + 1;
     });
 
@@ -991,7 +1002,9 @@ global void FillContentDefaults () {
 
     // 1. set the values for ARCH.*
     string cmd	= sformat ("cd %1; find -maxdepth 1 -type d", rpm_path);
-    map out	= (map) SCR::Execute (.target.bash_output, cmd);
+    map out	= $[];
+    if (rpm_path != "")
+	out	= (map) SCR::Execute (.target.bash_output, cmd);
 
     arch_directories	= [];
     foreach(string d, splitstring(out["stdout"]:"", "\n"), {
@@ -1006,8 +1019,9 @@ global void FillContentDefaults () {
     if (!clone)
     {
 	// 2. get the list of architectures from RPM's
-	out	= (map) SCR::Execute (.target.bash_output,
-	    sformat ("find %1 -name '*.rpm'", rpm_path));
+	if (rpm_path != "")
+	    out	= (map) SCR::Execute (.target.bash_output,
+		sformat ("find %1 -name '*.rpm'", rpm_path));
 	y2milestone ("asking the RPM's for ARCH and NAME...");
 	foreach (string f, splitstring (out["stdout"]:"", "\n"), {
 	    if (f == "") return;
@@ -1069,6 +1083,7 @@ global void FillContentDefaults () {
 	    y2milestone ("... done");
 	}
     }
+    if (rpm_path == "") return;
 
     // generate tmp package descriptions...
     // TODO move to other function?
@@ -1198,7 +1213,8 @@ global boolean CreateAddOnStructure (string base_path) {
     if (arch_directories == [])
     {
 	foreach (string arch_dir, list pa, available_packages, {
-	    SCR::Execute (.target.mkdir, full_data_path + "/" + arch_dir);
+	    if (arch_dir != "ZZZ_imported" && arch_dir != "ZZZ_required")
+		SCR::Execute (.target.mkdir, full_data_path + "/" + arch_dir);
 	});
     }
 
@@ -1225,6 +1241,7 @@ global boolean WritePackageDescriptions (string descr_path, map descr) {
     if (!FileUtils::Exists (descr_path)) return false;
 
     boolean ret	= true;
+    if (descr == $[]) return ret;
     foreach (string lang, map data, (map<string,map>)descr, {
 	string file_path	= descr_path + "/packages." + lang;
 	ret	= ret && SCR::Write (.packages_descr, [file_path, data]);
@@ -1238,6 +1255,13 @@ global boolean WritePackageDescriptions (string descr_path, map descr) {
 	cmd	= sformat ("/bin/cp %1/packages.DU '%2'", tmpdir, descr_path);
 	SCR::Execute (.target.bash, cmd, $["LANG":"C"]);
     }
+
+    if (extra_prov_file != "" && FileUtils::Exists (extra_prov_file))
+	extra_prov      = (string) SCR::Read (.target.string, extra_prov_file);
+
+    if (extra_prov != "" && extra_prov != nil)
+	SCR::Write (.target.string, descr_path + "/EXTRA_PROV",extra_prov);
+
     return ret;
 }
 
@@ -1424,6 +1448,9 @@ global boolean WritePatterns (string base_path) {
  * @return success
  */
 global boolean CopyRPMs (string in_path, string base_path) {
+
+    if (in_path == "")
+	return true;
 
     if (!FileUtils::Exists (base_path) || !FileUtils::Exists (in_path))
 	return false;
@@ -1846,7 +1873,7 @@ global boolean Write() {
 
 	WriteLicensesFiles (full_media_paths[0]:"", license_files);
 
-	if (info != "")
+	if (info != "" && info != nil)
 	    SCR::Write (.target.string, full_media_paths[0]:"" + "/info.txt", info);
 
 	Progress::NextStage();
