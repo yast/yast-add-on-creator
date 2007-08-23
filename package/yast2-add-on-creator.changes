@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Thu Aug 23 14:19:10 CEST 2007 - jsuchome@suse.cz
+
+- copy packages with different architectures to correct
+  directories (#302439)
+- 2.13.24
+
+-------------------------------------------------------------------
 Mon Aug  6 10:14:05 CEST 2007 - jsuchome@suse.cz
 
 - show ID for GPG key (#275885)
