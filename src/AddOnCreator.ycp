@@ -627,10 +627,10 @@ global list<string> gpg_keys	= [];
 global map<string,list> available_packages = $[];
 
 // mapping of package name to full file name
-global map<string,string> package2filename = $[];
+global map<string,map> package2filename = $[];
 
 // mapping of source package name to full file name
-global map<string,string> srcpackage2filename	= $[];
+global map<string,map> srcpackage2filename	= $[];
 
 // if we want only to sign existing product (and possibly create iso of it)
 global boolean only_sign_product		= false;
@@ -1103,10 +1103,14 @@ global void FillContentDefaults () {
 	    {
 		available_packages[arch] = add (
 		    available_packages[arch]:[], name);
+		if (!haskey (package2filename, arch))
+		    package2filename[arch]	= $[];
+		if (!haskey (srcpackage2filename, arch))
+		    srcpackage2filename[arch]	= $[];
 		if (arch != "src")
-		    package2filename[name]	= f;
+		    package2filename[arch,name]	= f;
 		else
-		    srcpackage2filename[name]      = f;
+		    srcpackage2filename[arch,name]      = f;
 	    }
 	});
 	y2milestone ("... done");
@@ -1592,14 +1596,14 @@ global boolean CopyRPMs (string in_path, string base_path) {
 		{
 		    foreach (string p, (list<string>) pa, {
 			SCR::Execute (.target.bash, sformat (
-			    "/bin/cp %1 '%2/'", package2filename[p]:"", out_dir));
+			    "/bin/cp %1 '%2/'", package2filename[arch,p]:"", out_dir));
 		    });
 		}
 		else if (size (srcpackage2filename) > 0 && arch == "src")
 		{
 		    foreach (string p, (list<string>) pa, {
 			SCR::Execute (.target.bash, sformat (
-			    "/bin/cp %1 '%2/'", srcpackage2filename[p]:"", out_dir));
+			    "/bin/cp %1 '%2/'", srcpackage2filename[arch,p]:"", out_dir));
 		    });
 		}
 		else

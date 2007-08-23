@@ -92,6 +92,10 @@ symbol WriteDialog() {
     return ret ? `next : `abort;
 }
 
+/**
+ * The first dialog in the Add-On creating wizard
+ * (select either creating new product or cloning existing one)
+ */
 any StartDialog () {
 
     // dialog caption
@@ -100,8 +104,6 @@ any StartDialog () {
 
     term contents = `HVCenter (`HBox (`HSpacing (), `VBox (
 	`VSpacing (0.8),
-	// label
-//	`Left (`Label (_("Create a New Add-On Product"))),
 	`RadioButtonGroup (`id(`rd), `Left(`HVSquash(`VBox (
 	    `Left (`RadioButton(`id(`new), `opt (`notify),
 		// radio button label
@@ -187,6 +189,44 @@ any StartDialog () {
         }
     }
     Wizard::RestoreBackButton();
+    if (ret != `copy)
+    {
+	// reset possible previous settings
+	AddOnCreator::content		= [];
+	AddOnCreator::content_map	= $[];
+	AddOnCreator::rpm_path		= "";
+	AddOnCreator::required_rpm_path	= "";
+	AddOnCreator::patterns		= $[];
+	AddOnCreator::packages_descr	= $[];
+	AddOnCreator::license		= "";
+	AddOnCreator::products_files	= [];
+	AddOnCreator::media_files	= [];
+	AddOnCreator::patches_files	= [];
+	AddOnCreator::info		= "";
+	AddOnCreator::extra_prov	= "";
+	AddOnCreator::extra_prov_file	= "";
+	AddOnCreator::nextmedia		= "";
+	AddOnCreator::readme_files	= $[ "README"	: "" ];
+	AddOnCreator::license_files	= $[ "license"	: "" ];
+	AddOnCreator::copying_files	= $[ "COPYING"	: "" ];
+	AddOnCreator::copyright_files	= $[ "COPYRIGHT": "" ];
+	AddOnCreator::y2update_packages	= [];
+	AddOnCreator::y2update_path	= "";
+	AddOnCreator::workflow_path	= "";
+	AddOnCreator::generate_descriptions = false;
+	AddOnCreator::iso		= false;
+	AddOnCreator::iso_path		= "";
+	AddOnCreator::iso_name		= "";
+	AddOnCreator::bootable		= false;
+	AddOnCreator::clone		= false;
+	AddOnCreator::import_path	= "";
+	AddOnCreator::base_output_path	= "";
+	AddOnCreator::passphrase	= "";
+	AddOnCreator::available_packages	= $[];
+	AddOnCreator::package2filename	= $[];
+	AddOnCreator::srcpackage2filename	= $[];
+	AddOnCreator::resign_packages	= false;
+    }
     return ret;
 }
 
