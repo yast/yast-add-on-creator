@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Sep  5 12:53:26 CEST 2007 - jsuchome@suse.cz
+
+- enable deleting of pattern keys (#297195)
+- 2.13.25
+
+-------------------------------------------------------------------
 Thu Aug 23 14:19:10 CEST 2007 - jsuchome@suse.cz
 
 - copy packages with different architectures to correct

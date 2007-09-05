@@ -238,6 +238,7 @@ any PatternsDialog() {
         `HBox (
             `PushButton (`id(`add), `opt(`key_F6), Label::AddButton ()),
             `PushButton (`id(`edit), `opt(`key_F7), Label::EditButton ()),
+            `PushButton (`id(`delete), `opt(`key_F8), Label::DeleteButton ()),
             `HStretch ()
 	),
 	`VSpacing (0.5)
@@ -332,6 +333,13 @@ any PatternsDialog() {
 		UI::ChangeWidget (`id(`pattern), `Items,
 		    get_pattern_items (patterns[sel]:$[]));
 	    }
+	    UI::SetFocus (`id(`pattern));
+	}
+	else if (ret == `delete) {
+	    string key	= (string)UI::QueryWidget (`id(`pattern),`CurrentItem);
+	    patterns[sel]	= remove (patterns[sel]:$[], key);
+	    UI::ChangeWidget (`id(`pattern), `Items,
+		get_pattern_items (patterns[sel]:$[]));
 	    UI::SetFocus (`id(`pattern));
 	}
 	else if (ret == `edit || ret == `pattern) {
