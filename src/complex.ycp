@@ -278,7 +278,7 @@ any SourcesDialog() {
 			requires == "sled-release-10")),
 		    `Left (`RadioButton(`id(`sled10sp1), `opt (`notify),
 			// radio button label
-			_("SUSE L&inux Enterprise &Desktop 10 SP1"),
+			_("SUSE L&inux Enterprise Desktop 10 SP1"),
 			requires == "product:SUSE_SLED = 10.1")),
 		    `Left (`RadioButton(`id(`sle10sp1), `opt (`notify),
 			// radio button label
@@ -1220,6 +1220,13 @@ Choose another one."));
 		}
 		list f		= splitstring (name, ".");
 		lang		= f[size(f)-1]:"en";
+		if (lang == "gz")
+		{
+		    if (size (f) > 2) lang	= f[size(f)-2]:"en";
+		    else continue;
+		}
+		if (lang == "" || lang == "DU")
+		    continue;
 		map description = AddOnCreator::ReadPackagesFile (file);
 		if (description == nil) continue; //TODO error handling
 		descr[lang]	= description;

@@ -652,6 +652,14 @@ global boolean Modified() {
     return modified;
 }
 
+boolean gzip_is_installed	= nil;
+
+boolean gzip_installed () {
+    if (gzip_is_installed == nil)
+	gzip_is_installed = Package::Installed ("gzip");
+    return gzip_is_installed;
+}
+
 map lang_codes = $[
     "languages"		: nil,
     "with_country"	: nil,
@@ -823,11 +831,33 @@ global list<map> ReadContentFile (string file_path) {
     return ret;
 }
 
+/**
+ * Take a path to compressed file as argument and return path to uncompressed one\
+ */
+string uncompress_file (string file_path) {
+
+    string ret	= file_path;
+    if (substring (file_path, size (file_path) - 3, 3) == ".gz" &&
+	gzip_installed ())
+    {
+	list full	= splitstring (file_path, "/");
+	string file	= full[size (full) - 1]:"";
+	if (!FileUtils::Exists (tmpdir + "/" + file))
+	    SCR::Execute (.target.bash, sformat ("cp %1 %2/", file_path, tmpdir));
+	map o = (map)SCR::Execute (.target.bash_output, sformat ("cd %1; gunzip %2", tmpdir, file));
+	if (o["exit"]:1 == 0)
+	    ret = tmpdir + "/" + substring (file, 0, size (file) - 3);
+	else
+	    y2warning ("gunzip failed with %1 (%2)", o["exit"]:0, o["stderr"]:"");
+    }
+    return ret;
+}
 
 // read the pattern given by file name
 global map ReadPatternFile (string file_path) {
 
     y2milestone ("Importing pattern '%1'", file_path);
+    file_path	= uncompress_file (file_path);
 
     map ret	= $[];
     map pt	= (map) SCR::Read (.pattern, file_path);
@@ -851,7 +881,7 @@ global map ReadPackagesFile (string file_path) {
 
     y2milestone ("Importing package description '%1'", file_path);
 
-    return PackagesDescr::Read (file_path);
+    return PackagesDescr::Read (uncompress_file (file_path));
 }
 
 /**
@@ -868,7 +898,7 @@ global boolean ImportExistingProduct (string dir_path) {
     string descr_path = sformat ("%1/%2", dir_path, content_map["DESCRDIR"]:"");
 
     map out = (map) SCR::Execute (.target.bash_output,
-	sformat ("ls -A1 %1/*.pat 2>/dev/null", descr_path));
+	sformat ("ls -A1 %1/*.pat %1/*.pat.gz 2>/dev/null", descr_path));
     foreach (string f, splitstring(out["stdout"]:"", "\n"), {
 	if (f == "") return;
 	map pat	= ReadPatternFile (f);
@@ -1171,6 +1201,12 @@ global void FillContentDefaults () {
     foreach (string file, splitstring (out["stdout"]:"", "\n"), {
 	list f	= splitstring (file, ".");
 	lang	= f[size(f)-1]:"en";
+	if (lang == "gz") // fortunatelly, there is no 'gz' locale...
+	{
+	    if (size (f) > 2)
+		lang	= f[size(f)-2]:"en";
+	    else return;
+	}
 	if (file == "" || lang == "DU") return;
 	packages_descr[lang]	= ReadPackagesFile (file);
     });
@@ -1325,9 +1361,15 @@ global boolean WritePackageDescriptions (string descr_path, map descr) {
     {
 	SCR::Execute (.target.bash,
 	    sformat ("/bin/rm -f '%1/packages' '%1/packages.DU'", descr_path));
-	string cmd = sformat("/bin/cp %1/packages '%2'", tmpdir, descr_path);
+	string pth	= tmpdir + "/packages";
+	if (!FileUtils::Exists (pth) && FileUtils::Exists (pth + ".gz"))
+	    pth	= pth + ".gz";
+	string cmd = sformat("/bin/cp %1 '%2'", pth, descr_path);
 	SCR::Execute (.target.bash, cmd, $["LANG":"C"]);
-	cmd	= sformat ("/bin/cp %1/packages.DU '%2'", tmpdir, descr_path);
+	pth	= tmpdir + "/packages.DU";
+	if (!FileUtils::Exists (pth) && FileUtils::Exists (pth + ".gz"))
+	    pth	= pth + ".gz";
+	cmd	= sformat ("/bin/cp %1 '%2'", pth, descr_path);
 	SCR::Execute (.target.bash, cmd, $["LANG":"C"]);
     }
 
@@ -1748,6 +1790,11 @@ global boolean CreateMD5SUMS (string base_path) {
     foreach (string full_path, dirs_for_md5, {
 	if (dir_has_files (full_path))
 	{
+	    // whole dir was copied -> also with original MD5SUMS
+	    if (FileUtils::Exists (full_path + "/MD5SUMS"))
+	    {
+		SCR::Execute (.target.bash, sformat("cd '%1'; chmod +w . MD5SUMS; rm MD5SUMS", full_path));
+	    }
 	    string command = sformat("cd '%1'; md5sum -- * > MD5SUMS", full_path);
 	    map out =
 		(map)SCR::Execute (.target.bash_output, command, $["LANG":"C"]);

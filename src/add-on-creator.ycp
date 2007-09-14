@@ -146,8 +146,14 @@ boolean Create (map<string,any> options ) {
 	    foreach (string file, splitstring (out["stdout"]:"", "\n"), {
 		list f		= splitstring (file, ".");
 		string lang	= f[size(f)-1]:"en";
+		if (lang == "gz")
+		{
+		    if (size (f) > 2) lang	= f[size(f)-2]:"en";
+		    else return;
+		}
 		if (file == "" || lang == "DU") return;
-		AddOnCreator::packages_descr[lang] = AddOnCreator::ReadPackagesFile (file);
+		AddOnCreator::packages_descr[lang] =
+		    AddOnCreator::ReadPackagesFile (file);
 	    });
 	}
 	else
