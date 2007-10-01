@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Oct  1 11:23:59 CEST 2007 - jsuchome@suse.cz
+
+- create patterns with correct key ordering (#328816)
+- 2.15.22
+
+-------------------------------------------------------------------
 Fri Sep 14 08:39:09 CEST 2007 - jsuchome@suse.cz
 
 - enable deleting of pattern keys (#297195)

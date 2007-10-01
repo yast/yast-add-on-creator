@@ -1563,7 +1563,10 @@ global boolean WritePatterns (string descr_path, string base_path) {
 	if (filename == "")
 	    return;
 	names		= add (names, filename);
-	string file	= "";
+	string file	= sformat ("=Ver: %1\n\n=Pat: %2\n",
+	    pattern["Ver"]:pattern_descr["Ver","defval"]:"",
+	    pattern["Pat"]:"");
+	pattern	= remove (remove (pattern, "Ver"), "Pat");
 	foreach (string key, any val, (map<string,any>) pattern, {
 	    map descr		= pattern_descr[key]:$[];
 	    // substring (key,0,3) is because of Des.lang, Sum.lang and Cat.lang
