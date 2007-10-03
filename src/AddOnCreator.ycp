@@ -260,7 +260,7 @@ global map content_specials	= $[
 
 
 // desctiption of pattern keys
-global map pattern_descr	= $[
+global map<string,map> pattern_descr	= $[
     "name"	: $[
 	"internal"	: true,
     ],
@@ -872,6 +872,15 @@ global map ReadPatternFile (string file_path) {
 	}
 	else
 	    ret[key]	= val;
+    });
+    foreach (string key, map descr, pattern_descr, {
+	if (!haskey (ret, key) && !descr["internal"]:false)
+	{
+	    y2debug ("adding empty key '%1'...", key);
+	    // do not add default values - maybe imported pattern
+	    // ignored them intentionally
+	    ret[key]	= "";
+	}
     });
     return ret;
 }
@@ -1563,7 +1572,10 @@ global boolean WritePatterns (string descr_path, string base_path) {
 	if (filename == "")
 	    return;
 	names		= add (names, filename);
-	string file	= "";
+	string file	= sformat ("=Ver: %1\n\n=Pat: %2\n",
+	    pattern["Ver"]:pattern_descr["Ver","defval"]:"",
+	    pattern["Pat"]:"");
+	pattern	= remove (remove (pattern, "Ver"), "Pat");
 	foreach (string key, any val, (map<string,any>) pattern, {
 	    map descr		= pattern_descr[key]:$[];
 	    // substring (key,0,3) is because of Des.lang, Sum.lang and Cat.lang

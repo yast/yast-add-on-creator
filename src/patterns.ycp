@@ -179,6 +179,7 @@ any PatternsDialog() {
 
     map<string,map> patterns	= AddOnCreator::patterns;
     string requires		= AddOnCreator::content_map["REQUIRES"]:"";
+    string import_path		= AddOnCreator::rpm_path;
 
     // helper for generation of table items
     list get_pattern_items (map pattern) {
@@ -279,8 +280,7 @@ any PatternsDialog() {
 	    }
 	}
 	else if (ret == `import_pt) {
-	    string file = UI::AskForExistingFile (
-		AddOnCreator::rpm_path, "*.pat",
+	    string file = UI::AskForExistingFile (import_path, "*.pat",
 		// popup for file selection dialog
 		_("Existing Pattern")
 	    );
@@ -300,6 +300,7 @@ any PatternsDialog() {
 			get_patterns_items());
 		    UI::ChangeWidget(`id(`patterns), `CurrentItem, name);
 		}
+		import_path	= file;
 	    }
 	}
 	else if (ret == `delete_pt) {
