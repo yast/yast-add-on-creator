@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu Oct 25 13:57:19 CEST 2007 - jsuchome@suse.cz
+
+- gpg needs --batch parameter to run non-interactively (#336680)
+- 2.15.23
+
+-------------------------------------------------------------------
 Mon Oct  1 11:23:59 CEST 2007 - jsuchome@suse.cz
 
 - create patterns with correct key ordering (#328816)
