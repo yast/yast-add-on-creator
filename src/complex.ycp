@@ -778,8 +778,13 @@ any EditValue (map entry, string table_type) {
 	table_type == "content" ? entry["key"]:"" : entry["label"]:"");
 
     any value		= entry["value"]:nil;
-    if (table_type == "content" && value == nil)
-	value = "";
+    if (value == nil)
+    {
+	if (table_type == "content")
+	    value = "";
+	if (type == "package-list")
+	    value = [];
+    }
 
     term cont		= `TextEntry (`id (`main), label, sformat("%1", value));
     symbol w_id		= `main;

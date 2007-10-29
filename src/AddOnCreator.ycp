@@ -38,6 +38,7 @@ textdomain "add-on-creator";
 import "Arch";
 import "Directory";
 import "FileUtils";
+import "Label";
 import "Mode";
 import "Package";
 import "PackageSystem";
@@ -1843,6 +1844,55 @@ global boolean CreateMD5SUMS (string base_path) {
 }
 
 /**
+ * Report the error with failed gpg and ask for possible new
+ * entering of pw
+ * @string error message from gpg
+ */
+string AskForPassphrase (string error) {
+
+    string pw	= nil;
+    UI::OpenDialog (`opt(`decorated), `HBox (`HSpacing (0.5),
+	`VBox (
+	    `HSpacing (70),
+	    // error label
+	    `Label (_("Signing of the product failed.")),
+	    error == "" ? `VSpacing (0) : `RichText (mergestring (splitstring (
+		String::EscapeTags (error),"\n"),"<br>")),
+	    `HBox (
+		`CheckBox (`id (`again), `opt (`notify),
+		    // checkbox label
+		    _("Try again with different passphrase")),
+		`Password (`id (`pw1), "")
+	    ),
+	    `PushButton (`id(`ok),`opt(`key_F10), Label::OKButton()),
+	    `VSpacing (0.5)
+	), `HSpacing (0.5))
+    );
+    UI::ChangeWidget (`id (`pw1), `Enabled, false);
+
+    any ret	= `cancel;
+    repeat
+    {
+	ret	= UI::UserInput ();
+	if (ret == `again)
+	{
+	    boolean enabled	= (boolean)UI::QueryWidget(`id(`pw1), `Enabled);
+	    UI::ChangeWidget (`id (`pw1), `Enabled, !enabled);
+	}
+	if (ret == `ok)
+	{
+	    if (UI::QueryWidget (`id(`pw1), `Enabled) == true)
+	    {
+		pw	= (string) UI::QueryWidget (`id(`pw1), `Value);
+	    }
+	}
+    } until (ret == `ok || ret == `cancel);
+
+    UI::CloseDialog ();
+    return pw;
+}
+
+/**
  * Sign the add-on
  */
 global boolean SignAddOn (string base_path, string key) {
@@ -1882,6 +1932,36 @@ global boolean SignAddOn (string base_path, string key) {
 	    deletechars (out["stdout"]:"", "\n"), base_path);
 	SCR::Execute (.target.bash, command, $["LANG" : "C"]);
     });
+    while (true)
+    {
+	// sign the content file
+	SCR::Execute (.target.bash, sformat ("rm -f '%1/content.asc'",
+	    base_path));
+	out	= (map) SCR::Execute (.target.bash_output, sformat("gpg --batch --no-tty --passphrase-fd 0 --detach-sign -u %1 -a '%2/content' < %3",
+	    local_key, base_path, pw_path)
+	);
+	if (out["exit"]:0 != 0)
+	{
+	    if (Mode::commandline ())
+		Report::Error (out["stderr"]:"");
+	    else
+	    {
+		passphrase	= AskForPassphrase (out["stderr"]:"");
+		if (passphrase != nil)
+		{
+			SCR::Write (.target.string, pw_path, passphrase);
+			continue;
+		}
+	    }
+	    SCR::Execute (.target.remove, pw_path);
+	    return false;
+	}
+	else break;
+    }
+
+    SCR::Execute (.target.bash,
+	sformat("gpg --export -a %1 > '%2/content.key'",local_key, base_path));
+
     // sign the packages
     if (resign_packages)
     {
@@ -1901,24 +1981,6 @@ global boolean SignAddOn (string base_path, string key) {
 	SCR::Execute (.target.bash, sformat ("rm %1", expect));
     }
 
-    // sign the content file
-    SCR::Execute (.target.bash, sformat ("rm -f '%1/content.asc'", base_path));
-    out	= (map) SCR::Execute (.target.bash_output, sformat("
-	gpg --no-tty --passphrase-fd 0 --detach-sign -u %1 -a '%2/content' < %3",
-	local_key, base_path, pw_path)
-    );
-    if (out["exit"]:0 != 0)
-    {
-	if (Mode::commandline ())
-	    Report::Error (out["stderr"]:"");
-	else
-	    // error message
-	    Popup::ErrorDetails (_("Signing of the product failed."), out["stderr"]:"");
-	return false;
-    }
-
-    SCR::Execute (.target.bash,
-	sformat("gpg --export -a %1 > '%2/content.key'",local_key, base_path));
 
     // sign products file
     string products_path = full_media_paths[0]:"" + "/products";
@@ -1926,7 +1988,7 @@ global boolean SignAddOn (string base_path, string key) {
     {
 	SCR::Execute (.target.bash, sformat ("rm -f '%1.asc'", products_path));
 	SCR::Execute (.target.bash,
-	    sformat("gpg --no-tty --passphrase-fd 0 --detach-sign -u %1 -a '%2' < %3",
+	    sformat("gpg --batch --no-tty --passphrase-fd 0 --detach-sign -u %1 -a '%2' < %3",
 	    local_key, products_path, pw_path));
 	SCR::Execute (.target.bash,
 	    sformat("gpg --export -a %1 > '%2.key'", local_key,products_path));
@@ -1999,6 +2061,8 @@ global boolean Write() {
 	    _("Copy the packages"),
 	    // Progress stage
 	    _("Create MD5 sums"),
+	    // Progress stage
+	    _("Sign resulting product"),
     ];
     list<string> steps	= [
 	    // Progress step
@@ -2011,6 +2075,8 @@ global boolean Write() {
 	    _("Copying the packages..."),
 	    // Progress step
 	    _("Creating MD5 sums..."),
+	    // Progress stage
+	    _("Signing resulting product..."),
     ];
 
     if (iso)
@@ -2099,6 +2165,8 @@ global boolean Write() {
 
 	CreateMD5SUMS (base_output_path);
     }
+
+    Progress::NextStage();
 
     if (!SignAddOn (base_output_path, gpg_key))
 	return false;

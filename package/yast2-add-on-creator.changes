@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Mon Oct 29 15:04:37 CET 2007 - jsuchome@suse.cz
+
+- gpg needs --batch parameter to run non-interactively (#336680)
+- ask for reentering password when gpg fails (#297168)
+- 2.16.1
+
+-------------------------------------------------------------------
 Mon Oct  1 11:23:59 CEST 2007 - jsuchome@suse.cz
 
 - create patterns with correct key ordering (#328816)
