@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Oct 30 22:16:18 CET 2007 - jsuchome@suse.cz
+
+- create patterns with correct key ordering (#328816)
+- after pattern import, show also keys without value (#329738)
+- 2.13.26
+
+-------------------------------------------------------------------
 Wed Sep  5 12:53:26 CEST 2007 - jsuchome@suse.cz
 
 - enable deleting of pattern keys (#297195)
