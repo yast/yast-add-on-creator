@@ -284,6 +284,10 @@ any SourcesDialog() {
 			// radio button label
 			_("S&USE Linux Enterprise 10 SP1"),
 			requires == "product:SUSE_SLE = 10.1")),
+		    `Left (`RadioButton(`id(`opensuse11), `opt (`notify),
+			// radio button label
+			_("OpenSUSE &11.0"),
+			requires == "product:openSUSE = 11.0")),
 		    `HBox (
 			`Left(`RadioButton(`id(`other), `opt (`notify),
 			    // radio button label
@@ -382,6 +386,10 @@ any SourcesDialog() {
 	}
 	else if (ret == `suse101) {
 	    requires    = "suse-release-10.1";
+	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
+	}
+	else if (ret == `opensuse11) {
+	    requires    = "product:openSUSE = 11.0";
 	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
 	}
 	else if (ret == `other) {

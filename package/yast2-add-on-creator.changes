@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Dec  7 15:48:37 CET 2007 - jsuchome@suse.cz
+
+- offer current openSUSE version as required product (#335813)
+- 2.16.2
+
+-------------------------------------------------------------------
 Mon Oct 29 15:04:37 CET 2007 - jsuchome@suse.cz
 
 - gpg needs --batch parameter to run non-interactively (#336680)
