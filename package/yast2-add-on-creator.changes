@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Dec 11 10:30:10 CET 2007 - jsuchome@suse.cz
+
+- added suport for PATTERNS and SHORTLABEL tags in content (#302398)
+- clear some cache when going back
+- 2.16.3
+
+-------------------------------------------------------------------
 Fri Dec  7 15:48:37 CET 2007 - jsuchome@suse.cz
 
 - offer current openSUSE version as required product (#335813)

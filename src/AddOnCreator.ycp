@@ -237,6 +237,18 @@ map<string,map> content_descr	= $[
 	    // help text for content file 'UPDATEURLS' key
 	    "help"	: _("URL of the update source."),
     ],
+    "PATTERNS"		: $[
+	    "key"	: "PATTERNS",
+	    // label of content file 'PATTERNS' key
+	    "label"	: _("Preselected patterns"),
+	    // help text for content file 'PATTERNS' key
+	    "help"	: _("List of patterns pre-selected by the product."),
+    ],
+    "SHORTLABEL"	: $[
+	    "key"	: "SHORTLABEL",
+	    // label of content file 'SHORTLABEL' key
+	    "label"	: _("Short label"),
+    ],
 ];
 
 // skeletons for special keys in content file
@@ -1024,6 +1036,9 @@ global boolean ImportExistingProduct (string dir_path) {
 	sformat ("ls -A1 -d %1/media.* 2>/dev/null", dir_path));
     if (out["stdout"]:"" != "")
     {
+	products_files	= [];
+	media_files	= [];
+	patches_files	= [];
 	foreach (string d, splitstring(out["stdout"]:"", "\n"), {
 	    if (d == "") return;
 	    string products_path	= d + "/products";
