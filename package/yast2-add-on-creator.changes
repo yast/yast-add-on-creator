@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Dec 11 13:53:33 CET 2007 - jsuchome@suse.cz
+
+- added suport for PATTERNS and SHORTLABEL tags in content (F302398)
+- clear some cache when going back
+- 2.13.27
+
+-------------------------------------------------------------------
 Tue Oct 30 22:16:18 CET 2007 - jsuchome@suse.cz
 
 - create patterns with correct key ordering (#328816)
