@@ -1,7 +1,7 @@
 -------------------------------------------------------------------
 Tue Dec 11 10:30:10 CET 2007 - jsuchome@suse.cz
 
-- added suport for PATTERNS and SHORTLABEL tags in content (#302398)
+- added suport for PATTERNS and SHORTLABEL tags in content (F302398)
 - clear some cache when going back
 - 2.16.3
 
