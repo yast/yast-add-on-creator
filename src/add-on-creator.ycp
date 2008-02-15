@@ -59,46 +59,56 @@ void ReportMissingDir (string dir) {
 }
 
 // helper for parsing command line data regarding iso creation
-void ParseISOData (map<string,any> options) {
+map ParseISOData (map<string,any> options) {
 
-    AddOnCreator::iso	= haskey (options, "create_iso");
+    map current_product	= $[];
+    current_product["iso"]	= haskey (options, "create_iso");
     if (haskey (options, "iso_name"))
     {
-	AddOnCreator::iso	= true;
-	AddOnCreator::iso_name	= options["iso_name"]:"";
+	current_product["iso"]	= true;
+	current_product["iso_name"]	= options["iso_name"]:"";
     }
     if (haskey (options, "iso_output_dir"))
     {
-	AddOnCreator::iso	= true;
-	AddOnCreator::iso_path	= options["iso_output_dir"]:"";
+	current_product["iso"]	= true;
+	current_product["iso_path"]	= options["iso_output_dir"]:"";
     }
+    return current_product;
 }
 
 // helper for parsing command line data regarding product signing
-void ParseGPGData (map<string,any> options) {
+map ParseGPGData (map<string,any> options) {
 
-    if (haskey (options, "gpg_key"))
-	AddOnCreator::gpg_key	= options["gpg_key"]:AddOnCreator::gpg_key;
-    if (haskey (options, "passphrase"))
-	AddOnCreator::passphrase	= options["passphrase"]:"";
-    else if (haskey (options, "passphrase_file"))
+    map current_product	= $[];
+    string key	= options["gpg_key"]:"";
+    if (key != "")
+	current_product["gpg_key"] = key;
+    string passphrase	= options["passphrase"]:"";
+    if (passphrase == "" && haskey (options, "passphrase_file"))
     {
 	string file = options["passphrase_file"]:"";
 	if (FileUtils::Exists (file))
 	{
-	    string passphrase	= (string) SCR::Read (.target.string, file);
-	    if (passphrase != nil)	AddOnCreator::passphrase = passphrase;
+	    string pass	= (string) SCR::Read (.target.string, file);
+	    if (pass != nil)
+		passphrase = pass;
 	}
 	else
 	{
 	    ReportMissingFile (file);
 	}
     }
-    else
-	AddOnCreator::passphrase	=
+    else if (passphrase == "" && key != "")
+    {
+	passphrase	=
 	    // question on command line
-	    CommandLine::PasswordInput(sformat (_("Passphrase for key %1:"),AddOnCreator::gpg_key));
-    AddOnCreator::resign_packages	= haskey (options, "resign_packages");
+	    CommandLine::PasswordInput (sformat (_("Passphrase for key %1:"),
+	    current_product["gpg_key"]:""));
+    }
+    AddOnCreator::passphrases[key]	= passphrase;
+    current_product["ask_for_passphrase"]	= true;
+    current_product["resign_packages"]	= haskey (options, "resign_packages");
+    return current_product;
 }
 
 /**
@@ -106,6 +116,7 @@ void ParseGPGData (map<string,any> options) {
  */
 boolean Create (map<string,any> options ) {
 
+    map current_product	= AddOnCreator::current_product;
     if (!haskey (options, "output_dir"))
     {
 	// error message
@@ -113,7 +124,7 @@ boolean Create (map<string,any> options ) {
 	return false;
     }
     else
-	AddOnCreator::base_output_path	= options["output_dir"]:"";
+	current_product["base_output_path"]	= options["output_dir"]:"";
 
     // now we can import different content file if it was provided
     if (haskey (options, "content"))
@@ -125,7 +136,7 @@ boolean Create (map<string,any> options ) {
 	    if (content != nil)
 	    {
 		AddOnCreator::content	= content;
-		AddOnCreator::UpdateContentMap ();
+		AddOnCreator::UpdateContentMap (content);
 	    }
 	}
 	else
@@ -143,6 +154,7 @@ boolean Create (map<string,any> options ) {
 	    // find all packages.langcode in dir and import them
 	    map out = (map) SCR::Execute (.target.bash_output,
 		sformat ("ls -A1 %1/packages.* 2>/dev/null", dir));
+	    map packages_descr	= current_product["packages_descr"]:$[];
 	    foreach (string file, splitstring (out["stdout"]:"", "\n"), {
 		list f		= splitstring (file, ".");
 		string lang	= f[size(f)-1]:"en";
@@ -152,9 +164,9 @@ boolean Create (map<string,any> options ) {
 		    else return;
 		}
 		if (file == "" || lang == "DU") return;
-		AddOnCreator::packages_descr[lang] =
-		    AddOnCreator::ReadPackagesFile (file);
+		packages_descr[lang] = AddOnCreator::ReadPackagesFile (file);
 	    });
+	    current_product["packages_descr"]	= packages_descr;
 	}
 	else
 	{
@@ -169,6 +181,7 @@ boolean Create (map<string,any> options ) {
 	    // find all packages.langcode in dir and import them
 	    map out = (map) SCR::Execute (.target.bash_output,
 		sformat ("ls -A1 %1/*.pat 2>/dev/null", dir));
+	    map patterns	= $[];
 	    foreach (string f, splitstring(out["stdout"]:"", "\n"), {
 		if (f == "") return;
 		map pat	= AddOnCreator::ReadPatternFile (f);
@@ -182,17 +195,18 @@ boolean Create (map<string,any> options ) {
 			pat["version"]	= pt[1]:"";
 			pat["release"]	= pt[2]:"";
 			pat["arch"]	= pt[3]:"";
-			AddOnCreator::patterns[name]	= pat;
+			patterns[name]	= pat;
 		    }
 		}
 	    });
+	    current_product["patterns"]	= patterns;
 	}
 	else
 	{
 	    ReportMissingDir (dir);
 	}
     }
-    ParseISOData (options);
+    current_product	= union (current_product, ParseISOData (options));
 
     if (haskey (options, "info"))
     {
@@ -201,7 +215,7 @@ boolean Create (map<string,any> options ) {
 	{
 	    string info	= (string) SCR::Read (.target.string, file);
 	    if (info != nil)
-		AddOnCreator::info	= info;
+		current_product["info"]	= info;
 	}
 	else
 	    ReportMissingFile (file);
@@ -213,7 +227,7 @@ boolean Create (map<string,any> options ) {
 	{
 	    string extra	= (string) SCR::Read (.target.string, file);
 	    if (extra != nil)
-		AddOnCreator::extra_prov	= extra;
+		current_product["extra_prov"]	= extra;
 	}
 	else
 	    ReportMissingFile (file);
@@ -251,7 +265,9 @@ boolean Create (map<string,any> options ) {
 		if (issubstring (name, ".txt"))
 		    name	= regexpsub (name, "^(.*)\.txt$", "\\1");
 		y2milestone ("Importing license file '%1'", f);
-		AddOnCreator::license_files[name] = (string) SCR::Read (.target.string, f);
+		string cont	= (string) SCR::Read (.target.string, f);
+		if (cont != nil)
+		    current_product["license_files",name] = cont;
 	    });
 	}
 	else
@@ -265,7 +281,7 @@ boolean Create (map<string,any> options ) {
 	string file	= options["workflow"]:"";
 	if (FileUtils::Exists (file))
 	{
-	    AddOnCreator::workflow_path	= file;
+	    current_product["workflow_path"]	= file;
 	}
 	else
 	{
@@ -278,7 +294,7 @@ boolean Create (map<string,any> options ) {
 	string file	= options["y2update"]:"";
 	if (FileUtils::Exists (file))
 	{
-	    AddOnCreator::y2update_path	= file;
+	    current_product["y2update_path"]	= file;
 	}
 	else
 	{
@@ -292,8 +308,9 @@ boolean Create (map<string,any> options ) {
 	{
 	    map out = (map) SCR::Execute (.target.bash_output,
 		sformat ("ls -A1 %1/*.rpm 2>/dev/null", dir));
-	    AddOnCreator::y2update_packages = filter (string f, splitstring(out["stdout"]:"", "\n"),
-		``(f != ""));
+	    current_product["y2update_packages"] = filter (
+		string f, splitstring(out["stdout"]:"", "\n"), ``(f != "")
+	    );
 	}
 	else
 	{
@@ -303,12 +320,16 @@ boolean Create (map<string,any> options ) {
 
     if (!haskey (options, "do_not_sign"))
     {
-	ParseGPGData (options);
+	current_product     = union (current_product, ParseGPGData (options));
     }
-    if (!FileUtils::Exists (AddOnCreator::base_output_path)) {
-	SCR::Execute (.target.mkdir, AddOnCreator::base_output_path);
+    if (!FileUtils::Exists (current_product["base_output_path"]:"")) {
+	SCR::Execute (.target.mkdir, current_product["base_output_path"]:"");
     }
-    return true;
+    AddOnCreator::current_product	= current_product;
+    AddOnCreator::CommitCurrentProduct ();
+    if (haskey (options, "do_not_build"))
+	return true;
+    return AddOnCreator::BuildAddOn ();
 }
 
 /**
@@ -326,7 +347,9 @@ boolean CreateAddOn (map<string,any> options) {
     }
     if (substring (rpm_dir, size (rpm_dir) - 1, 1) != "/")
 	rpm_dir	= rpm_dir + "/";
-    AddOnCreator::rpm_path	= rpm_dir;
+    AddOnCreator::current_product	= $[
+	"rpm_path"	: rpm_dir
+    ];
     if (!haskey (options, "content"))
     {
 	// error message
@@ -350,7 +373,8 @@ boolean CloneAddOn (map<string,any> options) {
 	Report::Error (_("Path to existing Add-On is missing."));
 	return false;
     }
-    AddOnCreator::generate_descriptions	= options["generate_descriptions"]:false;
+    AddOnCreator::generate_descriptions	=
+	haskey (options, "generate_descriptions");
     AddOnCreator::ImportExistingProduct (AddOnCreator::import_path);
     AddOnCreator::FillContentDefaults (); // TODO not necessary when content is provided?
     return Create (options);
@@ -361,6 +385,7 @@ boolean CloneAddOn (map<string,any> options) {
  */
 boolean SignAddOn (map<string,any> options) {
 
+    map current_product	= AddOnCreator::current_product;
     AddOnCreator::only_sign_product	= false;
     if (!haskey (options, "addon_dir"))
     {
@@ -369,15 +394,112 @@ boolean SignAddOn (map<string,any> options) {
 	return false;
     }
     else
-	AddOnCreator::base_output_path	= options["addon_dir"]:"";
+	current_product["base_output_path"]	= options["addon_dir"]:"";
 
     // we need to import same data from existing add-on (e.g. for iso name)
-    AddOnCreator::ImportExistingProduct (AddOnCreator::base_output_path);
+    AddOnCreator::ImportExistingProduct(current_product["base_output_path"]:"");
     AddOnCreator::FillContentDefaults ();
 
-    ParseGPGData (options);
-    ParseISOData (options);
+    current_product     = union (current_product, ParseGPGData (options));
+    current_product	= union (current_product, ParseISOData (options));
     AddOnCreator::only_sign_product	= true;
+    AddOnCreator::current_product	= current_product;
+    AddOnCreator::CommitCurrentProduct ();
+    return AddOnCreator::BuildAddOn ();
+}
+
+/**
+ * Command line handler for listing existing Add-On configurations
+ */
+boolean ListAddOns (map<string,any> options) {
+
+    list<map> add_on_products	= AddOnCreator::add_on_products;
+
+    integer i	= 1;
+    foreach (map add_on, add_on_products, {
+	map cont	= add_on["content_map"]:$[];
+	// command line summary, %1 is order, %2 product name
+	CommandLine::Print (sformat (_("(%1) Product Name: %2"),
+	    i, cont["PRODUCT"]:""));
+	// command line summary
+	CommandLine::Print (sformat (_("\tVersion : %1"), cont["VERSION"]:""));
+	// command line summary
+	CommandLine::Print (sformat (_("\tInput directory: %1"),
+	    add_on["rpm_path"]:""));
+	CommandLine::Print (sformat (_("\tOutput directory: %1"),
+	    add_on["base_output_path"]:""));
+	if (add_on["patterns"]:$[] != $[])
+	    // command line summary, %1 is comma-separated list
+	    CommandLine::Print (sformat (_("\tPatterns: %1"), mergestring (
+		maplist (string pat, map p, add_on["patterns"]:$[],``(pat)),
+		", "))
+	    );
+	i	= i + 1;
+    });
+    return false; // no write needed
+}
+
+/**
+ * Command line handler for building new addon
+ */
+boolean BuildAddOnHandler (map<string,any> options) {
+
+    list<map> add_on_products	= AddOnCreator::add_on_products;
+    if (size (add_on_products) == 0)
+    {
+	// command line message, do not translate 'create', 'clone'
+	Report::Error (_("There is no Add-On Product configuration present. Create a new one using 'create' or 'clone' command."));
+	return false;
+    }
+    integer number	= options["number"]:0;
+    if (number < 1)
+    {
+	if (size (add_on_products) == 1)
+	    number	= 0;
+	else
+	{
+	    // error message
+	    Report::Error (_("Specify Add-On Product that should be built."));
+	    return false;
+	}
+    }
+    // !!! numbers are shown starting from 1, list is indexed from 0 !!!
+    map product	= add_on_products[number - 1]:$[];
+
+    product     = union (product, ParseISOData (options));
+    // if the product should be signed (based on config) ParseGPGData should
+    // take care of asking for password
+    if (product["ask_for_passphrase"]:false && !haskey (options, "gpg_key"))
+	options["gpg_key"]	= product["gpg_key"]:"";
+    product     = union (product, ParseGPGData (options));
+
+    AddOnCreator::SelectProduct (product);
+    AddOnCreator::PrepareBuild ();
+    AddOnCreator::BuildAddOn ();
+    return false; // no write needed (configs were not modified)
+}
+
+/**
+ * Command line handler for deleting addon config
+ */
+boolean DeleteAddOn (map<string,any> options) {
+
+    list<map> add_on_products	= AddOnCreator::add_on_products;
+    if (size (add_on_products) == 0)
+    {
+	// command line message
+	Report::Error (_("There is no Add-On Product configuration present."));
+	return false;
+    }
+    integer number	= options["number"]:0;
+    if (number < 1)
+    {
+	// error message
+	Report::Error (_("Specify Add-On Product configuration that should be deleted."));
+	return false;
+    }
+    // !!! numbers are shown starting from 1, list is indexed from 0 !!!
+    AddOnCreator::add_on_products       = remove (add_on_products, number - 1);
     return true;
 }
 
@@ -392,17 +514,32 @@ map cmdline_description = $[
 	"create"	: $[
 	    "handler"	: CreateAddOn,
 	    // command line help text for 'create' action
-	    "help"	: _("Create new Add-On Product"),
+	    "help"	: _("Create and build new Add-On Product"),
 	],
 	"clone"		: $[
 	    "handler"	: CloneAddOn,
-	    // command line help text for 'create' action
-	    "help"	: _("Create an Add-On Product based on an existing one"),
+	    // command line help text for 'clone' action
+	    "help"	: _("Create and build new Add-On Product based on an existing one"),
 	],
 	"sign"		: $[
 	    "handler"	: SignAddOn,
-	    // command line help text for 'create' action
+	    // command line help text for 'sign' action
 	    "help"	: _("Sign unsigned Add-On Product"),
+	],
+	"list"		: $[
+	    "handler"   : ListAddOns,
+	    // command line help text for 'list' action
+	    "help"	: _("List available Add-On Product configurations"),
+	],
+	"build"		: $[
+	    "handler"	: BuildAddOnHandler,
+	    // command line help text for 'create' action
+	    "help"	: _("Build Add-On Product from selected configuration"),
+	],
+	"delete"	: $[
+	    "handler"	: DeleteAddOn,
+	    // command line help text for 'create' action
+	    "help"	: _("Delete selected Add-On Product configuration"),
 	],
     ],
     "options"		: $[
@@ -512,24 +649,42 @@ map cmdline_description = $[
 	    "help"	: _("Path to directory with Add-On Product"),
 	    "type"	: "string"
 	],
+	"do_not_build"	: $[
+	    // command line help text for 'do_not_build' option
+	    "help"	: _("Do not build the product, only save new configuration"),
+	],
+	"number"	: $[
+	    // help text for 'number' option; do not translate 'list'
+	    "help"	: _("Number of selected Add-On (see 'list' command for product numbers)"),
+	    "type"	: "integer"
+	],
     ],
     "mappings"		: $[
 	"create"	: [ "content", "rpm_dir", "package_descriptions_dir",
 	    "patterns_dir", "output_dir", "create_iso", "iso_name", "gpg_key",
 	    "passphrase", "passphrase_file", "workflow", "y2update",
 	    "y2update_packages_dir", "license", "do_not_sign", "iso_output_dir",
-	    "resign_packages", "info", "extra_prov"
+	    "resign_packages", "info", "extra_prov", "do_not_build",
 	],
 	"clone"		: [ "existing", "generate_descriptions", "content",
 	    "package_descriptions_dir", "patterns_dir", "output_dir",
 	    "create_iso", "iso_name",
 	    "gpg_key", "passphrase", "passphrase_file", "workflow", "y2update",
 	    "y2update_packages_dir", "license", "do_not_sign", "iso_output_dir",
-	    "resign_packages", "info", "extra_prov",
+	    "resign_packages", "info", "extra_prov", "do_not_build",
 	],
 	"sign"		: [ "addon_dir", "gpg_key", "passphrase",
 	    "passphrase_file", "create_iso", "iso_name", "iso_output_dir",
 	    "resign_packages"
+	],
+	"build"		: [
+	    "number", "gpg_key", "passphrase", "passphrase_file",
+	    "resign_packages", "create_iso", "iso_name", "iso_output_dir",
+	],
+	"delete"	: [
+	    "number"
+	],
+	"list"		: [
 	],
     ]
 ];

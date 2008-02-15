@@ -177,9 +177,10 @@ Choose a different one."));
  */
 any PatternsDialog() {
 
-    map<string,map> patterns	= AddOnCreator::patterns;
+    map current_product		= AddOnCreator::current_product;
     string requires		= AddOnCreator::content_map["REQUIRES"]:"";
-    string import_path		= AddOnCreator::rpm_path;
+    string import_path		= current_product["rpm_path"]:"";
+    map<string,map> patterns	= current_product["patterns"]:$[];
 
     // helper for generation of table items
     list get_pattern_items (map pattern) {
@@ -327,7 +328,9 @@ any PatternsDialog() {
 		current_pattern	= sel;
 		UI::ChangeWidget (`id(`pattern), `Items,
 		    get_pattern_items (patterns[current_pattern]:$[]));
-		UI::ChangeWidget (`id(`required), `Value, issubstring (requires, "pattern:" + sel));
+		UI::ChangeWidget (`id(`required), `Value,
+		    size (patterns) > 0 &&
+		    issubstring (requires, "pattern:" + sel));
 	    }
 	}
 	else if (ret == `add) {
@@ -393,7 +396,7 @@ any PatternsDialog() {
 	    }
 	}
         else if (ret == `next) {
-	    AddOnCreator::patterns			= patterns;
+	    AddOnCreator::current_product["patterns"]		= patterns;
 	    if (AddOnCreator::content_map["REQUIRES"]:"" != requires)
 	    {
 		integer i		= 0;

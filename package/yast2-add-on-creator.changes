@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Wed Feb 13 16:16:08 CET 2008 - jsuchome@suse.cz
+
+- new summary screen with the list of already configured add-ons
+- CLI support for handling of saved configurations
+- removed add-on-creator_auto.ycp and add-on-creator_proposal.ycp
+- 2.16.4 
+
+-------------------------------------------------------------------
 Tue Dec 11 10:30:10 CET 2007 - jsuchome@suse.cz
 
 - added suport for PATTERNS and SHORTLABEL tags in content (F302398)

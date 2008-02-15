@@ -36,16 +36,14 @@ textdomain "add-on-creator";
  */
 map HELPS = $[
 
-    /* Write dialog help 1/2 */
-    "write" : _("<p><b><big>Creating the Add-On</big></b><br>
+    // Build dialog help
+    "build" : _("<p><b><big>Creating the Add-On</big></b><br>
 Please wait...<br></p>
-") +
+"),
 
-    /* Write dialog help 2/2 */
-_("<p><b><big>Aborting Saving</big></b><br>
-Abort the save procedure by pressing <b>Abort</b>.
-An additional dialog informs whether it is safe to do so.
-</p>
+    // Write dialog help
+    "write" : _("<p><b>Writing Add-On configurations</b><br>
+Please wait...<br></p>
 "),
 
     // help text for start menu

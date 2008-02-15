@@ -3,8 +3,7 @@
 yncludedir = @yncludedir@/add-on-creator
 
 client_DATA =			\
-	add-on-creator.ycp	\
-	add-on-creator_auto.ycp
+	add-on-creator.ycp
 
 ynclude_DATA =			\
 	helps.ycp		\

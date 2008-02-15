@@ -88,13 +88,14 @@ Choose a different one."));
  */
 any ExpertSettingsDialog () {
 
+    map current_product		= AddOnCreator::current_product;
+
     // dialog caption
     string caption = _("Expert Settings");
 
-    string info		= AddOnCreator::info;
-
-    map<string,string> license_files	= AddOnCreator::license_files;
-    map<string,string> readme_files	= AddOnCreator::readme_files;
+    string info				= current_product["info"]:"";
+    map<string,string> license_files	= current_product["license_files"]:$[];
+    map<string,string> readme_files	= current_product["readme_files"]:$[];
 
     void replace_readme_widgets (string active) {
 		UI::ReplaceWidget (`id(`rpfiles),
@@ -187,7 +188,7 @@ any ExpertSettingsDialog () {
 	if (ret == `import_readme)
 	{
 	    string file = UI::AskForExistingFile (
-		AddOnCreator::rpm_path, "",
+		current_product["rpm_path"]:"", "",
 		// popup for file selection dialog
 		_("Choose the New README File")
 	    );
@@ -249,7 +250,7 @@ any ExpertSettingsDialog () {
 	if (ret == `import_license)
 	{
 	    string file = UI::AskForExistingFile (
-		AddOnCreator::rpm_path, "license*",
+		current_product["rpm_path"]:"", "license*",
 		// popup for file selection dialog
 		_("Choose the New License File")
 	    );
@@ -300,9 +301,10 @@ any ExpertSettingsDialog () {
 	    AddOnCreator::media =
 		(string) UI::QueryWidget (`id(`media),`Value);
 	    */
-	    AddOnCreator::info	= (string) UI::QueryWidget (`id(`info),`Value);
-	    AddOnCreator::readme_files	= readme_files;
-	    AddOnCreator::license_files	= license_files;
+	    AddOnCreator::current_product["info"]		=
+		UI::QueryWidget (`id(`info),`Value);
+	    AddOnCreator::current_product["readme_files"]	= readme_files;
+	    AddOnCreator::current_product["license_files"]	= license_files;
 	    break;
 	}
 	else if (ret == `abort || ret == `cancel) {
@@ -323,12 +325,12 @@ any ExpertSettingsDialog () {
  */
 any ExpertSettingsDialog2 () {
 
-
     // dialog caption
     string caption = _("Expert Settings, Part 2");
 
-    map<string,string> copying_files	= AddOnCreator::copying_files;
-    map<string,string> copyright_files	= AddOnCreator::copyright_files;
+    map current_product		= AddOnCreator::current_product;
+    map<string,string> copying_files	= current_product["copying_files"]:$[];
+    map<string,string> copyright_files = current_product["copyright_files"]:$[];
 
     void replace_copyright_widgets (string active) {
 	UI::ReplaceWidget (`id(`rpfiles),
@@ -423,7 +425,7 @@ any ExpertSettingsDialog2 () {
 	if (ret == `import_copyright)
 	{
 	    string file = UI::AskForExistingFile (
-		AddOnCreator::rpm_path, "COPYRIGHT*",
+		current_product["rpm_path"]:"", "COPYRIGHT*",
 		// popup for file selection dialog
 		_("Choose the New COPYRIGHT File")
 	    );
@@ -482,7 +484,7 @@ any ExpertSettingsDialog2 () {
 	if (ret == `import_copying)
 	{
 	    string file = UI::AskForExistingFile (
-		AddOnCreator::rpm_path, "copying*",
+		current_product["rpm_path"]:"", "copying*",
 		// popup for file selection dialog
 		_("Choose the New COPYING File")
 	    );
@@ -527,8 +529,8 @@ any ExpertSettingsDialog2 () {
 		(string)UI::QueryWidget(`id(`copyright),`Value);
 	    copying_files[current_copying]	=
 		(string)UI::QueryWidget(`id(`copying),`Value);
-	    AddOnCreator::copyright_files	= copyright_files;
-	    AddOnCreator::copying_files		= copying_files;
+	    AddOnCreator::current_product["copyright_files"] = copyright_files;
+	    AddOnCreator::current_product["copying_files"] = copying_files;
 	    Wizard::RestoreAbortButton();
 	    break;
 	}
@@ -553,9 +555,10 @@ any ExpertSettingsDialog3 () {
     // dialog caption
     string caption = _("Expert Settings, Part 3");
 
-    list<string> products_files	= AddOnCreator::products_files;
-    list<string> patches_files	= AddOnCreator::patches_files;
-    list<string> media_files	= AddOnCreator::media_files;
+    map current_product		= AddOnCreator::current_product;
+    list<string> products_files	= current_product["products_files"]:[];
+    list<string> patches_files	= current_product["patches_files"]:[];
+    list<string> media_files	= current_product["media_files"]:[];
 
     string products	= products_files[0]:"";
     string patches	= patches_files[0]:"";
@@ -613,9 +616,10 @@ any WorkflowConfigurationDialog () {
 
     // dialog caption
     string caption = _("Workflow Configuration");
-    string workflow_path	= AddOnCreator::workflow_path;
-    string y2update_path	= AddOnCreator::y2update_path;
-    list<string> y2update_packages	= AddOnCreator::y2update_packages;
+    map current_product		= AddOnCreator::current_product;
+    string workflow_path	= current_product["workflow_path"]:"";
+    string y2update_path	= current_product["y2update_path"]:"";
+    list<string> y2update_packages = current_product["y2update_packages"]:[];
     // helper for updating table contents
     void update_table () {
 	UI::ChangeWidget (`id(`y2update_packages), `Items,
@@ -692,7 +696,7 @@ any WorkflowConfigurationDialog () {
 	if (ret == `browse)
 	{
 	    string file = UI::AskForExistingFile (
-		AddOnCreator::rpm_path, "*.xml",
+		current_product["rpm_path"]:"", "*.xml",
 		// popup for file selection dialog
 		_("Choose the installation.xml File")
 	    );
@@ -714,7 +718,7 @@ any WorkflowConfigurationDialog () {
 	if (ret == `br_y2update)
 	{
 	    string file = UI::AskForExistingFile (
-		AddOnCreator::rpm_path, "y2update.tgz",
+		current_product["rpm_path"]:"", "y2update.tgz",
 		// popup for file selection dialog
 		_("Choose the Path to the y2update.tgz File")
 	    );
@@ -727,7 +731,7 @@ any WorkflowConfigurationDialog () {
 	else if (ret == `add)
 	{
 	    string file = UI::AskForExistingFile (
-		AddOnCreator::rpm_path, "*.rpm",
+		current_product["rpm_path"]:"", "*.rpm",
 		// popup for file selection dialog
 		_("Choose the YaST Module Package")
 	    );
@@ -748,10 +752,11 @@ any WorkflowConfigurationDialog () {
 	    UI::ChangeWidget (`id(`delete), `Enabled, y2update_packages != []);
 	}
         else if (ret == `next) {
-	    AddOnCreator::y2update_packages = y2update_packages;
-	    AddOnCreator::y2update_path	=
+	    AddOnCreator::current_product["y2update_packages"]	=
+		y2update_packages;
+	    AddOnCreator::current_product["y2update_path"]	=
 		(string)UI::QueryWidget (`id(`y2update_path), `Value);
-	    AddOnCreator::workflow_path	=
+	    AddOnCreator::current_product["workflow_path"]	=
 		(string)UI::QueryWidget (`id(`workflow_path), `Value);
 	    break;
 	}

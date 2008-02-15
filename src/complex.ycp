@@ -41,6 +41,7 @@ import "Report";
 import "String";
 import "Summary";
 import "Wizard";
+import "Wizard_hw";
 
 
 include "add-on-creator/helps.ycp";
@@ -87,16 +88,166 @@ symbol ReadDialog() {
  */
 symbol WriteDialog() {
     Wizard::RestoreHelp(HELPS["write"]:"");
-    // AddOnCreator::AbortFunction = PollAbort;
     boolean ret = AddOnCreator::Write();
     return ret ? `next : `abort;
 }
 
 /**
- * The first dialog in the Add-On creating wizard
+ * Write settings dialog
+ * @return `abort if aborted and `next otherwise
+ */
+symbol BuildDialog() {
+    Wizard::RestoreHelp(HELPS["build"]:"");
+    boolean ret = AddOnCreator::BuildAddOn ();
+    return ret ? `next : `abort;
+}
+
+/**
+ * Summary dialog with the list of all configured AddOn Products
+ */
+any SummaryDialog () {
+
+    // dialog caption
+    string caption = _("Add-On Creator Configuration Overview");
+
+    list<map> add_on_products	= AddOnCreator::add_on_products;
+
+    list get_summary_items () {
+	integer i	= -1;
+	return maplist (map add_on, add_on_products, {
+	    map content_map	= add_on["content_map"]:$[];
+	    i		= i + 1;
+	    return `item (`id (i),
+		content_map["PRODUCT"]:"", content_map["VERSION"]:"");
+	});
+    }
+    list summary_items	= get_summary_items ();
+
+    // generate description of selected product
+    string get_description (map add_on) {
+	map content_map = add_on["content_map"]:$[];
+	string ret	=
+	    // summary item
+	    sformat (_("Input directory: %1<br>"), add_on["rpm_path"]:"") +
+	    // summary item
+	    sformat (_("Output directory: %1<br>"),
+		add_on["base_output_path"]:"");
+	    if (add_on["patterns"]:$[] != $[])
+		// summary item, %1 is comma-separated list
+		ret	= ret + sformat (_("Patterns: %1"), mergestring (
+		    maplist (string pat, map p, add_on["patterns"]:$[],``(pat)),
+		    ", "));
+	return ret;
+    }
+
+    // help text
+    string help_text	= _("<p>Start the creating of new Add-On Product configuration with <b>Add</b>.</p>") +
+
+    // help text
+    _("<p>Use <b>Edit</b> to modify selected Add-On Product configuration.</p>") +
+
+    // help text
+    _("<p>Delete the selected configuration using <b>Delete</b>.</p>") +
+
+    // help text
+    _("<p>Build the fresh Add On Product based on selected configuration with <b>Build</b>.</p>");
+
+    term contents = `VBox (
+	`VWeight (3, `Table (`id (`table), `opt (`notify, `immediate),
+		// table header item
+                `header (_("Product Name"),
+		    // table header item
+		    _("Version")
+		),
+		summary_items
+	)),
+	`VWeight (1, `RichText (`id (`descr), "")),
+	`HBox (
+	    `PushButton (`id (`new), `opt (`key_F3), Label::AddButton ()),
+	    `PushButton (`id (`edit), `opt (`key_F4), Label::EditButton ()),
+	    `PushButton (`id (`delete), `opt (`key_F5), Label::DeleteButton ()),
+	    `HStretch (),
+	    // push button label
+	    `PushButton (`id (`build), `opt (`key_F6), _("&Build"))
+	)
+    );
+
+    contents = Wizard_hw::SpacingAround (contents, 1.5, 1.5, 1.0, 1.0);
+
+    Wizard::SetContentsButtons(caption, contents, help_text,
+        Label::AbortButton(), Label::FinishButton());
+    Wizard::HideAbortButton();
+
+    if (AddOnCreator::selected_product != -1)
+	UI::ChangeWidget (`id (`table), `CurrentItem, AddOnCreator::selected_product);
+    integer current = (integer) UI::QueryWidget(`id(`table), `CurrentItem);
+    map current_product	= add_on_products[current]:$[];
+    UI::ChangeWidget (`id (`descr), `Value, get_description (current_product));
+    UI::SetFocus (`id (`table));
+
+    any ret = nil;
+    while (true) {
+
+	ret = UI::UserInput();
+	current = (integer) UI::QueryWidget(`id(`table), `CurrentItem );
+
+	if (ret == `abort || ret == `cancel || ret == `back) {
+	    if (ReallyAbort ())
+	    {
+		ret	= `abort;
+		break;
+	    }
+            continue;
+        }
+        if (ret == `new)
+	{
+            break;
+        }
+        if(ret == `delete)
+	{
+	    // yes/no popup
+	    if (Popup::YesNo (sformat (_("Really delete configuration \"%1\"?"),
+		current_product["content_map","PRODUCT"]:"")))
+	    {
+		add_on_products	= remove (add_on_products, current);
+		summary_items	= get_summary_items ();
+		current_product	= $[];
+		UI::ChangeWidget (`id (`table), `Items, get_summary_items ());
+		UI::ChangeWidget (`id (`edit), `Enabled, summary_items != []);
+		UI::ChangeWidget (`id (`delete), `Enabled, summary_items != []);
+		if (summary_items != [])
+		    ret	= `table;
+	    }
+        }
+	if (ret == `table)
+	{
+	    current_product	= add_on_products[current]:$[];
+	    UI::ChangeWidget (`id (`descr), `Value,
+		get_description (current_product));
+
+	}
+        if (ret == `edit || ret == `build)
+	{
+	    AddOnCreator::SelectProduct (current_product);
+	    if (ret == `build)
+		AddOnCreator::PrepareBuild ();
+	    break;
+        }
+	if (ret == `next) {
+	    AddOnCreator::add_on_products	= add_on_products;
+	    break;
+	}
+    }
+    AddOnCreator::selected_product	= (ret == `new) ? -1 : current;
+    Wizard::RestoreAbortButton();
+    return (symbol)ret;
+}
+
+/**
+ * The first dialog in the sequence for creating new Add-On product
  * (select either creating new product or cloning existing one)
  */
-any StartDialog () {
+any NewProductDialog () {
 
     // dialog caption
     string caption = _("Add-On Product Creator");
@@ -140,7 +291,6 @@ any StartDialog () {
 
     Wizard::SetContentsButtons(caption, contents, HELPS["start"]:"",
 	    Label::BackButton(), Label::NextButton());
-    Wizard::HideBackButton();
 
     foreach (symbol w, [ `path, `descr_ch, `browse ], {
 	UI::ChangeWidget (`id(w), `Enabled, AddOnCreator::clone);
@@ -180,52 +330,15 @@ any StartDialog () {
 	    break;
 	    // FIXME checks...
 	}
-	else if (ret == `abort || ret == `cancel) {
+	else if (ret == `abort || ret == `cancel || ret == `back) {
 	    if(ReallyAbort()) break;
 	    else continue;
 	}
-	else if (ret == `back) {
-            break;
-        }
     }
-    Wizard::RestoreBackButton();
     if (ret != `copy)
     {
 	// reset possible previous settings
-	AddOnCreator::content		= [];
-	AddOnCreator::content_map	= $[];
-	AddOnCreator::rpm_path		= "";
-	AddOnCreator::required_rpm_path	= "";
-	AddOnCreator::patterns		= $[];
-	AddOnCreator::packages_descr	= $[];
-	AddOnCreator::license		= "";
-	AddOnCreator::products_files	= [];
-	AddOnCreator::media_files	= [];
-	AddOnCreator::patches_files	= [];
-	AddOnCreator::info		= "";
-	AddOnCreator::extra_prov	= "";
-	AddOnCreator::extra_prov_file	= "";
-	AddOnCreator::nextmedia		= "";
-	AddOnCreator::readme_files	= $[ "README"	: "" ];
-	AddOnCreator::license_files	= $[ "license"	: "" ];
-	AddOnCreator::copying_files	= $[ "COPYING"	: "" ];
-	AddOnCreator::copyright_files	= $[ "COPYRIGHT": "" ];
-	AddOnCreator::y2update_packages	= [];
-	AddOnCreator::y2update_path	= "";
-	AddOnCreator::workflow_path	= "";
-	AddOnCreator::generate_descriptions = false;
-	AddOnCreator::iso		= false;
-	AddOnCreator::iso_path		= "";
-	AddOnCreator::iso_name		= "";
-	AddOnCreator::bootable		= false;
-	AddOnCreator::clone		= false;
-	AddOnCreator::import_path	= "";
-	AddOnCreator::base_output_path	= "";
-	AddOnCreator::passphrase	= "";
-	AddOnCreator::available_packages	= $[];
-	AddOnCreator::package2filename	= $[];
-	AddOnCreator::srcpackage2filename	= $[];
-	AddOnCreator::resign_packages	= false;
+	AddOnCreator::ResetCurrentProduct ();
     }
     return ret;
 }
@@ -235,12 +348,15 @@ any StartDialog () {
  */
 any SourcesDialog() {
 
+    map current_product		= AddOnCreator::current_product;
+
     string requires	= AddOnCreator::content_map["REQUIRES"]:"";
     if (requires == "")
 	requires	= "sles-release-10";
-    string old_dir	= AddOnCreator::rpm_path;
-    if (AddOnCreator::rpm_path == nil)
-	AddOnCreator::rpm_path	= "";
+
+    string old_dir	= current_product["rpm_path"]:"";
+    if (old_dir == nil)
+	current_product["rpm_path"]	= "";
     string old_requires	= requires;
 
     string product	= AddOnCreator::content_map["PRODUCT"]:"";
@@ -303,7 +419,7 @@ any SourcesDialog() {
 	    `TextEntry (`id(`rpm_path),
 		// text entry label
 		_("&Path to Directory with Add-On Packages"),
-		AddOnCreator::rpm_path),
+		current_product["rpm_path"]:""),
 	    `VBox (
 		`Label (""),
 		`PushButton (`id(`browse_rpm), Label::BrowseButton ())
@@ -313,7 +429,7 @@ any SourcesDialog() {
 	    `TextEntry (`id(`required_rpm_path),
 		// text entry label
 		_("Path to Directory with Re&quired Product Packages"),
-		AddOnCreator::required_rpm_path),
+		current_product["required_rpm_path"]:""),
 	    `VBox (
 		`Label (""),
 		`PushButton (`id(`browse_req_rpm), Label::BrowseButton ())
@@ -414,10 +530,10 @@ any SourcesDialog() {
 	    }
 	    if (dir != "" && substring (dir, size (dir) - 1, 1) != "/")
 		dir	=	dir + "/";
-	    AddOnCreator::rpm_path		= dir;
+	    AddOnCreator::current_product["rpm_path"]		= dir;
 	    if (req_dir != "" && substring (req_dir, size (req_dir) - 1, 1) != "/")
 		req_dir	=	req_dir + "/";
-	    AddOnCreator::required_rpm_path	= req_dir;
+	    AddOnCreator::current_product["required_rpm_path"]	= req_dir;
 	    if (requires == "")
 		requires = (string) UI::QueryWidget (`id(`other_val), `Value);
 	    AddOnCreator::content_map["REQUIRES"]	= requires;
@@ -430,9 +546,17 @@ any SourcesDialog() {
 		AddOnCreator::content_map["DISTVERSION"]:"" == "")
 		AddOnCreator::content_map["DISTVERSION"]	= version;
 
+	    /* FIXME does this make a sense???
+	    we need to generate again when editing previous project
 	    if (requires == old_requires && dir == old_dir &&
 		product == old_product && version == old_version)
 		ret	= `skip_gen;
+	    */
+
+	    // if rpm_path is different, reset packages_descr
+	    // (otherwise current values settings are merged into generated)
+	    if (dir != old_dir)
+		AddOnCreator::current_product["packages_descr"]	= $[];
 	    break;
 	}
 	else if (ret == `abort || ret == `cancel) {
@@ -575,7 +699,8 @@ any ContentFileDialog() {
     // dialog caption - 'content' is file name
     string caption = _("Product Definition (content File)");
 
-    list<map> content	= AddOnCreator::content;
+    map current_product		= AddOnCreator::current_product;
+    list<map> content		= AddOnCreator::content;
 
     integer linguas_entry	= -1;
 
@@ -668,7 +793,7 @@ any ContentFileDialog() {
 	}
 	else if (ret == `import) {
 	    string file = UI::AskForExistingFile (
-		AddOnCreator::base_output_path, "",
+		current_product["base_output_path"]:"", "",
 		// popup for file selection dialog
 		_("Choose the Existing Content File")
 	    );
@@ -730,7 +855,7 @@ any ContentFileDialog() {
 	    if (index != -1)
 		content[index,"value"]	= distproduct;
 	    AddOnCreator::content	= content;
-	    AddOnCreator::UpdateContentMap ();
+	    AddOnCreator::UpdateContentMap (content);
 	    break;
 	}
 	else if(ret == `abort || ret == `cancel) {
@@ -1018,7 +1143,7 @@ map AddDescriptionValue (list existing) {
 	if (result == `import)
 	{
 	    string file = UI::AskForExistingFile (
-		AddOnCreator::base_output_path, "",
+		AddOnCreator::current_product["base_output_path"]:"", "",
 		// popup for file selection dialog
 		_("Choose the file with the text to be imported")
 	    );
@@ -1048,9 +1173,11 @@ map AddDescriptionValue (list existing) {
  */
 any PackagesDialog() {
 
+    map current_product		= AddOnCreator::current_product;
+
     // dialog caption
     string caption		= _("Package Descriptions");
-    map<string,map> descr	= AddOnCreator::packages_descr;
+    map<string,map> descr	= current_product["packages_descr"]:$[];
 
     list descr_files	= maplist (string l, map d, descr, ``(l));
 
@@ -1082,8 +1209,8 @@ any PackagesDialog() {
     list<string> allowed_langs	= sort (
 	splitstring (AddOnCreator::content_map["LINGUAS"]:""," \t"));
     if (allowed_langs == []) allowed_langs = [ "en", "de"];
-    string def_lang	= "en"; //FIXME other default?
-    // FIXME Addon for 10.1 has more languages, although only en, de in LINGUAS
+    string def_lang	= "en";
+    // Addon for 10.1 has more languages, although only en, de in LINGUAS...
 
     // lang is language that should be active in the combo box
     void replace_language_widgets (string lang) {
@@ -1151,7 +1278,7 @@ any PackagesDialog() {
 	`VSpacing (0.4),
 	`HBox (
 	    // textentry label
-	    `TextEntry (`id (`extra_prov), _("Location of the File with Additional &Dependencies"), AddOnCreator::extra_prov_file),
+	    `TextEntry (`id (`extra_prov), _("Location of the File with Additional &Dependencies"), current_product["extra_prov_file"]:""),
 	    `VBox (
 		`Label (""),
 		`PushButton (`id (`browse), Label::BrowseButton ())
@@ -1215,7 +1342,7 @@ any PackagesDialog() {
 	if (ret == `import_lang)
 	{
 	    string file = UI::AskForExistingFile (
-		AddOnCreator::rpm_path, "packages.*",
+		current_product["rpm_path"]:"", "packages.*",
 		// popup for file selection dialog
 		_("Choose the New Package Description File")
 	    );
@@ -1312,7 +1439,7 @@ Choose another one."));
 	else if (ret == `browse)
 	{
 	    string file = UI::AskForExistingFile (
-		AddOnCreator::rpm_path, "",
+		current_product["rpm_path"]:"", "",
 		// popup for file selection dialog
 		_("Choose the Path to EXTRA_PROV File")
 	    );
@@ -1320,7 +1447,7 @@ Choose another one."));
 		UI::ChangeWidget (`id (`extra_prov), `Value, file);
 	}
         else if(ret == `next) {
-	    AddOnCreator::packages_descr	= descr;
+	    AddOnCreator::current_product["packages_descr"]	= descr;
 	    string extra = (string) UI::QueryWidget (`id (`extra_prov), `Value);
 	    if (extra != "" && !FileUtils::Exists (extra))
 	    {
@@ -1331,7 +1458,16 @@ Choose another one."), extra));
 		continue;
 	    }
 	    else
-		AddOnCreator::extra_prov_file	= extra;
+	    {
+		string cont	= "";
+		if (extra != "")
+			cont	= (string) SCR::Read (.target.string, extra);
+		if (cont != nil)
+		{
+		    AddOnCreator::current_product["extra_prov"]	= cont;
+		    AddOnCreator::current_product["extra_prov_file"]	= extra;
+		}
+	    }
             break;
         }
 	else if (ret == `back) {
@@ -1439,13 +1575,18 @@ the OS a chance to collect more entropy.
  */
 any SigningDialog() {
 
+    map current_product		= AddOnCreator::current_product;
+    string gpg_key		= current_product["gpg_key"]:"";
     // dialog caption
     string caption	= _("Signing the Add-On Product");
     list gpg_keys	= maplist (string key, AddOnCreator::gpg_keys, {
 	map out		= (map) SCR::Execute (.target.bash_output,
 	    sformat ("gpg --list-secret-keys %1 | grep uid | sed -e 's/^uid[ ]*//'", key));
 	string name	= deletechars (out["stdout"]:"", "\n");
-	return `item (`id (key), name != "" ? sformat ("%1 (%2)", key, name) : key);
+	return `item (`id (key),
+	    name != "" ? sformat ("%1 (%2)", key, name) : key,
+	    key == gpg_key
+	);
     });
 
     term contents = `HBox (`HSpacing (), `VBox (
@@ -1462,18 +1603,19 @@ any SigningDialog() {
 	    )
 	),
 	// password entry label
-	`Password (`id(`pw), _("&Passphrase"), AddOnCreator::passphrase),
+	`Password (`id(`pw), _("&Passphrase"),
+	    AddOnCreator::passphrases[gpg_key]:""),
 	// password entry label (verification)
 	`Password (`id(`pw2), _("&Passphrase Verification"),
-	    AddOnCreator::passphrase),
+	    AddOnCreator::passphrases[gpg_key]:""),
 	// checkbox label
 	`Left (`CheckBox (`id (`resign),
 	    _("Re&sign all packages with selected key"),
-	    AddOnCreator::resign_packages)
+	    current_product["resign_packages"]:false)
 	),
 	`VSpacing (0.7)
     ), `HSpacing ());
-
+// FIXME checkbox (so there's a chance not to sign...)
 
     Wizard::SetContentsButtons(caption, contents, HELPS["signing"]:"",
 	    Label::BackButton(), Label::NextButton());
@@ -1512,9 +1654,10 @@ any SigningDialog() {
 		UI::ChangeWidget (`id (`resign), `Value, false);
 		continue;
 	    }
-	    AddOnCreator::gpg_key	= key;
-	    AddOnCreator::passphrase	= pw;
-	    AddOnCreator::resign_packages = resign;
+	    AddOnCreator::passphrases[key]	= pw;
+	    AddOnCreator::current_product["ask_for_passphrase"] = (pw != "");
+	    AddOnCreator::current_product["gpg_key"]	= key;
+	    AddOnCreator::current_product["resign_packages"] = resign;
 	    break;
 	}
 	else if (ret == `abort || ret == `cancel) {
@@ -1536,12 +1679,12 @@ any OutputDialog() {
 
     // dialog caption
     string caption	= _("Output Settings");
-    boolean iso		= AddOnCreator::iso;
-    boolean bootable	= AddOnCreator::bootable;
+    map current_product	= AddOnCreator::current_product;
+    boolean iso		= current_product["iso"]:false;
     boolean autorun	= false;
     map<string,string> content_map	= AddOnCreator::content_map;
 
-    string iso_name	= AddOnCreator::iso_name;
+    string iso_name	= current_product["iso_name"]:"";
     if (iso_name == "")
 	iso_name	= sformat ("%1-%2-%3",
 	    tolower (content_map["DISTPRODUCT"]:""),
@@ -1551,14 +1694,12 @@ any OutputDialog() {
 	`HBox (
 	    // text entry label
 	    `TextEntry (`id(`output_path), _("P&ath to Output Directory"),
-		AddOnCreator::base_output_path),
+		current_product["base_output_path"]:""),
 	    `VBox (
 		`Label (""),
 		`PushButton (`id(`browse), Label::BrowseButton ())
 	    )
 	),
-	// check box label
-//FIXME	`Left (`CheckBox (`id(`boot), _("Create B&ootable Add-On"), bootable)),
 	// check box label
 //FIXME	`Left (`CheckBox (`id(`autorun), _("&Autorun"), autorun)),
 
@@ -1593,7 +1734,6 @@ any OutputDialog() {
 	boolean iso	= (boolean)UI::QueryWidget (`id(`iso), `Value);
 	iso_name	= (string)UI::QueryWidget (`id(`iso_name), `Value);
 	UI::ChangeWidget (`id(`iso_name), `Enabled, iso);
-//	boolean bootable= (boolean)UI::QueryWidget (`id(`boot), `Value);
 	if (ret == `browse) {
 	    dir = UI::AskForExistingDirectory (dir, "");
 	    if (dir != nil)
@@ -1604,10 +1744,9 @@ any OutputDialog() {
 	    }
 	}
 	else if (ret == `expert || ret == `workflow) {
-	    AddOnCreator::base_output_path	= dir;
-	    AddOnCreator::iso			= iso;
-	    AddOnCreator::iso_name		= iso_name;
-//	    AddOnCreator::bootable		= bootable;
+	    AddOnCreator::current_product["base_output_path"]	= dir;
+	    AddOnCreator::current_product["iso"]		= iso;
+	    AddOnCreator::current_product["iso_name"]		= iso_name;
 	    break;
 	}
         else if (ret == `next) {
@@ -1628,10 +1767,9 @@ any OutputDialog() {
 		    continue;
 		}
 	    }
-	    AddOnCreator::base_output_path	= dir;
-	    AddOnCreator::iso			= iso;
-	    AddOnCreator::iso_name		= iso_name;
-//	    AddOnCreator::bootable		= bootable;
+	    AddOnCreator::current_product["base_output_path"]	= dir;
+	    AddOnCreator::current_product["iso"]		= iso;
+	    AddOnCreator::current_product["iso_name"]		= iso_name;
 	    if (iso && !Package::Install ("mkisofs"))
 	    {
 		UI::ChangeWidget (`id(`iso), `Value, false);
@@ -1661,6 +1799,8 @@ any OverviewDialog() {
     // dialog caption
     string caption = _("Overview");
 
+    map current_product		= AddOnCreator::current_product;
+
     string sum	= "";
 
     // summary header
@@ -1670,20 +1810,20 @@ any OverviewDialog() {
     // summary header
     sum	= Summary::AddHeader (sum, _("Patterns"));
     sum = Summary::OpenList (sum);
-    foreach (string name, map p, AddOnCreator::patterns, {
+    foreach (string name, map p, current_product["patterns"]:$[], {
 	sum	= Summary::AddListItem (sum, p["Pat"]:name);
     });
     sum = Summary::CloseList (sum);
 
     // summary header
     sum	= Summary::AddHeader (sum, _("Input Directory"));
-    sum	= Summary::AddLine (sum, AddOnCreator::rpm_path);
+    sum	= Summary::AddLine (sum, current_product["rpm_path"]:"");
 
     // summary header
     sum	= Summary::AddHeader (sum, _("Output Directory"));
-    sum	= Summary::AddLine (sum, AddOnCreator::base_output_path);
+    sum	= Summary::AddLine (sum, current_product["base_output_path"]:"");
 
-    if (AddOnCreator::iso)
+    if (current_product["iso"]:false)
     {
 	sum	= Summary::AddLine (sum,
 	    // summary line
