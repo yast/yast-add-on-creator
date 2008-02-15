@@ -1323,7 +1323,7 @@ string GenerateKeyDialog () {
 	    {
 		// error popup (see Name, Comment, Email Adress text entries
 		Popup::Error (_("Name, comment, and e-mail address values are empty.
-You must enter at least one of the them to provide user identification.
+You must enter at least one of them to provide user identification.
 "));
 		continue;
 	    }

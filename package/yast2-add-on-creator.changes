@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Feb 15 15:43:51 CET 2008 - jsuchome@suse.cz
+
+- merged proofread texts 
+- 2.13.28
+
+-------------------------------------------------------------------
 Tue Dec 11 13:53:33 CET 2007 - jsuchome@suse.cz
 
 - added suport for PATTERNS and SHORTLABEL tags in content (F302398)

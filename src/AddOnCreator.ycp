@@ -139,7 +139,7 @@ map<string,map> content_descr	= $[
 	    // labeliption of content file PREREQUIRES key
 	    "label"	: _("Resolvables needed before installation"),
 	    // help text for content file 'PREREQUIRES' key
-	    "help"	: _("Resolvables that must be installed on the system before installation of this product. The syntax is the same as for <b>REQUIRES</b>."),
+	    "help"	: _("Resolvables that must be installed on the system before the installation of this product. The syntax is the same as for <b>REQUIRES</b>."),
     ],
     "LABEL"		: $[
 	    "key"	: "LABEL",
@@ -153,7 +153,7 @@ map<string,map> content_descr	= $[
 	    // label of content file PROVIDES key
 	    "label"	: _("Resolvables provided"),
 	    // help text for content file 'PROVIDES' key
-	    "help"	: _("Capabilities this product provides. They can be used to match <b>REQUIRES</b> from others. Every resolvable has a provides by default--its own name and edition. For example, package <i>bar-1.42-1</i> provides the capability <tt>bar = 1.42-1</tt>."),
+	    "help"	: _("Capabilities this product provides. They can be used to match <b>REQUIRES</b> from others. Every resolvable has a provides by default- its own name and edition. For example, package <i>bar-1.42-1</i> provides the capability <tt>bar = 1.42-1</tt>."),
     ],
     "CONFLICTS"		: $[
 	    "key"	: "CONFLICTS",
@@ -240,7 +240,7 @@ map<string,map> content_descr	= $[
 	    // label of content file 'PATTERNS' key
 	    "label"	: _("Preselected patterns"),
 	    // help text for content file 'PATTERNS' key
-	    "help"	: _("List of patterns pre-selected by the product."),
+	    "help"	: _("List of patterns preselected by the product."),
     ],
     "SHORTLABEL"	: $[
 	    "key"	: "SHORTLABEL",
@@ -317,7 +317,7 @@ global map<string,map> pattern_descr	= $[
 	// help text for 'Des' pattern key
 	"help"		:_("Multiple line description in the default language"),
 	// help text for 'Des.lang' pattern key
-	"lang_help"	:_("Multiple line description, language specific.")
+	"lang_help"	:_("Multiple line description, language-specific.")
     ],
     "Cat"	: $[
 	// label for 'Cat' pattern key
@@ -442,7 +442,7 @@ other patterns marked as obsolete here."),
 	// label for 'Fre' pattern key
 	"label"		: _("Freshen"),
 	// help text for 'Fre' pattern key
-	"help"		: _("The current pattern is only considered for installation is the pattern specified here is installed."),
+	"help"		: _("The current pattern is only considered for installation if the pattern specified here is installed."),
 	"defval"	: "",
 	"type"		: "pattern-list",
     ],
@@ -493,7 +493,7 @@ global map<string,map> description_descr	= $[
 	// label for 'Eul' key
 	"label"		: _("EULA"),
 	// help text for 'Eul' key
-	"help"		: _("Text of the EULA. This text is displayed before package installation. If the user does not accept the EULA, package is not installed."),
+	"help"		: _("Text of the EULA. This text is displayed before the package installation. If the user does not accept the EULA, the package is not installed."),
 	"type"		: "multiline",
     ],
 ];
