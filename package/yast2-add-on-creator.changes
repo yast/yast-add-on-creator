@@ -1,4 +1,9 @@
 -------------------------------------------------------------------
+Mon Mar 17 12:43:32 CET 2008 - jsrain@suse.cz
+
+- added 'StartupNotify=true' to the desktop file (bnc #304964)
+
+-------------------------------------------------------------------
 Wed Feb 13 16:16:08 CET 2008 - jsuchome@suse.cz
 
 - new summary screen with the list of already configured add-ons

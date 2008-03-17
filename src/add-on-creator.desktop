@@ -22,3 +22,4 @@ Exec=/sbin/yast2 add-on-creator
 Name=Add-On Creator
 GenericName=Create Add-On product
 X-KDE-SubstituteUID=true
+StartupNotify=true
