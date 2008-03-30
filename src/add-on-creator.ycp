@@ -422,7 +422,7 @@ boolean ListAddOns (map<string,any> options) {
 	CommandLine::Print (sformat (_("(%1) Product Name: %2"),
 	    i, cont["PRODUCT"]:""));
 	// command line summary
-	CommandLine::Print (sformat (_("\tVersion : %1"), cont["VERSION"]:""));
+	CommandLine::Print (sformat (_("\tVersio: %1"), cont["VERSION"]:""));
 	// command line summary
 	CommandLine::Print (sformat (_("\tInput directory: %1"),
 	    add_on["rpm_path"]:""));
@@ -448,7 +448,7 @@ boolean BuildAddOnHandler (map<string,any> options) {
     if (size (add_on_products) == 0)
     {
 	// command line message, do not translate 'create', 'clone'
-	Report::Error (_("There is no Add-On Product configuration present. Create a new one using 'create' or 'clone' command."));
+	Report::Error (_("There is no add-on product configuration present. Create a new one using 'create' or 'clone' command."));
 	return false;
     }
     integer number	= options["number"]:0;
@@ -459,7 +459,7 @@ boolean BuildAddOnHandler (map<string,any> options) {
 	else
 	{
 	    // error message
-	    Report::Error (_("Specify Add-On Product that should be built."));
+	    Report::Error (_("Specify add-on product that should be built."));
 	    return false;
 	}
     }
@@ -488,14 +488,14 @@ boolean DeleteAddOn (map<string,any> options) {
     if (size (add_on_products) == 0)
     {
 	// command line message
-	Report::Error (_("There is no Add-On Product configuration present."));
+	Report::Error (_("There is no add-on product configuration present."));
 	return false;
     }
     integer number	= options["number"]:0;
     if (number < 1)
     {
 	// error message
-	Report::Error (_("Specify Add-On Product configuration that should be deleted."));
+	Report::Error (_("Specify add-on product configuration that should be deleted."));
 	return false;
     }
     // !!! numbers are shown starting from 1, list is indexed from 0 !!!
@@ -514,12 +514,12 @@ map cmdline_description = $[
 	"create"	: $[
 	    "handler"	: CreateAddOn,
 	    // command line help text for 'create' action
-	    "help"	: _("Create and build new Add-On Product"),
+	    "help"	: _("Create and build new add-on product"),
 	],
 	"clone"		: $[
 	    "handler"	: CloneAddOn,
 	    // command line help text for 'clone' action
-	    "help"	: _("Create and build new Add-On Product based on an existing one"),
+	    "help"	: _("Create and build new add-on product based on an existing one"),
 	],
 	"sign"		: $[
 	    "handler"	: SignAddOn,
@@ -529,17 +529,17 @@ map cmdline_description = $[
 	"list"		: $[
 	    "handler"   : ListAddOns,
 	    // command line help text for 'list' action
-	    "help"	: _("List available Add-On Product configurations"),
+	    "help"	: _("List available add-on product configurations"),
 	],
 	"build"		: $[
 	    "handler"	: BuildAddOnHandler,
 	    // command line help text for 'create' action
-	    "help"	: _("Build Add-On Product from selected configuration"),
+	    "help"	: _("Build add-on product from selected configuration"),
 	],
 	"delete"	: $[
 	    "handler"	: DeleteAddOn,
 	    // command line help text for 'create' action
-	    "help"	: _("Delete selected Add-On Product configuration"),
+	    "help"	: _("Delete selected add-on product configuration"),
 	],
     ],
     "options"		: $[
@@ -655,7 +655,7 @@ map cmdline_description = $[
 	],
 	"number"	: $[
 	    // help text for 'number' option; do not translate 'list'
-	    "help"	: _("Number of selected Add-On (see 'list' command for product numbers)"),
+	    "help"	: _("Number of selected add-on (see 'list' command for product numbers)"),
 	    "type"	: "integer"
 	],
     ],

@@ -42,7 +42,7 @@ Please wait...<br></p>
 "),
 
     // Write dialog help
-    "write" : _("<p><b>Writing Add-On configurations</b><br>
+    "write" : _("<p>Writing add-on configurations<br>
 Please wait...<br></p>
 "),
 
@@ -88,7 +88,7 @@ Please wait...<br></p>
 	_("<p>Use <b>Import</b> to import an existing <tt>content</tt> file.</p>"),
 
     // help text for package description files
-    "packages"	: _("<p>Here, edit the language-specific descriptions of packages (<tt>packages.lang</tt> files).</p>") +
+    "packages"	: _("<p>Edit the language-specific descriptions of packages (<tt>packages.lang</tt> files) here.</p>") +
 	// help text for package description files, cont.
 	_("<p>Use <b>Add Language</b> to add a description file for a new language. The list of available languages is read from the <b>LINGUAS</b> value of the <tt>content</tt> file. Import an existing file with package descriptions with <b>Import</b>. Delete the description file with <b>Delete</b>.</p>") +
 
@@ -99,7 +99,7 @@ Please wait...<br></p>
 	_("<p>Optionally, choose the path for the file providing <b>Additional Package Dependencies</b> (EXTRA_PROV).</p>"),
 
     // help text for patterns
-    "patterns"	: _("<p>Here, create and edit the patterns for the add-on product.</p>") +
+    "patterns"	: _("<p>Create and edit the patterns for the add-on product here.</p>") +
 
 	// help text for patterns, cont.
 	_("<p>Use <b>New</b> to create a new pattern or <b>Import</b> to import an existing one.</p>") +
@@ -124,7 +124,7 @@ Please wait...<br></p>
 	_("<p>Enter the location of the file with the workflow description. This file is an alternative to <tt>control.xml</tt> and is saved as <tt>installation.xml</tt> in the add-on product's base directory.</p>") +
 
 	// workflow help text
-	_("<p>To use custom YaST modules during installation of the add-on product, enter the path to the <tt>y2update.tgz</tt> archive where these modules are stored or configure the contents of <tt>y2update.tgz</tt> by specifying the YaST RPM packages in <b>Import the Packages</b>.</p>"),
+	_("<p>To use custom YaST modules during the installation of the add-on product, enter the path to the <tt>y2update.tgz</tt> archive where these modules are stored or configure the contents of <tt>y2update.tgz</tt> by specifying the YaST RPM packages in <b>Import the Packages</b>.</p>"),
 
     // help text for expert dialog 1
     "expert"	: _("<p>The optional <tt>info.txt</tt> file gives information about the add-on that should be displayed as a pop-up window with an <b>OK</b> button.</p>") +
@@ -141,7 +141,7 @@ Please wait...<br></p>
 	_("<p>Enter the passphrase needed to unlock the secret key.</p>") +
 
 	// help text for signing dialog, cont.
-	_("<p>Select if you want to <b>sign all packages</b> of the add-on product with selected key. All previous package signatures will be removed.</p>"),
+	_("<p>Select if you want to <b>Sign All Packages</b> of the add-on product with selected key. All previous package signatures will be removed.</p>"),
 
     // help text for generating new key dialog
     "generate"	: _("<p>Enter the values necessary for generating the new primary key pair.</p>") +

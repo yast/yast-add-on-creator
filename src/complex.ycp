@@ -141,16 +141,16 @@ any SummaryDialog () {
     }
 
     // help text
-    string help_text	= _("<p>Start the creating of new Add-On Product configuration with <b>Add</b>.</p>") +
+    string help_text	= _("<p>Start the creating of new add-on product configuration with <b>Add</b>.</p>") +
 
     // help text
-    _("<p>Use <b>Edit</b> to modify selected Add-On Product configuration.</p>") +
+    _("<p>Use <b>Edit</b> to modify selected add-on product configuration.</p>") +
 
     // help text
     _("<p>Delete the selected configuration using <b>Delete</b>.</p>") +
 
     // help text
-    _("<p>Build the fresh Add On Product based on selected configuration with <b>Build</b>.</p>");
+    _("<p>Build the fresh add-on product based on selected configuration with <b>Build</b>.</p>");
 
     term contents = `VBox (
 	`VWeight (3, `Table (`id (`table), `opt (`notify, `immediate),
@@ -1550,7 +1550,7 @@ string GenerateKeyDialog () {
 	    {
 		// error popup (see Name, Comment, Email Adress text entries
 		Popup::Error (_("Name, comment, and e-mail address values are empty.
-You must enter at least one of the them to provide user identification.
+You must enter at least one of them to provide user identification.
 "));
 		continue;
 	    }
