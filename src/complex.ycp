@@ -231,6 +231,10 @@ any SourcesDialog() {
 			// radio button label
 			_("S&USE Linux Enterprise 10 SP1"),
 			requires == "product:SUSE_SLE = 10.1")),
+		    `Left (`RadioButton(`id(`sle10sp2), `opt (`notify),
+			// radio button label
+			_("S&USE Linux Enterprise 10 SP2"),
+			requires == "product:SUSE_SLE = 10.2")),
 		    `HBox (
 			`Left(`RadioButton(`id(`other), `opt (`notify),
 			    // radio button label
@@ -323,6 +327,10 @@ any SourcesDialog() {
 	}
 	else if (ret == `sle10sp1) {
 	    requires = "product:SUSE_SLE = 10.1";
+	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
+	}
+	else if (ret == `sle10sp2) {
+	    requires = "product:SUSE_SLE = 10.2";
 	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
 	}
 	else if (ret == `suse101) {
