@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Mon Apr  7 10:43:35 CEST 2008 - jsuchome@suse.cz
+
+- offered SLE10SP2 products as a base for new AddOn (bnc#377091)
+- fixed typo (bnc#376702)
+- 2.16.6
+
+-------------------------------------------------------------------
 Sun Mar 30 20:44:45 CEST 2008 - jsuchome@suse.cz
 
 - merged proofread texts 

@@ -422,7 +422,7 @@ boolean ListAddOns (map<string,any> options) {
 	CommandLine::Print (sformat (_("(%1) Product Name: %2"),
 	    i, cont["PRODUCT"]:""));
 	// command line summary
-	CommandLine::Print (sformat (_("\tVersio: %1"), cont["VERSION"]:""));
+	CommandLine::Print (sformat (_("\tVersion: %1"), cont["VERSION"]:""));
 	// command line summary
 	CommandLine::Print (sformat (_("\tInput directory: %1"),
 	    add_on["rpm_path"]:""));
