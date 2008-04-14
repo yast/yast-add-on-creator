@@ -317,6 +317,7 @@ boolean Create (map<string,any> options ) {
 	    ReportMissingDir (dir);
 	}
     }
+    current_product["changelog"]	= haskey (options, "changelog");
 
     if (!haskey (options, "do_not_sign"))
     {
@@ -473,10 +474,16 @@ boolean BuildAddOnHandler (map<string,any> options) {
 	options["gpg_key"]	= product["gpg_key"]:"";
     product     = union (product, ParseGPGData (options));
 
+    // only set "generate" when requested, otherwise the saved info is used
+    if (haskey (options, "changelog"))
+	product["changelog"]	= true;
+
     AddOnCreator::SelectProduct (product);
     AddOnCreator::PrepareBuild ();
     AddOnCreator::BuildAddOn ();
-    return false; // no write needed (configs were not modified)
+    return false;
+    // no write needed (configs were not modified, or there was only one-time
+    // modification: iso, generated)
 }
 
 /**
@@ -658,6 +665,10 @@ map cmdline_description = $[
 	    "help"	: _("Number of selected add-on (see 'list' command for product numbers)"),
 	    "type"	: "integer"
 	],
+	"changelog"	: $[
+	    // command line help text for 'changelog' option
+	    "help"	: _("Generate Changelog file"),
+	],
     ],
     "mappings"		: $[
 	"create"	: [ "content", "rpm_dir", "package_descriptions_dir",
@@ -665,6 +676,7 @@ map cmdline_description = $[
 	    "passphrase", "passphrase_file", "workflow", "y2update",
 	    "y2update_packages_dir", "license", "do_not_sign", "iso_output_dir",
 	    "resign_packages", "info", "extra_prov", "do_not_build",
+	    "changelog",
 	],
 	"clone"		: [ "existing", "generate_descriptions", "content",
 	    "package_descriptions_dir", "patterns_dir", "output_dir",
@@ -672,6 +684,7 @@ map cmdline_description = $[
 	    "gpg_key", "passphrase", "passphrase_file", "workflow", "y2update",
 	    "y2update_packages_dir", "license", "do_not_sign", "iso_output_dir",
 	    "resign_packages", "info", "extra_prov", "do_not_build",
+	    "changelog",
 	],
 	"sign"		: [ "addon_dir", "gpg_key", "passphrase",
 	    "passphrase_file", "create_iso", "iso_name", "iso_output_dir",
@@ -680,6 +693,7 @@ map cmdline_description = $[
 	"build"		: [
 	    "number", "gpg_key", "passphrase", "passphrase_file",
 	    "resign_packages", "create_iso", "iso_name", "iso_output_dir",
+	    "changelog",
 	],
 	"delete"	: [
 	    "number"

@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Apr 14 14:17:41 CEST 2008 - jsuchome@suse.cz
+
+- added an option for generating Changelog using mk_changelog
+- 2.16.7
+
+-------------------------------------------------------------------
 Mon Apr  7 10:43:35 CEST 2008 - jsuchome@suse.cz
 
 - offered SLE10SP2 products as a base for new AddOn (bnc#377091)

@@ -115,6 +115,9 @@ Please wait...<br></p>
     "output"	: _("<p>Specify the path to the directory in which the add-on product should be created. Select <b>Create ISO Image</b> to create the ISO image of the product in the output directory.</p>") +
 
 	// help text for the 'various settings' dialog
+	_("<p>Use <b>Generate Changelog</b> to generate a Changelog file with all the changes of packages on the add-on product made in the last two years.</p>") +
+
+	// help text for the 'various settings' dialog
 	_("<p>Adapt the workflow of the add-on product with <b>Configure Workflow</b>. Use <b>Optional Files</b> to configure texts of <tt>README</tt> files, licenses, and other optional values.</p>"),
 
     // workflow help text

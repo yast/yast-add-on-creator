@@ -1685,6 +1685,7 @@ any OutputDialog() {
     string caption	= _("Output Settings");
     map current_product	= AddOnCreator::current_product;
     boolean iso		= current_product["iso"]:false;
+    boolean changelog	= current_product["changelog"]:false;
     boolean autorun	= false;
     map<string,string> content_map	= AddOnCreator::content_map;
 
@@ -1715,6 +1716,9 @@ any OutputDialog() {
 	    // text entry label
 	    `TextEntry (`id(`iso_name), _("Image File Name"), iso_name)
 	),
+	`VSpacing (0.4),
+	// check box label
+	`Left (`CheckBox (`id(`changelog), _("&Generate Changelog"),changelog)),
 	`VSpacing (4),
 	`HBox (
 	    `HStretch (),
@@ -1735,6 +1739,7 @@ any OutputDialog() {
 
 	ret = UI::UserInput();
 	string dir	= (string)UI::QueryWidget (`id(`output_path), `Value);
+	boolean changelog = (boolean)UI::QueryWidget (`id(`changelog), `Value);
 	boolean iso	= (boolean)UI::QueryWidget (`id(`iso), `Value);
 	iso_name	= (string)UI::QueryWidget (`id(`iso_name), `Value);
 	UI::ChangeWidget (`id(`iso_name), `Enabled, iso);
@@ -1751,6 +1756,7 @@ any OutputDialog() {
 	    AddOnCreator::current_product["base_output_path"]	= dir;
 	    AddOnCreator::current_product["iso"]		= iso;
 	    AddOnCreator::current_product["iso_name"]		= iso_name;
+	    AddOnCreator::current_product["changelog"]		= changelog;
 	    break;
 	}
         else if (ret == `next) {
@@ -1774,6 +1780,7 @@ any OutputDialog() {
 	    AddOnCreator::current_product["base_output_path"]	= dir;
 	    AddOnCreator::current_product["iso"]		= iso;
 	    AddOnCreator::current_product["iso_name"]		= iso_name;
+	    AddOnCreator::current_product["changelog"]		= changelog;
 	    if (iso && !Package::Install ("mkisofs"))
 	    {
 		UI::ChangeWidget (`id(`iso), `Value, false);
