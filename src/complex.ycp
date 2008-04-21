@@ -352,7 +352,7 @@ any SourcesDialog() {
 
     string requires	= AddOnCreator::content_map["REQUIRES"]:"";
     if (requires == "")
-	requires	= "sles-release-10";
+	requires	= "product:openSUSE = 11.0";
 
     string old_dir	= current_product["rpm_path"]:"";
     if (old_dir == nil)
