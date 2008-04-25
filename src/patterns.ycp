@@ -261,9 +261,9 @@ any PatternsDialog() {
 	UI::ChangeWidget (`id(`required), `Value,
 	    issubstring (requires, "pattern:" + current_pattern));
     }
-    UI::ChangeWidget (`id(`delete_pt), `Enabled, patterns != $[]);
-    UI::ChangeWidget (`id(`edit), `Enabled, patterns != $[]);
-    UI::ChangeWidget (`id(`add), `Enabled, patterns != $[]);
+    foreach (symbol w, [ `delete_pt, `edit, `add, `delete, `required ], {
+	UI::ChangeWidget (`id (w), `Enabled, patterns != $[]);
+    });
 
     symbol ret	= nil;
     while(true) {
@@ -314,7 +314,7 @@ any PatternsDialog() {
 	}
 	if (contains ([`new_pt, `import_pt, `delete_pt], ret))
 	{
-	    foreach (symbol s, [`delete_pt, `edit, `add], {
+	    foreach (symbol s, [`delete_pt, `edit, `add, `delete, `required], {
 		UI::ChangeWidget (`id(s), `Enabled, patterns != $[]);
 	    });
 	    ret = `patterns;

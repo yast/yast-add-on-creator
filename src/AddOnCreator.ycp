@@ -1222,6 +1222,7 @@ global boolean ImportExistingProduct (string dir_path) {
 list<string> create_argument_lists (string stdout) {
 
     list<string> ret	= [];
+    if (stdout == nil || stdout == "") return ret;
     // approximately maximum size of parameters list passed to rpm
     integer kbytes		= 120;
     // looks like pre-sorting helps to fasten rpm call
@@ -2021,7 +2022,7 @@ boolean dir_has_files (string dir) {
     map out = (map) SCR::Execute (.target.bash_output,
 	sformat ("cd '%1'; find -maxdepth 1 -type f | wc -l", dir));
     integer count = tointeger(deletechars(out["stdout"]:"0","\n"));
-    return count > 0;
+    return (count != nil && count > 0);
 }
 
 /**
@@ -2092,7 +2093,7 @@ string AskForPassphrase (string message, boolean failure) {
     term info_term	= failure ? `VBox (
 	`HSpacing (70),
 	// error label
-	`Label (_("Signing of the product failed.")),
+	`Left (`Label (_("Signing of the product failed."))),
 	message == "" ?
 	    `VSpacing (0) :
 	    `RichText (mergestring (splitstring (
@@ -2100,9 +2101,9 @@ string AskForPassphrase (string message, boolean failure) {
 	    )
     ) : `VSpacing ();
     term input_term	= failure ?  `HBox (
-		`CheckBox (`id (`again), `opt (`notify),
+		`Left (`CheckBox (`id (`again), `opt (`notify),
 		    // checkbox label
-		    _("Try again with different passphrase")),
+		    _("Try again with different passphrase"))),
 		`Password (`id (`pw1), "")
     ) : `VBox (
 	`Password (`id (`pw1), message)

@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Fri Apr 25 10:06:08 CEST 2008 - jsuchome@suse.cz
+
+- fixed some widget layouts
+- allow deleting keys from package descriptions
+- 2.16.9
+
+-------------------------------------------------------------------
 Mon Apr 21 13:08:17 CEST 2008 - jsuchome@suse.cz
 
 - default product is openSUSE11.0

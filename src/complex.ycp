@@ -255,7 +255,7 @@ any NewProductDialog () {
 
     term contents = `HVCenter (`HBox (`HSpacing (), `VBox (
 	`VSpacing (0.8),
-	`RadioButtonGroup (`id(`rd), `Left(`HVSquash(`VBox (
+	`RadioButtonGroup (`id(`rd), `HVSquash (`VBox (
 	    `Left (`RadioButton(`id(`new), `opt (`notify),
 		// radio button label
 		_("Create an Add-On &from the Beginning"), !AddOnCreator::clone)
@@ -267,7 +267,7 @@ any NewProductDialog () {
 	    ),
 	    `HBox (
 		`HSpacing (2.5),
-		`TextEntry (`id(`path),
+		`InputField (`id(`path), `opt (`hstretch),
 		    // text entry label
 		    _("&Path to Directory of the Existing Add-On Product"),
 		    AddOnCreator::import_path
@@ -285,7 +285,7 @@ any NewProductDialog () {
 		// TODO move to next dialog?
 		)
 	    )
-	)))),
+	))),
 	`VSpacing (0.9)
     )));
 
@@ -370,10 +370,12 @@ any SourcesDialog() {
 
     term contents = `HBox (`HSpacing (), `VBox (
 	`HBox (
+	    `InputField (`id (`product), `opt (`hstretch),
+		// textentry label
+		_("&Add-On Product Name"), product),
 	    // textentry label
-	    `TextEntry (`id (`product), _("&Add-On Product Name"), product),
-	    // textentry label
-	    `TextEntry (`id (`version), _("&Version"), version)
+	    `InputField (`id (`version), `opt (`hstretch), _("&Version"),
+		version)
 	),
 	`VSpacing (0.7),
 	`Frame (_("Required Product"), `HBox (`HSpacing (0.5), `VBox (
@@ -412,7 +414,7 @@ any SourcesDialog() {
 			`Left(`RadioButton(`id(`other), `opt (`notify),
 			    // radio button label
 			    _("&Other"))),
-			`TextEntry (`id(`other_val), "")
+			`InputField (`id(`other_val), "")
 		    )
 		)))
 	    ),
@@ -420,7 +422,7 @@ any SourcesDialog() {
 	))),
 	`VSpacing (0.7),
 	`HBox (
-	    `TextEntry (`id(`rpm_path),
+	    `InputField (`id(`rpm_path), `opt (`hstretch),
 		// text entry label
 		_("&Path to Directory with Add-On Packages"),
 		current_product["rpm_path"]:""),
@@ -430,7 +432,7 @@ any SourcesDialog() {
 	    )
 	),
 	`HBox (
-	    `TextEntry (`id(`required_rpm_path),
+	    `InputField (`id(`required_rpm_path), `opt (`hstretch),
 		// text entry label
 		_("Path to Directory with Re&quired Product Packages"),
 		current_product["required_rpm_path"]:""),
@@ -1277,6 +1279,7 @@ any PackagesDialog() {
         `HBox (
             `PushButton (`id(`add), `opt(`key_F6), Label::AddButton ()),
             `PushButton (`id(`edit), `opt(`key_F7), Label::EditButton ()),
+            `PushButton (`id(`delete), `opt(`key_F8), Label::DeleteButton ()),
             `HStretch ()
 	),
 	`VSpacing (0.4),
@@ -1317,6 +1320,7 @@ any PackagesDialog() {
 
     UI::ChangeWidget (`id(`import_lang), `Enabled, descr[current_lang]:$[] != $[]);
     UI::ChangeWidget (`id(`edit), `Enabled, descr[current_lang]:$[] != $[]);
+    UI::ChangeWidget (`id(`delete), `Enabled, descr[current_lang]:$[] != $[]);
 
     replace_language_widgets (current_lang);
 
@@ -1440,6 +1444,16 @@ Choose another one."));
 	    }
 	    UI::SetFocus (`id(`description));
 	}
+	else if (ret == `delete) {
+	    string key =(string)UI::QueryWidget(`id(`description),`CurrentItem);
+	    if (descr[lang,sel,key]:nil != nil)
+	    {
+		descr[lang,sel]	= remove (descr[lang,sel]:$[], key);
+		UI::ChangeWidget (`id(`description), `Items,
+		    get_descr_items (descr[lang, sel]:$[]));
+	    }
+	    UI::SetFocus (`id(`description));
+	}
 	else if (ret == `browse)
 	{
 	    string file = UI::AskForExistingFile (
@@ -1518,7 +1532,7 @@ string GenerateKeyDialog () {
 	    // textentry label
 	    `TextEntry (`id("Name-Email"), _("E-&Mail Address")),
 	    // password widget label
-	    `Password (`id ("Passphrase"), _("&Passphrase"))
+	    `Password (`id ("Passphrase"), `opt (`hstretch), _("&Passphrase"))
 	),
 	`HSpacing(1)
     );
@@ -1607,10 +1621,10 @@ any SigningDialog() {
 	    )
 	),
 	// password entry label
-	`Password (`id(`pw), _("&Passphrase"),
+	`Password (`id(`pw), `opt (`hstretch), _("&Passphrase"),
 	    AddOnCreator::passphrases[gpg_key]:""),
 	// password entry label (verification)
-	`Password (`id(`pw2), _("&Passphrase Verification"),
+	`Password (`id(`pw2), `opt (`hstretch), _("&Passphrase Verification"),
 	    AddOnCreator::passphrases[gpg_key]:""),
 	// checkbox label
 	`Left (`CheckBox (`id (`resign),
@@ -1697,8 +1711,9 @@ any OutputDialog() {
 
     term contents = `HBox (`HSpacing (), `VBox (
 	`HBox (
-	    // text entry label
-	    `TextEntry (`id(`output_path), _("P&ath to Output Directory"),
+	    `InputField (`id(`output_path), `opt (`hstretch),
+		// text entry label
+		_("P&ath to Output Directory"),
 		current_product["base_output_path"]:""),
 	    `VBox (
 		`Label (""),
@@ -1714,7 +1729,8 @@ any OutputDialog() {
 	`HBox (
 	    `HSpacing (2),
 	    // text entry label
-	    `TextEntry (`id(`iso_name), _("Image File Name"), iso_name)
+	    `InputField (`id(`iso_name), `opt (`hstretch), _("Image File Name"),
+		iso_name)
 	),
 	`VSpacing (0.4),
 	// check box label
