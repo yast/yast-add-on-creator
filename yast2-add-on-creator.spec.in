@@ -1,6 +1,7 @@
 @HEADER-COMMENT@
 
 @HEADER@
+PreReq:         %fillup_prereq
 Requires:	yast2
 BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite
 
@@ -19,6 +20,9 @@ Summary:	YaST module for creating Add-On product
 
 @CLEAN@
 
+%post
+%{fillup_only -n add-on-creator}
+
 %files
 %defattr(-,root,root)
 %dir @yncludedir@/add-on-creator
@@ -31,3 +35,4 @@ Summary:	YaST module for creating Add-On product
 @scrconfdir@/*.scr
 @agentdir@/ag_*
 %doc @docdir@
+/var/adm/fillup-templates/sysconfig.add-on-creator

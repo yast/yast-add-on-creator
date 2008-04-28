@@ -1,0 +1,9 @@
+## Path:	System/Yast2/Add-On-Creator
+## Description:	YaST2 Add-On Creator
+## Type:	string
+## Default:	none
+#
+# Default value of 'VENDOR' key in the content file for new Add-On Products.
+#
+#
+VENDOR=""

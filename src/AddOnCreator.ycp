@@ -848,6 +848,16 @@ global boolean Read() {
 
     gpg_keys	= read_secret_keys ();
 
+    map out = (map) SCR::Execute (.target.bash_output, "/usr/bin/id --user");
+    if (out["stdout"]:"" != "0\n" && out["stdout"]:"" != "")
+    {
+	// TODO use getenv builtin when it is available
+	out	= (map) SCR::Execute (.target.bash_output, "echo $HOME");
+	string home	= deletechars (out["stdout"]:"", "\n");
+	if (home != "" && home != nil)
+	    add_on_products_file	= home + "/add_on_products.ycp";
+    }
+
     // Read the info of configured AddOns
     if (FileUtils::Exists (add_on_products_file))
     {
@@ -879,6 +889,12 @@ global boolean Read() {
 	}
 	if (key == "DEFAULTBASE")
 	    content_descr[key,"value"]	= Arch::architecture ();
+	string defval = (string)SCR::Read (add(.sysconfig.add-on-creator, key));
+	if (defval != nil && defval != "")
+	{
+	    y2milestone ("using default value for %1: %2", key, defval);
+	    content_descr[key,"value"]	= defval;
+	}
 	i	= i + 1;
     });
 

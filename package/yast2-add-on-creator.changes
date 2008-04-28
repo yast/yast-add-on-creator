@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Mon Apr 28 14:26:15 CEST 2008 - jsuchome@suse.cz
+
+- save list of products to $HOME if module is not called by root
+- added /etc/sysconfig/add-on-creator for storing default values
+- 2.16.10 
+
+-------------------------------------------------------------------
 Fri Apr 25 10:06:08 CEST 2008 - jsuchome@suse.cz
 
 - fixed some widget layouts
