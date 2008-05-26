@@ -163,7 +163,7 @@ boolean Create (map<string,any> options ) {
 		    if (size (f) > 2) lang	= f[size(f)-2]:"en";
 		    else return;
 		}
-		if (file == "" || lang == "DU") return;
+		if (file == "" || lang == "DU" || lang == "FL") return;
 		packages_descr[lang] = AddOnCreator::ReadPackagesFile (file);
 	    });
 	    current_product["packages_descr"]	= packages_descr;
@@ -184,20 +184,21 @@ boolean Create (map<string,any> options ) {
 	    map patterns	= $[];
 	    foreach (string f, splitstring(out["stdout"]:"", "\n"), {
 		if (f == "") return;
-		map pat	= AddOnCreator::ReadPatternFile (f);
-		if (pat != $[])
-		{
-		    list<string> pt	= splitstring (pat["Pat"]:"", " ");
-		    string name		= pt[0]:"";
-		    if (name != "")
+		foreach (map pat, AddOnCreator::ReadPatternsFile (f), {
+		    if (pat != $[])
 		    {
-			pat["name"]	= name;
-			pat["version"]	= pt[1]:"";
-			pat["release"]	= pt[2]:"";
-			pat["arch"]	= pt[3]:"";
-			patterns[name]	= pat;
+			list<string> pt	= splitstring (pat["Pat"]:"", " ");
+			string name	= pt[0]:"";
+			if (name != "")
+			{
+			    pat["name"]		= name;
+			    pat["version"]	= pt[1]:"";
+			    pat["release"]	= pt[2]:"";
+			    pat["arch"]		= pt[3]:"";
+			    patterns[name]	= pat;
+			}
 		    }
-		}
+		});
 	    });
 	    current_product["patterns"]	= patterns;
 	}

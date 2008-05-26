@@ -1,4 +1,14 @@
 -------------------------------------------------------------------
+Mon May 26 13:27:02 CEST 2008 - jsuchome@suse.cz
+
+- enable reading pattern files with more patterns (bnc#393515)
+- create_package_descr : added option for creating file lists (-F)
+- updated list of supported pattern metadata keys
+- enable compressing packages and pattern files, added sysconfig
+  support
+- 2.16.11
+
+-------------------------------------------------------------------
 Fri May 16 16:40:22 CEST 2008 - jsrain@suse.cz
 
 - added categories Settings and System into desktop file

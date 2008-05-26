@@ -181,9 +181,20 @@ any SummaryDialog () {
     if (AddOnCreator::selected_product != -1)
 	UI::ChangeWidget (`id (`table), `CurrentItem, AddOnCreator::selected_product);
     integer current = (integer) UI::QueryWidget(`id(`table), `CurrentItem);
-    map current_product	= add_on_products[current]:$[];
-    UI::ChangeWidget (`id (`descr), `Value, get_description (current_product));
-    UI::SetFocus (`id (`table));
+    map current_product	= $[];
+    if (size (summary_items) > 0)
+    {
+	current_product	= add_on_products[current]:$[];
+	UI::ChangeWidget (`id (`descr), `Value, get_description (current_product));
+	UI::SetFocus (`id (`table));
+    }
+    else
+    {
+	foreach (symbol t, [`edit, `delete, `build], {
+	    UI::ChangeWidget (`id (t), `Enabled, false);
+	});
+	UI::SetFocus (`id (`new));
+    }
 
     any ret = nil;
     while (true) {
@@ -213,8 +224,9 @@ any SummaryDialog () {
 		summary_items	= get_summary_items ();
 		current_product	= $[];
 		UI::ChangeWidget (`id (`table), `Items, get_summary_items ());
-		UI::ChangeWidget (`id (`edit), `Enabled, summary_items != []);
-		UI::ChangeWidget (`id (`delete), `Enabled, summary_items != []);
+		foreach (symbol t, [`edit, `delete, `build], {
+		    UI::ChangeWidget (`id (t), `Enabled, summary_items != []);
+		});
 		if (summary_items != [])
 		    ret	= `table;
 	    }
@@ -485,6 +497,10 @@ any SourcesDialog() {
 		    req_dir = substring (req_dir, 0, size(req_dir)-1);
 		UI::ChangeWidget (`id(`required_rpm_path), `Value, req_dir);
 	    }
+	}
+	else if (ret == `other)
+	{
+	    UI::SetFocus (`id(`other_val));
 	}
 	else if (ret == `sles10sp1) {
 	    requires	= "product:SUSE_SLES = 10.1";
@@ -819,6 +835,7 @@ any ContentFileDialog() {
 		content[key_no,"value"]	= val;
 		UI::ChangeWidget (`id(`content_table),`Item(key_no,1), val);
 	    }
+	    UI::SetFocus (`id (`content_table));
 	}
         else if (ret == `next) {
 	    list<string> missing	= [];
@@ -1373,7 +1390,7 @@ Choose another one."));
 		    if (size (f) > 2) lang	= f[size(f)-2]:"en";
 		    else continue;
 		}
-		if (lang == "" || lang == "DU")
+		if (lang == "" || lang == "DU" || lang == "FL")
 		    continue;
 		map description = AddOnCreator::ReadPackagesFile (file);
 		if (description == nil) continue; //TODO error handling

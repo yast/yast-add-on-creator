@@ -4,7 +4,13 @@ use lib "/usr/lib/YaST2/agents_non_y2";
 use ycp;
 use strict;
 
+# current pattern
 my %pattern		= ();
+
+# list of all patterns in current file
+my @patterns		= ();
+
+# error code
 my $err_no		= 0;
 
 # which keys have multiline values
@@ -19,6 +25,7 @@ my %multiple		= (
 sub parse_file {
 
     my $file	= shift;
+    @patterns	= ();
     %pattern	= ();
     my $i = open PATTERN, "< $file";
     if (!defined $i) {
@@ -31,6 +38,12 @@ sub parse_file {
     foreach my $line (<PATTERN>) {
 	chomp $line;
 	if ($line =~ /^=([\w\.]+):[ \t]*(.*)/) {
+	    if ($1 eq "Ver" && %pattern) {
+		y2debug ("new pattern; saving ", $pattern{"Pat"} || "-");
+		my %pat		= %pattern;
+		push @patterns, \%pat;
+		%pattern	= ();
+	    }
 	    $pattern{$1}	= $2;
 	}
 	elsif ($line =~ /^\+([\w\.]+):.*/) {
@@ -50,6 +63,7 @@ sub parse_file {
 	    $multiline_val      = $multiline_val.$line;
 	}
     }
+    push @patterns, \%pattern if (%pattern);
     close PATTERN;
     return 1;
 }
@@ -98,6 +112,7 @@ while (<STDIN>)
     {
 	y2debug ("argument: $argument");
 
+	# return pattern map from given file(last one if there are more of them)
 	if ($path eq '.' && $argument) {
 	    if (parse_file ($argument)) {
 		ycp::Return (\%pattern);
@@ -106,12 +121,21 @@ while (<STDIN>)
 		ycp::Return ({});
 	    }
 	}
+	# return list of pattern maps from given file
+	elsif ($path eq '.list' && $argument) {
+	    if (parse_file ($argument)) {
+		ycp::Return (\@patterns);
+	    }
+	    else {
+		ycp::Return ([]);
+	    }
+	}
 	else {
 	    y2error ("wrong path ($path) or argument: ", ref ($argument));
 	    ycp::Return("false");#FIXME nil?
 	}
     }
-    elsif ($command eq "Write")
+    elsif ($command eq "Write") # FIXME not complete, do not use
     {
 	y2debug ("argument: $argument");
 	if ($path eq '.' && ref ($argument) eq "ARRAY") {

@@ -527,7 +527,58 @@ other patterns marked as obsolete here."),
     ],
     // TODO during editing, remove from Prc and Prs packages contained in Prq
     // TODO add some key for sorting, so output file is readable
-];
+
+
+    // FIXME new keys, add labels after 11.0
+    "Ext"	: $[
+	// label for 'Ext' pattern key
+	"label"		: _("Extends"),
+	"defval"	: "",
+	"type"		: "pattern-list",
+    ],
+    "Inc"	: $[
+	// label for 'Inc' pattern key
+	"label"		: _("Includes"),
+	"defval"	: "",
+	"type"		: "pattern-list",
+    ],
+    "Enh"	: $[
+	// label for 'Exnh pattern key
+	"label"		: _("Enhanced patterns"),
+	"defval"	: "",
+	"type"		: "pattern-list",
+    ],
+    "Pcn"	: $[
+	// label for 'Pcn' pattern key
+	"label"		: _("Conflicting packages"),
+	"type"		: "package-list",
+	"defval"	: [],
+    ],
+    "Pob"	: $[
+	// label for 'Pob' pattern key
+	"label"		: _("Obsoleted packages"),
+	"type"		: "package-list",
+	"defval"	: [],
+    ],
+    "Pfr"	: $[
+	// label for 'Pfr' pattern key
+	"label"		: _("Freshened packages"),
+	"type"		: "package-list",
+	"defval"	: [],
+    ],
+    "Psp"	: $[
+	// label for 'Psp' pattern key
+	"label"		: _("Supplemented packages"),
+	"type"		: "package-list",
+	"defval"	: [],
+    ],
+    "Pen"	: $[
+	// label for 'Pen' pattern key
+	"label"		: _("Enhanced packages"),
+	"type"		: "package-list",
+	"defval"	: [],
+    ],
+ ];
 
 // description of keys in package description files
 global map<string,map> description_descr	= $[
@@ -625,68 +676,6 @@ global boolean generate_descriptions = false;
  */
 global boolean bootable	= false;
 
-// text with license (in the root dir)
-//global string license		= "";
-
-// the contents of products files
-//global list<string> products_files	= [];
-
-// the contents of media files
-//global list<string> media_files	= [];
-
-// the contents of patches files
-//global list<string> patches_files	= [];
-
-// the contents of info.txt file
-//global string info		= "";
-
-// the contents of EXTRA_PROV file
-//global string extra_prov	= "";
-
-// path to the file with EXTRA_PROV data
-//global string extra_prov_file	= "";
-
-// the contents of nextmedia file
-//global string nextmedia		= "";
-
-/* content of readme files
-global map<string,string> readme_files	= $[
-    "README"	: ""
-];
-
-// content of license files (in media.1 dir)
-global map<string,string> license_files	= $[
-    "license"	: ""
-];
-
-global map<string,string> copying_files	= $[
-    "COPYING"	: ""
-];
-
-global map<string,string> copyright_files	= $[
-    "COPYRIGHT"	: ""
-];
-*/
-
-// paths with packages to be archived in y2update.tgz
-//global list<string> y2update_packages	= [];
-
-// path with y2update.tgz (alternative to y2update_packages)
-//global string y2update_path	= "";
-
-// path to file with installation workflow (installation.xml)
-//global string workflow_path	= "";
-
-// if iso image should be created from the final Add-On
-//global boolean iso	= false;
-
-// where the iso image should be put
-//global string iso_path	= "";
-
-// name of the iso image file
-//global string iso_name	= "";
-
-
 // tmp directory
 string tmpdir	= "";
 
@@ -722,8 +711,14 @@ global map<string,map> srcpackage2filename	= $[];
 // if we want only to sign existing product (and possibly create iso of it)
 global boolean only_sign_product		= false;
 
-// also sign all rpm's (see bug #287447)
-//global boolean resign_packages			= false;
+// if pattern files should be compressed
+global boolean compress_patterns		= false;
+
+// if pattern definitions should be merged into one file TODO
+global boolean merge_patterns			= false;
+
+// if package description files should be compressed
+global boolean compress_package_descriptions	= false;
 
 /**
  * Data was modified?
@@ -900,6 +895,13 @@ global boolean Read() {
 
     tmpdir	= Directory::tmpdir;
 
+    if (SCR::Read (.sysconfig.add-on-creator.COMPRESS_PATTERNS) == "yes")
+	compress_patterns	= true;
+
+    if (SCR::Read (.sysconfig.add-on-creator.COMPRESS_PACKAGE_DESCRIPTIONS)
+	== "yes")
+	compress_package_descriptions	= true;
+
     return true;
 }
 
@@ -988,7 +990,7 @@ string uncompress_file (string file_path) {
     return ret;
 }
 
-// read the pattern given by file name
+// read the pattern given by file name (obsolete, use ReadPatternsFile instead)
 global map ReadPatternFile (string file_path) {
 
     y2milestone ("Importing pattern '%1'", file_path);
@@ -1020,6 +1022,47 @@ global map ReadPatternFile (string file_path) {
     return ret;
 }
 
+/**
+ * read all the patterns defined in given file
+ * @return list of pattern maps
+ */
+global list<map> ReadPatternsFile (string file_path) {
+
+    y2milestone ("Importing pattern '%1'", file_path);
+    file_path	= uncompress_file (file_path);
+
+    list<map> retlist	= [];
+    list<map> pts	= (list<map>) SCR::Read (.pattern.list, file_path);
+
+    foreach (map pt, pts, {
+	map ret	= $[];
+	foreach (string key, any val, (map<string,any>) pt, {
+	    if (pattern_descr[key,"type"]:"" == "package-list")
+	    {
+		ret[key]	= splitstring (sformat ("%1", val), "\n");
+		// make the packages included in pattern available for UI
+		available_packages["ZZZ_imported"] = union (
+		    available_packages["ZZZ_imported"]:[], ret[key]:[]);
+	    }
+	    else
+		ret[key]	= val;
+	});
+	// add empty values for keys not present in imported pattern
+	foreach (string key, map descr, pattern_descr, {
+	    if (!haskey (ret, key) && !descr["internal"]:false)
+	    {
+		y2debug ("adding empty key '%1'...", key);
+		// do not add default values - maybe imported pattern
+		// ignored them intentionally
+		ret[key]	= "";
+	    }
+	});
+	if (ret != $[])
+	    retlist	= add (retlist, ret);
+    });
+    return retlist;
+}
+
 // read the package description (package.lang) file
 global map ReadPackagesFile (string file_path) {
 
@@ -1047,20 +1090,21 @@ global boolean ImportExistingProduct (string dir_path) {
     map patterns	= $[];
     foreach (string f, splitstring(out["stdout"]:"", "\n"), {
 	if (f == "") return;
-	map pat	= ReadPatternFile (f);
-	if (pat != $[])
-	{
-	    list<string> pt	= splitstring (pat["Pat"]:"", " ");
-	    string name		= pt[0]:"";
-	    if (name != "")
+	foreach (map pat, ReadPatternsFile (f), {
+	    if (pat != $[])
 	    {
-		pat["name"]	= name;
-		pat["version"]	= pt[1]:"";
-		pat["release"]	= pt[2]:"";
-		pat["arch"]	= pt[3]:"";
-		patterns[name]	= pat;
+		list<string> pt	= splitstring (pat["Pat"]:"", " ");
+		string name	= pt[0]:"";
+		if (name != "")
+		{
+		    pat["name"]		= name;
+		    pat["version"]	= pt[1]:"";
+		    pat["release"]	= pt[2]:"";
+		    pat["arch"]		= pt[3]:"";
+		    patterns[name]	= pat;
+		}
 	    }
-	}
+	});
     });
     current_product["patterns"]	= patterns;
 
@@ -1415,7 +1459,7 @@ Please wait...
 	FileUtils::Exists ("/usr/bin/create_package_descr"))
     {
 	y2milestone ("creating packages descriptions...");
-	cmd	= sformat("/usr/bin/create_package_descr -d %1 -C -o %2",
+	cmd	= sformat("/usr/bin/create_package_descr -d %1 -C -F -o %2",
 	    rpm_path, tmpdir);
 	SCR::Execute (.target.bash, cmd, $["LANG":"C"]);
 	y2milestone ("... done");
@@ -1433,7 +1477,7 @@ Please wait...
 		lang	= f[size(f)-2]:"en";
 	    else return;
 	}
-	if (file == "" || lang == "DU") return;
+	if (file == "" || lang == "DU" || lang == "FL") return;
 	if (packages_descr[lang]:$[] == $[])
 	{
 	    packages_descr[lang]    = ReadPackagesFile (file);
@@ -1563,7 +1607,7 @@ global boolean GeneratePackageDescriptions () {
 
     if (!FileUtils::Exists ("/usr/bin/create_package_descr")) return false;
 
-    string command = sformat ("/usr/bin/create_package_descr -d %1 -C -o %2",
+    string command = sformat ("/usr/bin/create_package_descr -d %1 -C -F -o %2",
 	full_data_path, full_descr_path);
     SCR::Execute (.target.bash_output, command, $["LANG":"C"]);
     return true;
@@ -1584,21 +1628,32 @@ global boolean WritePackageDescriptions (string descr_path, map descr) {
     foreach (string lang, map data, (map<string,map>)descr, {
 	string file_path	= descr_path + "/packages." + lang;
 	ret	= ret && PackagesDescr::Write (file_path,(map<string,any>)data);
+	if (compress_package_descriptions && gzip_installed ())
+	{
+	    y2debug ("compressing %1 file: %2", file_path, SCR::Execute (
+		.target.bash, sformat ("gzip %1", file_path)));
+	}
     });
     if (ret) // copy the rest of files, generated earlier
     {
-	SCR::Execute (.target.bash,
-	    sformat ("/bin/rm -f '%1/packages' '%1/packages.DU'", descr_path));
-	string pth	= tmpdir + "/packages";
-	if (!FileUtils::Exists (pth) && FileUtils::Exists (pth + ".gz"))
-	    pth	= pth + ".gz";
-	string cmd = sformat("/bin/cp %1 '%2'", pth, descr_path);
-	SCR::Execute (.target.bash, cmd, $["LANG":"C"]);
-	pth	= tmpdir + "/packages.DU";
-	if (!FileUtils::Exists (pth) && FileUtils::Exists (pth + ".gz"))
-	    pth	= pth + ".gz";
-	cmd	= sformat ("/bin/cp %1 '%2'", pth, descr_path);
-	SCR::Execute (.target.bash, cmd, $["LANG":"C"]);
+	SCR::Execute (.target.bash, sformat (
+	    "/bin/rm -f '%1/packages' '%1/packages.DU*' '%1/packages.FL*'",
+	    descr_path));
+	foreach (string file, [ "packages", "packages.DU", "packages.FL"], {
+	    string pth		= tmpdir + "/" + file;
+	    boolean compress	= false;
+	    if (!FileUtils::Exists (pth) && FileUtils::Exists (pth + ".gz"))
+		pth = pth + ".gz";
+	    else if (compress_package_descriptions)
+		compress	= true;
+	    string cmd = sformat("/bin/cp %1 '%2'", pth, descr_path);
+	    SCR::Execute (.target.bash, cmd, $["LANG":"C"]);
+	    if (compress)
+	    {
+		SCR::Execute (.target.bash,
+		    sformat ("gzip %1/%2", descr_path, file));
+	    }
+	});
     }
 
     /* no need to read now, already done in UI or CLI
@@ -1830,6 +1885,11 @@ global boolean WritePatterns (string descr_path, string base_path) {
 	    }
 	});
 	SCR::Write (.target.string, descr_path + "/" + filename, file);
+	if (compress_patterns && gzip_installed ())
+	{
+	    y2debug ("compressing pattern file: %1", SCR::Execute (
+		.target.bash, sformat ("gzip %1/%2",descr_path,filename)));
+	}
     });
     if (names != [])
 	ret = SCR::Write (.target.string, descr_path + "/patterns",

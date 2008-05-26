@@ -281,26 +281,29 @@ any PatternsDialog() {
 	    }
 	}
 	else if (ret == `import_pt) {
-	    string file = UI::AskForExistingFile (import_path, "*.pat",
+	    string file = UI::AskForExistingFile (import_path, "*.pat *.pat.gz",
 		// popup for file selection dialog
 		_("Existing Pattern")
 	    );
 	    if (file != nil)
 	    {
-		map pat	= AddOnCreator::ReadPatternFile (file);
-		list<string> pt	= splitstring (pat["Pat"]:"", " ");
-		string name	= pt[0]:"";
+		list<map> pats	= AddOnCreator::ReadPatternsFile (file);
+		string name	= "";
+		foreach (map pat, pats, {
+		    list<string> pt	= splitstring (pat["Pat"]:"", " ");
+		    name	= pt[0]:"";
+		    if (name != "")
+		    {
+			pat["name"]		= name;
+			pat["version"]	= pt[1]:"";
+			pat["release"]	= pt[2]:"";
+			pat["arch"]		= pt[3]:"";
+			patterns[name]	= pat;
+		    }
+		});
+		UI::ChangeWidget(`id(`patterns), `Items, get_patterns_items());
 		if (name != "")
-		{
-		    pat["name"]		= name;
-		    pat["version"]	= pt[1]:"";
-		    pat["release"]	= pt[2]:"";
-		    pat["arch"]		= pt[3]:"";
-		    patterns[name]	= pat;
-		    UI::ChangeWidget(`id(`patterns), `Items,
-			get_patterns_items());
 		    UI::ChangeWidget(`id(`patterns), `CurrentItem, name);
-		}
 		import_path	= file;
 	    }
 	}
@@ -310,6 +313,7 @@ any PatternsDialog() {
 	    {
 		patterns	= remove (patterns, sel);
 		UI::ChangeWidget(`id(`patterns),`Items, get_patterns_items());
+		UI::SetFocus (`id (`patterns));
 	    }
 	}
 	if (contains ([`new_pt, `import_pt, `delete_pt], ret))
