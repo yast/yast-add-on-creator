@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri May 30 11:28:43 CEST 2008 - jsuchome@suse.cz
+
+- CLI: read current product data after it was cleared (bnc#395753)
+- 2.16.12
+
+-------------------------------------------------------------------
 Mon May 26 13:27:02 CEST 2008 - jsuchome@suse.cz
 
 - enable reading pattern files with more patterns (bnc#393515)
