@@ -2388,7 +2388,10 @@ global void ResetCurrentProduct () {
     full_data_path	= "";
 }
 
-// save the data with current configuration into global list
+/**
+ * save the data with current configuration into global list
+ * + reset the current product map
+ */
 global void CommitCurrentProduct () {
 
     map modified_product	= union (current_product, $[
@@ -2554,6 +2557,7 @@ global boolean BuildAddOn () {
 	{
 	    // Error message (do not translate 'content'
 	    Report::Error (_("Cannot write content file."));
+	    return false;
 	}
 
 	WriteStringFiles (base_output_path,
@@ -2569,6 +2573,7 @@ global boolean BuildAddOn () {
 	{
 	    // Error message
 	    Report::Error (_("Cannot create the output directory structure."));
+	    return false;
 	}
 
 	WritePatchesFiles (base_output_path,

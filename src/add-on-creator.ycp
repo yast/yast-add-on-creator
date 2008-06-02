@@ -328,9 +328,19 @@ boolean Create (map<string,any> options ) {
 	SCR::Execute (.target.mkdir, current_product["base_output_path"]:"");
     }
     AddOnCreator::current_product	= current_product;
+    AddOnCreator::selected_product	= -1; // new product
     AddOnCreator::CommitCurrentProduct ();
+
     if (haskey (options, "do_not_build"))
 	return true;
+
+    // now, build the product that was added last: current product data
+    // must be initialized again:
+    AddOnCreator::current_product	=
+      AddOnCreator::add_on_products[size(AddOnCreator::add_on_products)-1]:$[];
+    // fill again other global values cleared by CommitCurrentProduct
+    AddOnCreator::SelectProduct (AddOnCreator::current_product);
+
     return AddOnCreator::BuildAddOn ();
 }
 
@@ -387,7 +397,6 @@ boolean CloneAddOn (map<string,any> options) {
  */
 boolean SignAddOn (map<string,any> options) {
 
-    map current_product	= AddOnCreator::current_product;
     AddOnCreator::only_sign_product	= false;
     if (!haskey (options, "addon_dir"))
     {
@@ -396,18 +405,25 @@ boolean SignAddOn (map<string,any> options) {
 	return false;
     }
     else
-	current_product["base_output_path"]	= options["addon_dir"]:"";
+    {
+	AddOnCreator::current_product["base_output_path"] =
+	    options["addon_dir"]:"";
+    }
 
     // we need to import same data from existing add-on (e.g. for iso name)
-    AddOnCreator::ImportExistingProduct(current_product["base_output_path"]:"");
+    AddOnCreator::ImportExistingProduct (options["addon_dir"]:"");
     AddOnCreator::FillContentDefaults ();
+
+    map current_product	= AddOnCreator::current_product;
 
     current_product     = union (current_product, ParseGPGData (options));
     current_product	= union (current_product, ParseISOData (options));
     AddOnCreator::only_sign_product	= true;
     AddOnCreator::current_product	= current_product;
-    AddOnCreator::CommitCurrentProduct ();
-    return AddOnCreator::BuildAddOn ();
+    AddOnCreator::BuildAddOn ();
+    return false;
+    // no write needed (configs were not modified, or there was only one-time
+    // modification: iso, gpg info)
 }
 
 /**
