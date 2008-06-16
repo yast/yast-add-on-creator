@@ -196,10 +196,13 @@ any SummaryDialog () {
 	UI::SetFocus (`id (`new));
     }
 
-    any ret = nil;
+    any ret		= nil;
+    boolean deleted	= false;
     while (true) {
 
-	ret = UI::UserInput();
+	map event       = UI::WaitForEvent ();
+	ret             = event["ID"]:nil;
+
 	current = (integer) UI::QueryWidget(`id(`table), `CurrentItem );
 
 	if (ret == `abort || ret == `cancel || ret == `back) {
@@ -210,7 +213,7 @@ any SummaryDialog () {
 	    }
             continue;
         }
-        if (ret == `new)
+        if (ret == `new || ret == `next)
 	{
             break;
         }
@@ -223,12 +226,20 @@ any SummaryDialog () {
 		add_on_products	= remove (add_on_products, current);
 		summary_items	= get_summary_items ();
 		current_product	= $[];
+		deleted		= true;
 		UI::ChangeWidget (`id (`table), `Items, get_summary_items ());
 		foreach (symbol t, [`edit, `delete, `build], {
 		    UI::ChangeWidget (`id (t), `Enabled, summary_items != []);
 		});
 		if (summary_items != [])
-		    ret	= `table;
+		{
+		    ret		= `table;
+		    event	= $[];
+		}
+		else
+		{
+		    UI::ChangeWidget (`id (`descr), `Value, "");
+		}
 	    }
         }
 	if (ret == `table)
@@ -236,7 +247,8 @@ any SummaryDialog () {
 	    current_product	= add_on_products[current]:$[];
 	    UI::ChangeWidget (`id (`descr), `Value,
 		get_description (current_product));
-
+	    if (event["EventReason"]:"" == "Activated")
+		ret     = `edit;
 	}
         if (ret == `edit || ret == `build)
 	{
@@ -245,12 +257,14 @@ any SummaryDialog () {
 		AddOnCreator::PrepareBuild ();
 	    break;
         }
-	if (ret == `next) {
-	    AddOnCreator::add_on_products	= add_on_products;
-	    break;
-	}
     }
     AddOnCreator::selected_product	= (ret == `new) ? -1 : current;
+
+    // save the map without possible deleted products
+    if (ret != `abort && deleted)
+    {
+	AddOnCreator::add_on_products	= add_on_products;
+    }
     Wizard::RestoreAbortButton();
     return (symbol)ret;
 }
@@ -1615,9 +1629,7 @@ any SigningDialog() {
     // dialog caption
     string caption	= _("Signing the Add-On Product");
     list gpg_keys	= maplist (string key, AddOnCreator::gpg_keys, {
-	map out		= (map) SCR::Execute (.target.bash_output,
-	    sformat ("gpg --list-secret-keys %1 | grep uid | sed -e 's/^uid[ ]*//'", key));
-	string name	= deletechars (out["stdout"]:"", "\n");
+	string name	= AddOnCreator::GetKeyUID (key);
 	return `item (`id (key),
 	    name != "" ? sformat ("%1 (%2)", key, name) : key,
 	    key == gpg_key

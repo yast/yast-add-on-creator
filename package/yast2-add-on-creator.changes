@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Mon Jun 16 15:29:44 CEST 2008 - jsuchome@suse.cz
+
+- delete products not only after immediate exit (bnc#399964)
+- show more info about GPG keys
+- 2.17.0
+
+-------------------------------------------------------------------
 Fri May 30 11:28:43 CEST 2008 - jsuchome@suse.cz
 
 - CLI: read current product data after it was cleared (bnc#395753)

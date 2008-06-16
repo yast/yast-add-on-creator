@@ -859,17 +859,12 @@ global boolean Read() {
 	list<map> all_products	= (list<map>)
 	    SCR::Read (.target.ycp, add_on_products_file);
 	if (all_products != nil)
-	{
-	    add_on_products	= maplist (map product, all_products, {
-		return product;
-	    });
-	}
+	    add_on_products	= all_products;
     }
     else
     {
 	current_product["gpg_key"]	= gpg_keys[0]:"";
     }
-
     // fill uninitialized values in content descriptions
     integer i	= 0;
 
@@ -2451,6 +2446,15 @@ global boolean Write () {
     return SCR::Write (.target.ycp, add_on_products_file, add_on_products);
 }
 
+/**
+ * read the user's ID for given GPG key
+ */
+global string GetKeyUID (string key) {
+
+    map out         = (map) SCR::Execute (.target.bash_output, sformat ("gpg --list-secret-keys %1 | grep uid | sed -e 's/^uid[ ]*//'", key));
+    string name	= deletechars (out["stdout"]:"", "\n");
+    return name == nil ? "" : name;
+}
 
 /**
  * prepare the data of current product for a build
@@ -2467,9 +2471,11 @@ global boolean PrepareBuild () {
     if (current_product["ask_for_passphrase"]:false &&
 	key != "" && passphrases[key]:"" == "" && !Mode::commandline ())
     {
-	// ask for pw now
+	string name	= GetKeyUID (key);
+	// ask for pw now %1 is key id, %2 user name
 	passphrases[key]	= AskForPassphrase (
-	    sformat (_("Passphrase for GPG key %1"), key), false);
+	    sformat (_("Enter passphrase for GPG key %1
+(%2)"), key, name), false);
     }
 }
 
