@@ -27,7 +27,7 @@ sub parse_file {
     my $file	= shift;
     @patterns	= ();
     %pattern	= ();
-    my $i = open PATTERN, "< $file";
+    my $i = open(PATTERN, $file =~ /\.gz$/ ? "/usr/bin/gunzip -c $file |" : "< $file");
     if (!defined $i) {
 	y2error ("$file cannot be opened for reading!");
 	$err_no		= 1;
@@ -79,7 +79,7 @@ sub write_file {
 	$err_no	= 10;
 	return 0;
     }
-    my $o = open PATTERN, "> $file";
+    my $o = open(PATTERN, $file =~ /\.gz$/ ? "| /usr/bin/gzip -9 -c $file" : "> $file");
     if (!defined $o) {
 	y2error ("$file cannot be opened for writing!");
 	$err_no	= 11;

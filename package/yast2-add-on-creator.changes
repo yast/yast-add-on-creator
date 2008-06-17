@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Tue Jun 17 09:52:15 CEST 2008 - lslezak@suse.cz
+
+- ag_pattern agent - automatically compress/decompress pattern
+  file with .gz suffix
+
+-------------------------------------------------------------------
 Mon Jun 16 15:29:44 CEST 2008 - jsuchome@suse.cz
 
 - delete products not only after immediate exit (bnc#399964)
