@@ -2428,6 +2428,17 @@ global void SelectProduct (map product) {
 	    entry["value"]	= content_map[key]:"";
 	content	= add (content, entry);
     });
+    foreach (string key, string val, content_map, {
+	if (!haskey (content_descr, key) && issubstring (key, "."))
+	{
+	    y2debug ("key %1 not in descr", key);
+	    map entry	=
+		content_specials[substring (key,0,findfirstof (key,"."))]:$[];
+	    entry["key"]	= key;
+	    entry["value"]	= val;
+	    content = add (content, entry);
+	}
+    });
     available_packages	= product["available_packages"]:$[];
     arch_directories	= product["arch_directories"]:[];
     package2filename	= product["package2filename"]:$[];

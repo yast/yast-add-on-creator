@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Jul 14 09:50:58 CEST 2008 - jsuchome@suse.cz
+
+- read all content file values from saved configuration (bnc#406153)
+- 2.16.13
+
+-------------------------------------------------------------------
 Fri May 30 11:28:43 CEST 2008 - jsuchome@suse.cz
 
 - CLI: read current product data after it was cleared (bnc#395753)
