@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Jul 14 09:52:18 CEST 2008 - jsuchome@suse.cz
+
+- read all content file values from saved configuration (bnc#406153) 
+- 2.17.2
+
+-------------------------------------------------------------------
 Wed Jun 18 11:54:32 CEST 2008 - jsuchome@suse.cz
 
 - 2.17.1 

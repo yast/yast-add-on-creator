@@ -79,7 +79,7 @@ sub write_file {
 	$err_no	= 10;
 	return 0;
     }
-    my $o = open(PATTERN, $file =~ /\.gz$/ ? "| /usr/bin/gzip -9 -c $file" : "> $file");
+    my $o = open(PATTERN, $file =~ /\.gz$/ ? "| /usr/bin/gzip -9 -c '$file'" : "> $file");
     if (!defined $o) {
 	y2error ("$file cannot be opened for writing!");
 	$err_no	= 11;
