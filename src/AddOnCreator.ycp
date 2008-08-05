@@ -43,7 +43,6 @@ import "Mode";
 import "Package";
 import "PackageSystem";
 import "PackagesDescr";
-import "Popup";
 import "Progress";
 import "Report";
 import "String";
@@ -1618,11 +1617,14 @@ global boolean WritePackageDescriptions (string descr_path, map descr) {
 
     if (!FileUtils::Exists (descr_path)) return false;
 
+    y2milestone ("writing package description files...");
+
     boolean ret	= true;
     if (descr == $[]) return ret;
     foreach (string lang, map data, (map<string,map>)descr, {
 	string file_path	= descr_path + "/packages." + lang;
 	ret	= ret && PackagesDescr::Write (file_path,(map<string,any>)data);
+	y2debug ("file '%1' written, retval: %2", file_path, ret);
 	if (compress_package_descriptions && gzip_installed ())
 	{
 	    y2debug ("compressing %1 file: %2", file_path, SCR::Execute (
@@ -1636,6 +1638,7 @@ global boolean WritePackageDescriptions (string descr_path, map descr) {
 	    descr_path));
 	foreach (string file, [ "packages", "packages.DU", "packages.FL"], {
 	    string pth		= tmpdir + "/" + file;
+	    y2debug ("processing '%1'", pth);
 	    boolean compress	= false;
 	    if (!FileUtils::Exists (pth) && FileUtils::Exists (pth + ".gz"))
 		pth = pth + ".gz";
@@ -1651,14 +1654,11 @@ global boolean WritePackageDescriptions (string descr_path, map descr) {
 	});
     }
 
-    /* no need to read now, already done in UI or CLI
-    if (extra_prov_file != "" && FileUtils::Exists (extra_prov_file))
-	extra_prov	= (string) SCR::Read (.target.string, extra_prov_file);
-    */
     string extra_prov	= current_product["extra_prov"]:"";
     if (extra_prov != "" && extra_prov != nil)
 	SCR::Write (.target.string, descr_path + "/EXTRA_PROV",extra_prov);
 
+    y2milestone ("... done");
     return ret;
 }
 
@@ -1788,7 +1788,7 @@ global boolean WriteLicensesFiles (string descr_path, string base_path, map<stri
 	y2warning ("no %1 directory exists...", base_path);
 	return false;
     }
-
+    y2milestone ("writing licenses...");
     boolean ret	= true;
     string cmd	= "";
     foreach (string file, string cont, files, {
@@ -1879,7 +1879,9 @@ global boolean WritePatterns (string descr_path, string base_path) {
 		file = file + sformat ("+%1:\n%2\n-%1:\n", key, val);
 	    }
 	});
-	SCR::Write (.target.string, descr_path + "/" + filename, file);
+	y2milestone ("writing pattern %1/%2: %3", descr_path, filename,
+	    SCR::Write (.target.string, descr_path + "/" + filename, file)
+	);
 	if (compress_patterns && gzip_installed ())
 	{
 	    y2debug ("compressing pattern file: %1", SCR::Execute (
@@ -1926,12 +1928,14 @@ global boolean CopyRPMs (string in_path, string base_path) {
 	    if (arch != "ZZZ_imported" && arch != "ZZZ_required" &&
 		FileUtils::Exists (out_dir))
 	    {
+		y2milestone ("copying packages of '%1' arhitecture", arch);
 		// arch_directories will be needed later for CreateMD5SUMS and
 		// resign_packages
 		arch_directories	= (list<string>)
 		    union (arch_directories, [arch]);
 		if (size (package2filename) > 0 && arch != "src")
 		{
+		    y2debug ("package names known");
 		    foreach (string p, (list<string>) pa, {
 			SCR::Execute (.target.bash, sformat (
 			    "/bin/cp %1 '%2/'", package2filename[arch,p]:"", out_dir));
@@ -1939,6 +1943,7 @@ global boolean CopyRPMs (string in_path, string base_path) {
 		}
 		else if (size (srcpackage2filename) > 0 && arch == "src")
 		{
+		    y2debug ("source packages, names known");
 		    foreach (string p, (list<string>) pa, {
 			SCR::Execute (.target.bash, sformat (
 			    "/bin/cp %1 '%2/'", srcpackage2filename[arch,p]:"", out_dir));
@@ -1946,6 +1951,7 @@ global boolean CopyRPMs (string in_path, string base_path) {
 		}
 		else
 		{
+		    y2debug ("package names not known, using wildcard");
 		    foreach (string p, (list<string>) pa, {
 			SCR::Execute (.target.bash, sformat (
 			    "/bin/cp %1/%2*.rpm '%3/'", in_path, p, out_dir));
@@ -2017,7 +2023,7 @@ boolean WriteWorkflow (string base_path,string desc_path, list<string> packages,
 boolean GenerateChangelog (string base_path)
 {
     if (!Package::Installed ("inst-source-utils") &&
-	!FileUtils::Exists ("/usr/bin//usr/bin/mk_changelog"))
+	!FileUtils::Exists ("/usr/bin/mk_changelog"))
     {
 	y2error("inst-source-utils not installed and mk_changelog not present");
 	return false;
@@ -2112,6 +2118,7 @@ global boolean CreateMD5SUMS (string base_path) {
     foreach (string full_path, dirs_for_md5, {
 	if (dir_has_files (full_path))
 	{
+	    y2milestone ("creating MDBSUM in %1", full_path);
 	    // whole dir was copied -> also with original MD5SUMS
 	    if (FileUtils::Exists (full_path + "/MD5SUMS"))
 	    {
@@ -2129,6 +2136,7 @@ global boolean CreateMD5SUMS (string base_path) {
     map out = (map) SCR::Execute (.target.bash_output, sformat ("ls -A1 '%1'", full_descr_path));
     foreach (string file, splitstring (out["stdout"]:"", "\n"), {
 	if (file == "") return;
+	y2milestone ("creating sha1sum of %1", file);
 	out = (map) SCR::Execute (.target.bash_output,
 	    sformat ("cd '%1' && sha1sum -- %2", full_descr_path, String::Quote (file)),
 	    $["LANG" : "C"]);
@@ -2138,10 +2146,12 @@ global boolean CreateMD5SUMS (string base_path) {
     });
 
     // sha1sums of the rest of interesting files
-    foreach (string file, [ "installation.xml", "license.tar.gz", "media.1/info.txt"],
+    foreach (string file, [ "installation.xml", "license.tar.gz",
+	"media.1/info.txt"],
     {
 	if (FileUtils::Exists (base_path + "/" + file))
 	{
+	    y2milestone ("creating sha1sum of %1", file);
 	    out = (map) SCR::Execute (.target.bash_output,
 		sformat ("cd '%1' && sha1sum -- %2", base_path, String::Quote (file)), $["LANG" : "C"]);
 	    string command = sformat ("echo 'HASH SHA1 %1' >> '%2/content'",
@@ -2212,7 +2222,9 @@ string AskForPassphrase (string message, boolean failure) {
 }
 
 /**
- * Sign the add-on
+ * Sign current Add-On product
+ * @param base_path path to target product directory
+ * @param key GPG key to sign with
  */
 global boolean SignAddOn (string base_path, string key) {
 
@@ -2252,6 +2264,7 @@ global boolean SignAddOn (string base_path, string key) {
 	    deletechars (out["stdout"]:"", "\n"), base_path);
 	SCR::Execute (.target.bash, command, $["LANG" : "C"]);
     });
+    y2milestone ("signing content file...");
     while (true)
     {
 	// sign the content file
@@ -2278,6 +2291,7 @@ global boolean SignAddOn (string base_path, string key) {
 	}
 	else break;
     }
+    y2milestone ("... done");
 
     SCR::Execute (.target.bash,
 	sformat("gpg --export -a %1 > '%2/content.key'",local_key, base_path));
@@ -2285,6 +2299,7 @@ global boolean SignAddOn (string base_path, string key) {
     // sign the packages
     if (current_product["resign_packages"]:false)
     {
+	y2milestone ("signing the packages...");
 	string expect	= tmpdir + "/sign.ex";
 	SCR::Write (.target.string, expect,
 	    sformat (expect_script, key, passphrase));
@@ -2298,20 +2313,42 @@ global boolean SignAddOn (string base_path, string key) {
 		out = (map) SCR::Execute (.target.bash_output, cmd);
 	    }
 	});
+	y2milestone ("... done");
 	SCR::Execute (.target.bash, sformat ("rm %1", expect));
+	// after signing packages checksums have changed:
+	// run create_package_descr again and take new 'packages' file
+	y2milestone ("updating packages descriptions...");
+	string cmd = sformat("/usr/bin/create_package_descr -d %1 -C -F -o %2",
+	    full_data_path, tmpdir);
+	if (SCR::Execute (.target.bash, cmd, $["LANG":"C"]) == 0)
+	{
+	    cmd = sformat ("/bin/cp %1/packages '%2'", tmpdir, full_descr_path);
+	    SCR::Execute (.target.bash, cmd, $["LANG":"C"]);
+	    if (compress_package_descriptions)
+	    {
+		SCR::Execute (.target.bash,
+		    sformat ("gzip %1/packages", full_descr_path));
+	    }
+	}
+	else
+	{
+	    y2warning ("'%1' failed", cmd);
+	}
+	y2milestone ("... done");
     }
-
 
     // sign products file
     string products_path = full_media_paths[0]:"" + "/products";
     if (FileUtils::Exists (products_path))
     {
+	y2milestone ("signing products file...");
 	SCR::Execute (.target.bash, sformat ("rm -f '%1.asc'", products_path));
 	SCR::Execute (.target.bash,
 	    sformat("gpg --batch --no-tty --passphrase-fd 0 --detach-sign -u %1 -a '%2' < %3",
 	    local_key, products_path, pw_path));
 	SCR::Execute (.target.bash,
 	    sformat("gpg --export -a %1 > '%2.key'", local_key,products_path));
+	y2milestone ("... done");
     }
     SCR::Execute (.target.remove, pw_path);
     return true;
@@ -2325,11 +2362,13 @@ global boolean CreateDirectoryYaSTFiles (string base_path) {
 
     if (!FileUtils::Exists (base_path)) return false;
 
+    y2milestone ("creating directory.yast files...");
     foreach (string dir, (list<string>) merge (
 	[base_path, full_descr_path], full_media_paths),
     {
 	SCR::Execute (.target.bash_output, sformat ("cd '%1'; ls -A1 -p | grep -v 'directory.yast' > directory.yast", dir), $["LANG" : "C"]);
     });
+    y2milestone ("... done");
     return true;
 }
 
@@ -2350,13 +2389,18 @@ global boolean CreateISOImage (string dir_path, string iso_p, string name) {
 	name	= name + ".iso";
     current_product["iso_name"]	= name; // ??
 
+    y2milestone ("creating iso image '%1/%2' from '%3' with mkisofs...",
+	iso_p, name, dir_path);
+
     // possible options -allow-leading-dots
-    string cmd	= sformat("mkisofs -r -J -l -o '%1/%2' '%3'",iso_p, name, dir_path);
+    string cmd	= sformat("mkisofs -r -J -l -o '%1/%2' '%3'",
+	iso_p, name, dir_path);
     map out	= (map) SCR::Execute (.target.bash_output, cmd);
     if (out["exit"]:0 != 0)
     {
 	y2warning ("%1 returned %2", cmd, out);
     }
+    y2milestone ("... done");
     return true;
 }
 
@@ -2388,6 +2432,8 @@ global void ResetCurrentProduct () {
  * + reset the current product map
  */
 global void CommitCurrentProduct () {
+
+    y2milestone ("saving current product to the global list");
 
     map modified_product	= union (current_product, $[
 	"content_map"		: content_map,
@@ -2454,6 +2500,7 @@ global boolean Write () {
 	});
 	return product;
     });
+    y2milestone ("writing list of configured products");
     return SCR::Write (.target.ycp, add_on_products_file, add_on_products);
 }
 
