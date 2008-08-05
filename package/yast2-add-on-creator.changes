@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Tue Aug  5 12:49:14 CEST 2008 - jsuchome@suse.cz
+
+- recreate package metadata after signing RPMs (bnc#412591)
+- more logging during write phase
+- 2.16.14
+
+-------------------------------------------------------------------
 Mon Jul 14 09:50:58 CEST 2008 - jsuchome@suse.cz
 
 - read all content file values from saved configuration (bnc#406153)
