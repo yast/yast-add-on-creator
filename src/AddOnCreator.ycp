@@ -149,6 +149,7 @@ map<string,map> content_descr	= $[
 	    "value"	: "1",
 	    "mandatory"	: true,
     ],
+    /*
     "DISTPRODUCT"	: $[
 	    "key"	: "DISTPRODUCT",
 	    // label of content file key
@@ -166,6 +167,7 @@ map<string,map> content_descr	= $[
 	    "value"	: "1",
 	    "mandatory"	: true,
     ],
+    */
     "VENDOR"		: $[
 	    "key"	: "VENDOR",
 	    // label of content file key
@@ -173,16 +175,6 @@ map<string,map> content_descr	= $[
 	    // help text for content file 'VENDOR' key
 	    "help"	: _("Vendor name (free form)."),
 	    "mandatory"	: true,
-    ],
-    "REQUIRES"		: $[
-	    "key"	: "REQUIRES",
-	    // label of content file key
-	    "label"	: _("Resolvables that must be installed"),
-	    // help text for content file 'REQUIRES' key
-	    "help"	: _("<p>Resolvables that must be installed on the system to meet the needs of this product.</p>
-<p>This is a space-separated list of names or <tt>kind:name</tt> pairs optionally followed by version constraints. Just a name denotes a dependency to a package, such as <tt>sles-release</tt> or <tt>sles-release-10</tt>. The kind can be package, pattern, or product, such as <tt>pattern:basesystem</tt>.</p>"),
-	    "mandatory"	: true,
-//TODO editor...
     ],
     "DESCRDIR"		: $[
 	    "key"	: "DESCRDIR",
@@ -202,6 +194,7 @@ map<string,map> content_descr	= $[
 	    "value"	: "suse",
 	    "mandatory"	: true,
     ],
+    /*
     "DEFAULTBASE"	: $[
 	    "key"	: "DEFAULTBASE",
 	    // label of content file key
@@ -212,19 +205,30 @@ map<string,map> content_descr	= $[
 	    "type"	: "combo",
 	    "allowed_values"	: allowed_archs,
     ],
-    "PREREQUIRES"	: $[
-	    "key"	: "PREREQUIRES",
-	    // labeliption of content file PREREQUIRES key
-	    "label"	: _("Resolvables needed before installation"),
-	    // help text for content file 'PREREQUIRES' key
-	    "help"	: _("Resolvables that must be installed on the system before the installation of this product. The syntax is the same as for <b>REQUIRES</b>."),
-    ],
+    */
     "LABEL"		: $[
 	    "key"	: "LABEL",
 	    // label of content file key
 	    "label"	: _("Label"),
 	    // help text for content file '' key
 	    "help"	: _("UTF-8 encoded label. Default label if <b>LINGUAS</b> is omitted or no default language can be determined."),
+    ],
+    /*
+    "REQUIRES"		: $[
+	    "key"	: "REQUIRES",
+	    // label of content file key
+	    "label"	: _("Resolvables that must be installed"),
+	    // help text for content file 'REQUIRES' key
+	    "help"	: _("<p>Resolvables that must be installed on the system to meet the needs of this product.</p>
+<p>This is a space-separated list of names or <tt>kind:name</tt> pairs optionally followed by version constraints. Just a name denotes a dependency to a package, such as <tt>sles-release</tt> or <tt>sles-release-10</tt>. The kind can be package, pattern, or product, such as <tt>pattern:basesystem</tt>.</p>"),
+	    "mandatory"	: true,
+    ],
+    "PREREQUIRES"	: $[
+	    "key"	: "PREREQUIRES",
+	    // labeliption of content file PREREQUIRES key
+	    "label"	: _("Resolvables needed before installation"),
+	    // help text for content file 'PREREQUIRES' key
+	    "help"	: _("Resolvables that must be installed on the system before the installation of this product. The syntax is the same as for <b>REQUIRES</b>."),
     ],
     "PROVIDES"		: $[
 	    "key"	: "PROVIDES",
@@ -275,6 +279,7 @@ map<string,map> content_descr	= $[
 	    // help text for content file 'ENHANCES' key
 	    "help"	: _("A reverse <b>SUGGESTS</b>. This product can be installed if this capability is provided by an installed resolvable. It is just a hint for an application. For example, <i>SuSEplugger</i> can suggest packages for installation if specific hardware is found."),
     ],
+    */
     "LINGUAS"		: $[
 	    "key"	: "LINGUAS",
 	    // label of content file 'LINGUAS' key
@@ -337,6 +342,7 @@ global map content_specials	= $[
 	    "help"	: _("UTF-8-encoded <b>LABEL</b>. <tt>lang</tt> has the same syntax as the <b>LINGUAS</b> values. For each language in <b>LINGUAS</b>, a matching <b>LABEL.lang</b> is expected."),
 	    "helplabel"	: "LABEL.lang",
     ],
+    /*
     "ARCH"	: $[
 	    // label of content file ARCH.base key
 	    "label"	: _("Allowed architectures"),
@@ -345,6 +351,7 @@ global map content_specials	= $[
 	    "helplabel"	: "ARCH.base",
 	    "mandatory"	: true
     ],
+    */
 ];
 
 
@@ -555,7 +562,7 @@ other patterns marked as obsolete here."),
     ],
     "Pob"	: $[
 	// label for 'Pob' pattern key
-	"label"		: _("Obsoleted packages"),
+	"label"		: _("Obsolete packages"),
 	"type"		: "package-list",
 	"defval"	: [],
     ],
@@ -845,9 +852,12 @@ global boolean Read() {
     map out = (map) SCR::Execute (.target.bash_output, "/usr/bin/id --user");
     if (out["stdout"]:"" != "0\n" && out["stdout"]:"" != "")
     {
-	// TODO use getenv builtin when it is available
+	// FIXME use getenv builtin when it is available
+	/*
 	out	= (map) SCR::Execute (.target.bash_output, "echo $HOME");
 	string home	= deletechars (out["stdout"]:"", "\n");
+	*/
+	string home	= getenv ("HOME");
 	if (home != "" && home != nil)
 	    add_on_products_file	= home + "/add_on_products.ycp";
     }
@@ -899,6 +909,7 @@ global boolean Read() {
     return true;
 }
 
+/*
 // proposal for ARCH.* values (of content file)
 // FIXME this won't work for other architectures...
 global string ValueForArchitecture (string arch_dir) {
@@ -912,6 +923,7 @@ global string ValueForArchitecture (string arch_dir) {
     });
     return val;
 }
+*/
 
 // read the content file given by file name
 global list<map> ReadContentFile (string file_path) {
@@ -1342,15 +1354,14 @@ global void FillContentDefaults () {
     Progress::New (caption, " ", size (stages),
 	(list<string>) stages, (list<string>) steps,
 	// help text
-	_("<b>Generating Data for Add-On</b><br>
-Please wait...
+	_("<b>Wait while generating data for add-on...</b><br/>
 "));
 
     Progress::NextStage();
     map<string,string> arch_map	= $[];
     string rpm_path	= current_product["rpm_path"]:"";
 
-    // 1. set the values for ARCH.*
+    // 1. find the used architectures
     string cmd	= sformat ("cd %1; find -maxdepth 1 -type d", rpm_path);
     map out	= $[];
     if (rpm_path != "")
@@ -1362,7 +1373,7 @@ Please wait...
 	string arch_dir	= splitdir[1]:"";
 	if (contains (allowed_archs, arch_dir))
 	{
-	    arch_map["ARCH." + arch_dir ] = ValueForArchitecture (arch_dir);
+//	    arch_map["ARCH." + arch_dir ] = ValueForArchitecture (arch_dir);
 	    arch_directories	= add (arch_directories, arch_dir);
 	}
     });
@@ -1412,12 +1423,14 @@ Please wait...
 		    entry["value"]	= content_map[key]:"";
 		content	= add (content, entry);
 	    });
+	    /*
 	    map arch_skel	= content_specials["ARCH"]:$[];
 	    foreach (string key, string val, arch_map, {
 		arch_skel["key"]	= key;
 		arch_skel["value"]	= val;
 		content = add (content, arch_skel);
 	    });
+	    */
 	}
 	string required_rpm_path = current_product["required_rpm_path"]:"";
 	// 4. read the list of packages, not present on AddOn
@@ -1721,7 +1734,7 @@ global boolean WriteProductsFiles (string base_path, list<string> p_files)
 	if (cont == "")
 	{
 	    cont = "/\t" +
-		content_map["DISTPRODUCT"]:"" + " " +
+		content_map["PRODUCT"]:"" + " " +
 		content_map["VERSION"]:"";
 	}
 	SCR::Write (.target.string,
@@ -2383,8 +2396,8 @@ global boolean CreateISOImage (string dir_path, string iso_p, string name) {
 
     if (name == "")
 	name	= sformat ("%1-%2-%3",
-	    tolower (content_map["DISTPRODUCT"]:content_map["PRODUCT"]:"addon"),
-	    content_map["DISTVERSION"]:"", content_map["DEFAULTBASE"]:"");
+	    tolower (content_map["PRODUCT"]:"addon"),
+	    content_map["VERSION"]:"", content_map["DEFAULTBASE"]:"");
     if (!issubstring (name, ".iso"))
 	name	= name + ".iso";
     current_product["iso_name"]	= name; // ??

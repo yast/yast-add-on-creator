@@ -42,9 +42,8 @@ Please wait...<br></p>
 "),
 
     // Write dialog help
-    "write" : _("<p>Writing add-on configurations<br>
-Please wait...<br></p>
-"),
+    "write" : _("<p>Writing the add-on configurations<br>
+Please wait...<br></p>\n"),
 
     // help text for start menu
     "start"	: _("<p>This module offers guidance for the creation of an add-on product.</p>") +

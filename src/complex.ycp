@@ -141,16 +141,16 @@ any SummaryDialog () {
     }
 
     // help text
-    string help_text	= _("<p>Start the creating of new add-on product configuration with <b>Add</b>.</p>") +
+    string help_text	= _("<p>Start creating a new add-on product configuration with <b>Add</b>.</p>") +
 
     // help text
-    _("<p>Use <b>Edit</b> to modify selected add-on product configuration.</p>") +
+    _("<p>Use <b>Edit</b> to modify the selected add-on product configuration.</p>") +
 
     // help text
     _("<p>Delete the selected configuration using <b>Delete</b>.</p>") +
 
     // help text
-    _("<p>Build the fresh add-on product based on selected configuration with <b>Build</b>.</p>");
+    _("<p>Build the fresh add-on product based on the selected configuration with <b>Build</b>.</p>");
 
     term contents = `VBox (
 	`VWeight (3, `Table (`id (`table), `opt (`notify, `immediate),
@@ -376,6 +376,7 @@ any SourcesDialog() {
 
     map current_product		= AddOnCreator::current_product;
 
+// FIXME handle REQUIRES in new product-specific package
     string requires	= AddOnCreator::content_map["REQUIRES"]:"";
     if (requires == "")
 	requires	= "product:openSUSE = 11.0";
@@ -575,12 +576,6 @@ any SourcesDialog() {
 	    AddOnCreator::content_map["REQUIRES"]	= requires;
 	    AddOnCreator::content_map["PRODUCT"]	= product;
 	    AddOnCreator::content_map["VERSION"]	= version;
-	    if (product != "" &&
-		AddOnCreator::content_map["DISTPRODUCT"]:"" == "")
-		AddOnCreator::content_map["DISTPRODUCT"]	= product;
-	    if (version != "" &&
-		AddOnCreator::content_map["DISTVERSION"]:"" == "")
-		AddOnCreator::content_map["DISTVERSION"]	= version;
 
 	    /* FIXME does this make a sense???
 	    we need to generate again when editing previous project
@@ -622,12 +617,12 @@ string ValidatePatternValue (string key, any val) {
 string ValidateContentValue (string key, any val) {
 
     string sval	= sformat ("%1", val);
-    if (key == "DISTPRODUCT")
+    if (key == "PRODUCT")
     {
 	if (deletechars (sval, String::CAlnum() + ".~_-") != "" )
 	{
 	    // error popup (input validation failed)
-	    return _("The value of DISTPRODUCT may contain only
+	    return _("The value of PRODUCT may contain only
 letters, numbers, and the characters \".~_-\".");
 	}
     }
@@ -637,22 +632,24 @@ letters, numbers, and the characters \".~_-\".");
 map AddContentValue (list conflicts) {
 
     map ret		= $[];
+    /*
     list allowed_archs	= filter (string arch, AddOnCreator::allowed_archs, {
 	return !contains (conflicts, "ARCH." + arch);
     });
+    */
     list allowed_langs	= filter (string l, AddOnCreator::GetLangCodes (true),{
 	return !contains (conflicts, "LABEL." + l);
     });
-    string help	= mergestring (maplist (string k, ["ARCH", "LABEL"], {
-	return sformat ("<p><b>%1</b></p>%2",
-		AddOnCreator::content_specials[k,"helplabel"]:"",
-		AddOnCreator::content_specials[k,"help"]:"");
-    }), "<br>");
+//    string help	= mergestring (maplist (string k, ["ARCH", "LABEL"], {
+    string help	= sformat ("<p><b>%1</b></p>%2<br>",
+		AddOnCreator::content_specials["LABEL","helplabel"]:"",
+		AddOnCreator::content_specials["LABEL","help"]:"");
 
     UI::OpenDialog (`opt(`decorated), `HBox(
 	`HSpacing(1),
 	`VBox(
 	    `VSpacing (0.5),
+	    /*
 	    `RadioButtonGroup (`id(`rd), `Left(`VBox (
 	      `Left (`RadioButton(`id("ARCH"), `opt (`notify),_("&ARCH"),true)),
 	      allowed_archs == [] ? `VSpacing (0) :
@@ -670,6 +667,10 @@ map AddContentValue (list conflicts) {
 		    allowed_langs))
 	      )
 	    ))),
+	    */
+	    `Label (_("LABEL")),
+	    // combo label
+	    `Left (`ComboBox (`id(`lang), _("La&nguage Code"), allowed_langs)),
 	    // textentry label
 	    `TextEntry (`id(`val), _("&Value"), ""),
 	    `HBox(
@@ -680,6 +681,7 @@ map AddContentValue (list conflicts) {
 	),
 	`HSpacing(1)
     ));
+    /*
     if (allowed_archs != [])
     {
 	UI::ChangeWidget (`id(`lang), `Enabled, false);
@@ -689,6 +691,7 @@ map AddContentValue (list conflicts) {
 	UI::ChangeWidget (`id("ARCH"), `Enabled, false);
 	UI::ChangeWidget (`id(`rd), `Value, "LABEL");
     }
+    */
     UI::SetFocus (`id(`val));
     while (true)
     {
@@ -698,12 +701,14 @@ map AddContentValue (list conflicts) {
 	    ret	= $[];
 	    break;
 	}
+	/*
 	string but = (string) UI::QueryWidget (`id(`rd), `Value);
 	if (result == "ARCH" || result == "LABEL")
 	{
 	    UI::ChangeWidget (`id(`lang), `Enabled, result == "LABEL");
 	    UI::ChangeWidget (`id(`base), `Enabled, result == "ARCH");
 	}
+	*/
 	if (result == `help)
 	{
 	    // Heading for help popup window
@@ -711,11 +716,14 @@ map AddContentValue (list conflicts) {
 	}
 	if (result == `ok)
 	{
+	    /*
 	    string key	= sformat ("%1.%2", but, but == "ARCH" ?
 		UI::QueryWidget (`id(`base), `Value) :
 		UI::QueryWidget (`id(`lang), `Value));
-	    ret	= union (AddOnCreator::content_specials[but]:$[], $[
-		"key"	: key,
+	    */
+	    ret	= union (AddOnCreator::content_specials["LABEL"]:$[], $[
+		"key"	: sformat ("LABEL.%1",
+		    UI::QueryWidget (`id(`lang), `Value)),
 		"value"	: UI::QueryWidget (`id(`val), `Value)
 	    ]);
 	    break;
@@ -756,7 +764,6 @@ any ContentFileDialog() {
 	});
 	return ret;
     }
-// TODO: editor for REQUIRES: read patterns available on target...
 
     term contents = `HBox (`HSpacing (), `VBox (
 	`Table (`id(`content_table), `opt(`notify), `header (
@@ -853,15 +860,19 @@ any ContentFileDialog() {
 	}
         else if (ret == `next) {
 	    list<string> missing	= [];
+	    /*
 	    boolean arch_present	= false;
 	    string default_base		= "";
+	    */
 	    foreach (map entry, content, {
 		if (entry["value"]:"" == "" && entry["mandatory"]:false)
 		    missing	= add (missing, entry["key"]:"");
+		/*
 		if (substring (entry["key"]:"",0,4) == "ARCH")
 		    arch_present	= true;
 		if (entry["key"]:"" == "DEFAULTBASE")
 		    default_base	= entry["value"]:"";
+		*/
 	    });
 	    if (missing != [])
 	    {
@@ -870,6 +881,7 @@ any ContentFileDialog() {
 %1"), mergestring (missing, "\n")));
 		continue;
 	    }
+	    /*
 	    if (!arch_present)
 	    {
 		// we should not get here, because ARCH's are created
@@ -879,18 +891,19 @@ any ContentFileDialog() {
 		    "value": AddOnCreator::ValueForArchitecture (default_base)
 		], AddOnCreator::content_specials["ARCH"]:$[]));
 	    }
+	    */
 	    integer i		= 0;
 	    integer index	= -1;
-	    string distproduct		= "";
+	    string product		= "";
 	    foreach (map entry, content, {
 		if (entry["key"]:"" == "LABEL" && entry["value"]:"" == "")
 		    index	= i;
-		if (entry["key"]:"" == "DISTPRODUCT")
-		    distproduct		= entry["value"]:"";
+		if (entry["key"]:"" == "PRODUCT")
+		    product		= entry["value"]:"";
 		i = i + 1;
 	    });
 	    if (index != -1)
-		content[index,"value"]	= distproduct;
+		content[index,"value"]	= product;
 	    AddOnCreator::content	= content;
 	    AddOnCreator::UpdateContentMap (content);
 	    break;
@@ -1734,9 +1747,17 @@ any OutputDialog() {
 
     string iso_name	= current_product["iso_name"]:"";
     if (iso_name == "")
+	iso_name	= sformat ("%1-%2",
+	    tolower (content_map["PRODUCT"]:""),
+	    content_map["VERSION"]:""
+	);
+	/*
 	iso_name	= sformat ("%1-%2-%3",
-	    tolower (content_map["DISTPRODUCT"]:""),
-	    content_map["DISTVERSION"]:"", content_map["DEFAULTBASE"]:"");
+	    tolower (content_map["PRODUCT"]:""),
+	    content_map["VERSION"]:"",
+	    content_map["DEFAULTBASE"]:""
+	);
+	*/
 
     term contents = `HBox (`HSpacing (), `VBox (
 	`HBox (
