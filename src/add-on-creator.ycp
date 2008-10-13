@@ -438,7 +438,7 @@ boolean ListAddOns (map<string,any> options) {
 	map cont	= add_on["content_map"]:$[];
 	// command line summary, %1 is order, %2 product name
 	CommandLine::Print (sformat (_("(%1) Product Name: %2"),
-	    i, cont["PRODUCT"]:""));
+	    i, cont["NAME"]:""));
 	// command line summary
 	CommandLine::Print (sformat (_("\tVersion: %1"), cont["VERSION"]:""));
 	// command line summary

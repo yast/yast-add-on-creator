@@ -178,9 +178,10 @@ Choose a different one."));
 any PatternsDialog() {
 
     map current_product		= AddOnCreator::current_product;
-    string requires		= AddOnCreator::content_map["REQUIRES"]:"";
     string import_path		= current_product["rpm_path"]:"";
     map<string,map> patterns	= current_product["patterns"]:$[];
+    string content_patterns	= AddOnCreator::content_map["PATTERNS"]:"";
+    list<string> proposed_patterns	= splitstring (content_patterns, " ");
 
     // helper for generation of table items
     list get_pattern_items (map pattern) {
@@ -259,7 +260,7 @@ any PatternsDialog() {
 	UI::ChangeWidget (`id(`pattern), `Items,
 	    get_pattern_items (patterns[current_pattern]:$[]));
 	UI::ChangeWidget (`id(`required), `Value,
-	    issubstring (requires, "pattern:" + current_pattern));
+	    contains (proposed_patterns, current_pattern));
     }
     foreach (symbol w, [ `delete_pt, `edit, `add, `delete, `required ], {
 	UI::ChangeWidget (`id (w), `Enabled, patterns != $[]);
@@ -334,7 +335,7 @@ any PatternsDialog() {
 		    get_pattern_items (patterns[current_pattern]:$[]));
 		UI::ChangeWidget (`id(`required), `Value,
 		    size (patterns) > 0 &&
-		    issubstring (requires, "pattern:" + sel));
+		    contains (proposed_patterns, sel));
 	    }
 	}
 	else if (ret == `add) {
@@ -390,26 +391,27 @@ any PatternsDialog() {
 	{
 	    if (UI::QueryWidget (`id (`required), `Value) == true)
 	    {
-		if (!issubstring (requires, "pattern:" + sel))
-		    requires = requires + " pattern:" + sel;
+		if (!contains (proposed_patterns, sel))
+		    proposed_patterns	= add (proposed_patterns, sel);
 	    }
-	    else if (issubstring (requires, "pattern:" + sel))
+	    else if (contains (proposed_patterns, sel))
 	    {
-		list<string> req = splitstring (requires, " ");
-		requires = mergestring (filter (string r, req, ``(r != "pattern:" + sel)), " ");
+		proposed_patterns = filter (string p, proposed_patterns,
+		    ``(sel != p));
 	    }
 	}
         else if (ret == `next) {
 	    AddOnCreator::current_product["patterns"]		= patterns;
-	    if (AddOnCreator::content_map["REQUIRES"]:"" != requires)
+	    content_patterns	= mergestring (proposed_patterns, " ");
+	    if (AddOnCreator::content_map["PATTERNS"]:"" != content_patterns)
 	    {
 		integer i		= 0;
 		foreach (map entry, AddOnCreator::content, {
-		    if (entry["key"]:"" == "REQUIRES")
-			AddOnCreator::content[i,"value"]	= requires;
+		    if (entry["key"]:"" == "PATTERNS")
+			AddOnCreator::content[i,"value"]= content_patterns;
 		    i	= i + 1;
 		});
-		AddOnCreator::content_map["REQUIRES"]	= requires;
+		AddOnCreator::content_map["PATTERNS"]	= content_patterns;
 	    }
 	    break;
 	}

@@ -118,7 +118,8 @@ any SummaryDialog () {
 	    map content_map	= add_on["content_map"]:$[];
 	    i		= i + 1;
 	    return `item (`id (i),
-		content_map["PRODUCT"]:"", content_map["VERSION"]:"");
+		content_map["NAME"]:content_map["PRODUCT"]:"",
+		content_map["VERSION"]:"");
 	});
     }
     list summary_items	= get_summary_items ();
@@ -221,7 +222,7 @@ any SummaryDialog () {
 	{
 	    // yes/no popup
 	    if (Popup::YesNo (sformat (_("Really delete configuration \"%1\"?"),
-		current_product["content_map","PRODUCT"]:"")))
+		current_product["content_map","NAME"]:"")))
 	    {
 		add_on_products	= remove (add_on_products, current);
 		summary_items	= get_summary_items ();
@@ -354,7 +355,6 @@ any NewProductDialog () {
 		ret				= `copy;
 	    }
 	    break;
-	    // FIXME checks...
 	}
 	else if (ret == `abort || ret == `cancel || ret == `back) {
 	    if(ReallyAbort()) break;
@@ -377,16 +377,16 @@ any SourcesDialog() {
     map current_product		= AddOnCreator::current_product;
 
 // FIXME handle REQUIRES in new product-specific package
-    string requires	= AddOnCreator::content_map["REQUIRES"]:"";
+    string requires	= AddOnCreator::product_info["REQUIRES"]:"";
     if (requires == "")
-	requires	= "product:openSUSE = 11.0";
+	requires	= "product:openSUSE = 11.0"; // FIXME different values
 
     string old_dir	= current_product["rpm_path"]:"";
     if (old_dir == nil)
 	current_product["rpm_path"]	= "";
     string old_requires	= requires;
 
-    string product	= AddOnCreator::content_map["PRODUCT"]:"";
+    string product	= AddOnCreator::content_map["NAME"]:"";
     string old_product	= product == "" ? nil : product;
 
     string version	= AddOnCreator::content_map["VERSION"]:"";
@@ -573,16 +573,11 @@ any SourcesDialog() {
 	    AddOnCreator::current_product["required_rpm_path"]	= req_dir;
 	    if (requires == "")
 		requires = (string) UI::QueryWidget (`id(`other_val), `Value);
-	    AddOnCreator::content_map["REQUIRES"]	= requires;
-	    AddOnCreator::content_map["PRODUCT"]	= product;
-	    AddOnCreator::content_map["VERSION"]	= version;
+	    AddOnCreator::product_info["REQUIRES"]	= requires;
 
-	    /* FIXME does this make a sense???
-	    we need to generate again when editing previous project
-	    if (requires == old_requires && dir == old_dir &&
-		product == old_product && version == old_version)
-		ret	= `skip_gen;
-	    */
+	    AddOnCreator::content_map["NAME"]		= product;
+	    AddOnCreator::content_map["VERSION"]	= version;
+// FIXME propose DISTRIBUTION as NAME - VERSION?
 
 	    // if rpm_path is different, reset packages_descr
 	    // (otherwise current values settings are merged into generated)
@@ -617,12 +612,12 @@ string ValidatePatternValue (string key, any val) {
 string ValidateContentValue (string key, any val) {
 
     string sval	= sformat ("%1", val);
-    if (key == "PRODUCT")
+    if (key == "NAME")
     {
 	if (deletechars (sval, String::CAlnum() + ".~_-") != "" )
 	{
 	    // error popup (input validation failed)
-	    return _("The value of PRODUCT may contain only
+	    return _("The value of NAME may contain only
 letters, numbers, and the characters \".~_-\".");
 	}
     }
@@ -860,19 +855,9 @@ any ContentFileDialog() {
 	}
         else if (ret == `next) {
 	    list<string> missing	= [];
-	    /*
-	    boolean arch_present	= false;
-	    string default_base		= "";
-	    */
 	    foreach (map entry, content, {
 		if (entry["value"]:"" == "" && entry["mandatory"]:false)
 		    missing	= add (missing, entry["key"]:"");
-		/*
-		if (substring (entry["key"]:"",0,4) == "ARCH")
-		    arch_present	= true;
-		if (entry["key"]:"" == "DEFAULTBASE")
-		    default_base	= entry["value"]:"";
-		*/
 	    });
 	    if (missing != [])
 	    {
@@ -881,24 +866,14 @@ any ContentFileDialog() {
 %1"), mergestring (missing, "\n")));
 		continue;
 	    }
-	    /*
-	    if (!arch_present)
-	    {
-		// we should not get here, because ARCH's are created
-		// after entering source with RPM's
-		content = add (content, union ($[
-		    "key" : "ARCH." + default_base,
-		    "value": AddOnCreator::ValueForArchitecture (default_base)
-		], AddOnCreator::content_specials["ARCH"]:$[]));
-	    }
-	    */
 	    integer i		= 0;
 	    integer index	= -1;
 	    string product		= "";
 	    foreach (map entry, content, {
 		if (entry["key"]:"" == "LABEL" && entry["value"]:"" == "")
 		    index	= i;
-		if (entry["key"]:"" == "PRODUCT")
+// FIXME fill default value of DISTRIBUTION and BASEARCHS (and not only in UI)
+		if (entry["key"]:"" == "NAME")
 		    product		= entry["value"]:"";
 		i = i + 1;
 	    });
@@ -1732,7 +1707,7 @@ any SigningDialog() {
 }
 
 /**
- * TODO better placing, more dialogs?
+ * Output settings
  * @return dialog result
  */
 any OutputDialog() {
@@ -1748,16 +1723,9 @@ any OutputDialog() {
     string iso_name	= current_product["iso_name"]:"";
     if (iso_name == "")
 	iso_name	= sformat ("%1-%2",
-	    tolower (content_map["PRODUCT"]:""),
-	    content_map["VERSION"]:""
+	    tolower (content_map["NAME"]:""),
+	    content_map["VERSION"]:"" // FIXME no DEFAULTBASE for %1-%2-%3
 	);
-	/*
-	iso_name	= sformat ("%1-%2-%3",
-	    tolower (content_map["PRODUCT"]:""),
-	    content_map["VERSION"]:"",
-	    content_map["DEFAULTBASE"]:""
-	);
-	*/
 
     term contents = `HBox (`HSpacing (), `VBox (
 	`HBox (
@@ -1770,10 +1738,6 @@ any OutputDialog() {
 		`PushButton (`id(`browse), Label::BrowseButton ())
 	    )
 	),
-	// check box label
-//FIXME	`Left (`CheckBox (`id(`autorun), _("&Autorun"), autorun)),
-
-
 	// check box label
 	`Left (`CheckBox (`id(`iso),`opt(`notify),_("Create &ISO Image"), iso)),
 	`HBox (
@@ -1882,7 +1846,7 @@ any OverviewDialog() {
 
     // summary header
     sum	= Summary::AddHeader (sum, _("Product Name"));
-    sum	= Summary::AddLine (sum, AddOnCreator::content_map["PRODUCT"]:"");
+    sum	= Summary::AddLine (sum, AddOnCreator::content_map["NAME"]:"");
 
     // summary header
     sum	= Summary::AddHeader (sum, _("Patterns"));

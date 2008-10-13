@@ -132,13 +132,30 @@ global list<string> allowed_archs = [ "ppc", "ppc64", "ia64", "x86_64", "i686", 
 
 
 map<string,map> content_descr	= $[
-    "PRODUCT"	: $[
-	    "key"	: "PRODUCT",
+    "CONTENTSTYLE"	: $[
+	    "key"	: "CONTENTSTYLE",
+	    // label of content file key
+	    "label"	: _("Content file style"),
+	    // help text for content file CONTENTSTYLE key
+	    "help"	: _("Must be the first tag of the content file"),
+	    "value"	: "11",
+	    "mandatory"	: true,
+    ],
+    "NAME"	: $[
+	    "key"	: "NAME",
 	    // label of content file key
 	    "label"	: _("Product name"),
-	    // help text for content file 'PRODUCT' key
-	    "help"	: _("Name of the add-on product"),
+	    // help text for content file 'NAME' key
+	    "help"	: _("For internal usage. Same restrictions as for package names apply."),
 	    "mandatory"	: true,
+    ],
+    "BASEARCHS"	: $[
+	    "key"	: "BASEARCHS",
+	    // label of content file BASEARCHS key
+	    "label"	: _("Product architectures"),
+	    // help text for content file 'BASEARCHS' key
+	    "help"	: _("Space-separated list of product architectures for. Matches the available product-release packages architectures. "),
+	    "mandatory"	: true
     ],
     "VERSION"	: $[
 	    "key"       : "VERSION",
@@ -149,32 +166,12 @@ map<string,map> content_descr	= $[
 	    "value"	: "1",
 	    "mandatory"	: true,
     ],
-    /*
-    "DISTPRODUCT"	: $[
-	    "key"	: "DISTPRODUCT",
+    "DISTRIBUTION"	: $[ // FIXME default to NAME if missing
+	    "key"	: "DISTRIBUTION",
 	    // label of content file key
-	    "label"	: _("Distribution ID"),
-	    // help text for content file 'DISTPRODUCT' key
-	    "help"	: _("Distribution ID (vendor specific). The value of the keyword must not contain spaces. Only letters, numbers, and the characters \".~_-\" are allowed."),
-	    "mandatory"	: true,
-    ],
-    "DISTVERSION"	: $[
-	    "key"	: "DISTVERSION",
-	    // label of content file key
-	    "label"	: _("Distribution version"),
-	    // help text for content file 'DISTVERSION' key
-	    "help"	: _("Distribution version (vendor specific)."),
-	    "value"	: "1",
-	    "mandatory"	: true,
-    ],
-    */
-    "VENDOR"		: $[
-	    "key"	: "VENDOR",
-	    // label of content file key
-	    "label"	: _("Vendor name"),
-	    // help text for content file 'VENDOR' key
-	    "help"	: _("Vendor name (free form)."),
-	    "mandatory"	: true,
+	    "label"	: _("Distribution name"), // FIXME
+	    // help text for content file 'DISTRIBUTION' key
+	    "help"	: _(""),
     ],
     "DESCRDIR"		: $[
 	    "key"	: "DESCRDIR",
@@ -194,7 +191,64 @@ map<string,map> content_descr	= $[
 	    "value"	: "suse",
 	    "mandatory"	: true,
     ],
-    /*
+    "LABEL"		: $[
+	    "key"	: "LABEL",
+	    // label of content file key
+	    "label"	: _("Label"),
+	    // help text for content file '' key
+	    "help"	: _("UTF-8 encoded label. Default label if <b>LINGUAS</b> is omitted or no default language can be determined."),
+    ],
+    "LINGUAS"		: $[
+	    "key"	: "LINGUAS",
+	    // label of content file 'LINGUAS' key
+	    "label"	: _("Languages"),
+	    // help text for content file 'LINGUAS' key
+	    "help"	: _("ISO language code or language code_country code."),
+    ],
+    "LANGUAGE"		: $[
+	    "key"	: "LANGUAGE",
+	    // label of content file 'LANGUAGE' key
+	    "label"	: _("Default language"),
+	    // help text for content file 'LANGUAGE' key
+	    "help"	: _("Default language code."),
+	    "type"	: "combo",
+	    "allowed_values"	: nil,
+    ],
+    "PATTERNS"		: $[
+	    "key"	: "PATTERNS",
+	    // label of content file 'PATTERNS' key
+	    "label"	: _("Preselected patterns"),
+	    // help text for content file 'PATTERNS' key
+	    "help"	: _("List of patterns preselected by the product."),
+    ],
+    "VENDOR"		: $[
+	    "key"	: "VENDOR",
+	    // label of content file key
+	    "label"	: _("Vendor name"),
+	    // help text for content file 'VENDOR' key
+	    "help"	: _("Vendor name (free form)."),
+	    "mandatory"	: true,
+    ],
+    "RELNOTESURL"	: $[
+	    "key"	: "RELNOTESURL",
+	    // label of content file 'RELNOTESURL' key
+	    "label"	: _("Release notes URL"),
+	    // help text for content file 'RELNOTESURL' key
+	    "help"	: _("URL from which to fetch release notes."),
+    ],
+    "UPDATEURLS"	: $[
+	    "key"	: "UPDATEURLS",
+	    // label of content file 'UPDATEURLS' key
+	    "label"	: _("Update URL"),
+	    // help text for content file 'UPDATEURLS' key
+	    "help"	: _("URL of the update source."),
+    ],
+/*
+    "SHORTLABEL"	: $[
+	    "key"	: "SHORTLABEL",
+	    // label of content file 'SHORTLABEL' key
+	    "label"	: _("Short label"),
+    ],
     "DEFAULTBASE"	: $[
 	    "key"	: "DEFAULTBASE",
 	    // label of content file key
@@ -205,15 +259,31 @@ map<string,map> content_descr	= $[
 	    "type"	: "combo",
 	    "allowed_values"	: allowed_archs,
     ],
-    */
-    "LABEL"		: $[
-	    "key"	: "LABEL",
+    "PRODUCT"	: $[
+	    "key"	: "PRODUCT",
 	    // label of content file key
-	    "label"	: _("Label"),
-	    // help text for content file '' key
-	    "help"	: _("UTF-8 encoded label. Default label if <b>LINGUAS</b> is omitted or no default language can be determined."),
+	    "label"	: _("Product name"),
+	    // help text for content file 'PRODUCT' key
+	    "help"	: _("Name of the add-on product"),
+	    "mandatory"	: true,
     ],
-    /*
+    "DISTPRODUCT"	: $[
+	    "key"	: "DISTPRODUCT",
+	    // label of content file key
+	    "label"	: _("Distribution ID"),
+	    // help text for content file 'DISTPRODUCT' key
+	    "help"	: _("Distribution ID (vendor specific). The value of the keyword must not contain spaces. Only letters, numbers, and the characters \".~_-\" are allowed."),
+	    "mandatory"	: true,
+    ],
+    "DISTVERSION"	: $[
+	    "key"	: "DISTVERSION",
+	    // label of content file key
+	    "label"	: _("Distribution version"),
+	    // help text for content file 'DISTVERSION' key
+	    "help"	: _("Distribution version (vendor specific)."),
+	    "value"	: "1",
+	    "mandatory"	: true,
+    ],
     "REQUIRES"		: $[
 	    "key"	: "REQUIRES",
 	    // label of content file key
@@ -279,31 +349,6 @@ map<string,map> content_descr	= $[
 	    // help text for content file 'ENHANCES' key
 	    "help"	: _("A reverse <b>SUGGESTS</b>. This product can be installed if this capability is provided by an installed resolvable. It is just a hint for an application. For example, <i>SuSEplugger</i> can suggest packages for installation if specific hardware is found."),
     ],
-    */
-    "LINGUAS"		: $[
-	    "key"	: "LINGUAS",
-	    // label of content file 'LINGUAS' key
-	    "label"	: _("Languages"),
-	    // help text for content file 'LINGUAS' key
-	    "help"	: _("ISO language code or language code_country code."),
-// TODO editor
-    ],
-    "LANGUAGE"		: $[
-	    "key"	: "LANGUAGE",
-	    // label of content file 'LANGUAGE' key
-	    "label"	: _("Default language"),
-	    // help text for content file 'LANGUAGE' key
-	    "help"	: _("Default language code."),
-	    "type"	: "combo",
-	    "allowed_values"	: nil,
-    ],
-    "RELNOTESURL"	: $[
-	    "key"	: "RELNOTESURL",
-	    // label of content file 'RELNOTESURL' key
-	    "label"	: _("Release notes URL"),
-	    // help text for content file 'RELNOTESURL' key
-	    "help"	: _("URL from which to fetch release notes."),
-    ],
     "FLAGS"		: $[
 	    "key"	: "FLAGS",
 	    // label of content file 'FLAGS' key
@@ -311,25 +356,7 @@ map<string,map> content_descr	= $[
 	    // help text for content file 'FLAGS' key
 	    "help"	: _("Product-specific capabilities."),
     ],
-    "UPDATEURLS"	: $[
-	    "key"	: "UPDATEURLS",
-	    // label of content file 'UPDATEURLS' key
-	    "label"	: _("Update URL"),
-	    // help text for content file 'UPDATEURLS' key
-	    "help"	: _("URL of the update source."),
-    ],
-    "PATTERNS"		: $[
-	    "key"	: "PATTERNS",
-	    // label of content file 'PATTERNS' key
-	    "label"	: _("Preselected patterns"),
-	    // help text for content file 'PATTERNS' key
-	    "help"	: _("List of patterns preselected by the product."),
-    ],
-    "SHORTLABEL"	: $[
-	    "key"	: "SHORTLABEL",
-	    // label of content file 'SHORTLABEL' key
-	    "label"	: _("Short label"),
-    ],
+    */
 ];
 
 // skeletons for special keys in content file
@@ -660,6 +687,10 @@ exit $stat";
 // just key:value mapping based on content list
 global map<string,string> content_map	= $[];
 
+// info for product.xml
+global map<string,string> product_info	= $[];
+
+
 /**
  * if we have 'source add-on' to base the new one on
  */
@@ -852,12 +883,10 @@ global boolean Read() {
     map out = (map) SCR::Execute (.target.bash_output, "/usr/bin/id --user");
     if (out["stdout"]:"" != "0\n" && out["stdout"]:"" != "")
     {
-	// FIXME use getenv builtin when it is available
-	/*
 	out	= (map) SCR::Execute (.target.bash_output, "echo $HOME");
 	string home	= deletechars (out["stdout"]:"", "\n");
-	*/
-	string home	= getenv ("HOME");
+// FIXME update to new yast2-core
+//	string home	= getenv ("HOME");
 	if (home != "" && home != nil)
 	    add_on_products_file	= home + "/add_on_products.ycp";
     }
@@ -908,22 +937,6 @@ global boolean Read() {
 
     return true;
 }
-
-/*
-// proposal for ARCH.* values (of content file)
-// FIXME this won't work for other architectures...
-global string ValueForArchitecture (string arch_dir) {
-
-    string val = "";
-    foreach (string arch, allowed_archs, {
-	if (arch == arch_dir)
-	    val	= arch;
-	else if (val != "")
-	    val = val + " " + arch;
-    });
-    return val;
-}
-*/
 
 // read the content file given by file name
 global list<map> ReadContentFile (string file_path) {
@@ -1386,6 +1399,8 @@ global void FillContentDefaults () {
 	    out	= (map) SCR::Execute (.target.bash_output,
 		sformat ("find %1 -name '*.rpm'", rpm_path));
 	y2milestone ("asking the RPM's for ARCH and NAME...");
+	// for which architectures are the packages built
+	map<string,any> package_architectures	= $[];
 	foreach (string f, splitstring (out["stdout"]:"", "\n"), {
 	    if (f == "") return;
 	    out = (map) SCR::Execute (.target.bash_output,
@@ -1406,7 +1421,10 @@ global void FillContentDefaults () {
 		if (!haskey (srcpackage2filename, arch))
 		    srcpackage2filename[arch]	= $[];
 		if (arch != "src")
+		{
 		    package2filename[arch,name]	= f;
+		    package_architectures[arch]	= 1;
+		}
 		else
 		    srcpackage2filename[arch,name]      = f;
 	    }
@@ -1421,6 +1439,16 @@ global void FillContentDefaults () {
 	    foreach (string key, map entry, content_descr, {
 		if (content_map[key]:"" != "")
 		    entry["value"]	= content_map[key]:"";
+		// FIXME what default to put into BASEARCHS?
+		if (key == "BASEARCHS")
+		{
+		    string archs	= mergestring (arch_directories, " ");
+		    if (arch_directories == [])
+			archs	= mergestring ((list<string>) maplist (
+			    string a, any v, package_architectures,``(a)), " "
+			);
+		    entry["value"]	= archs;
+		}
 		content	= add (content, entry);
 	    });
 	    /*
@@ -1529,10 +1557,16 @@ global boolean WriteContentFile (string base_path, list<map> content_data) {
     foreach (map entry, content_data, {
 	if (entry["value"]:"" != "")
 	{
-	    file = file + sformat ("%1 %2\n",entry["key"]:"",entry["value"]:"");
+	    if (entry["key"]:"" != "CONTENTSTYLE")
+	    {
+		file = file +
+		    sformat ("%1 %2\n",entry["key"]:"",entry["value"]:"");
+	    }
 	    content_map[entry["key"]:""] = entry["value"]:"";
 	}
     });
+    // CONTENTSTYLE must be first key...
+    file = sformat ("CONTENTSTYLE %1\n", content_map["CONTENTSTYLE"]:"11")+file;
 
     return SCR::Write (.target.string, base_path + "/content", file);
 }
@@ -1734,7 +1768,7 @@ global boolean WriteProductsFiles (string base_path, list<string> p_files)
 	if (cont == "")
 	{
 	    cont = "/\t" +
-		content_map["PRODUCT"]:"" + " " +
+		content_map["NAME"]:"" + " " +
 		content_map["VERSION"]:"";
 	}
 	SCR::Write (.target.string,
@@ -2395,9 +2429,8 @@ global boolean CreateISOImage (string dir_path, string iso_p, string name) {
     if (!FileUtils::Exists (dir_path) || !FileUtils::Exists (iso_p)) return false;
 
     if (name == "")
-	name	= sformat ("%1-%2-%3",
-	    tolower (content_map["PRODUCT"]:"addon"),
-	    content_map["VERSION"]:"", content_map["DEFAULTBASE"]:"");
+	name	= sformat ("%1-%2",
+	    tolower (content_map["NAME"]:"addon"), content_map["VERSION"]:"");
     if (!issubstring (name, ".iso"))
 	name	= name + ".iso";
     current_product["iso_name"]	= name; // ??
