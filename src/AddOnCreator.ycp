@@ -166,12 +166,12 @@ map<string,map> content_descr	= $[
 	    "value"	: "1",
 	    "mandatory"	: true,
     ],
-    "DISTRIBUTION"	: $[ // FIXME default to NAME if missing
+    "DISTRIBUTION"	: $[
 	    "key"	: "DISTRIBUTION",
 	    // label of content file key
-	    "label"	: _("Distribution name"), // FIXME
+	    "label"	: _("Distribution name"),
 	    // help text for content file 'DISTRIBUTION' key
-	    "help"	: _(""),
+	    "help"	: _("Some string denoting the distribution. The same string is most probably used in the .rpms to denote the distribution. Usually a composition of the name, version and architecture."),
     ],
     "DESCRDIR"		: $[
 	    "key"	: "DESCRDIR",
@@ -244,11 +244,6 @@ map<string,map> content_descr	= $[
 	    "help"	: _("URL of the update source."),
     ],
 /*
-    "SHORTLABEL"	: $[
-	    "key"	: "SHORTLABEL",
-	    // label of content file 'SHORTLABEL' key
-	    "label"	: _("Short label"),
-    ],
     "DEFAULTBASE"	: $[
 	    "key"	: "DEFAULTBASE",
 	    // label of content file key
@@ -562,7 +557,6 @@ other patterns marked as obsolete here."),
     // TODO add some key for sorting, so output file is readable
 
 
-    // FIXME new keys, add labels after 11.0
     "Ext"	: $[
 	// label for 'Ext' pattern key
 	"label"		: _("Extends"),
@@ -688,7 +682,96 @@ exit $stat";
 global map<string,string> content_map	= $[];
 
 // info for product.xml
-global map<string,string> product_info	= $[];
+global map<string,map> product_info	= $[
+    "REQUIRES"		: $[
+	    "key"	: "REQUIRES",
+	    // label of key
+	    "label"	: _("Resolvables that must be installed"),
+	    // help text for 'REQUIRES' key
+	    "help"	: _("<p>Resolvables that must be installed on the system to meet the needs of this product.</p>
+<p>This is a space-separated list of names or <tt>kind:name</tt> pairs optionally followed by version constraints. Just a name denotes a dependency to a package, such as <tt>sles-release</tt> or <tt>sles-release-10</tt>. The kind can be package, pattern, or product, such as <tt>pattern:basesystem</tt>.</p>"),
+	    "mandatory"	: true,
+    ],
+    "PREREQUIRES"	: $[
+	    "key"	: "PREREQUIRES",
+	    // labeliption of PREREQUIRES key
+	    "label"	: _("Resolvables needed before installation"),
+	    // help text for 'PREREQUIRES' key
+	    "help"	: _("Resolvables that must be installed on the system before the installation of this product. The syntax is the same as for <b>REQUIRES</b>."),
+    ],
+    "PROVIDES"		: $[
+	    "key"	: "PROVIDES",
+	    // label of PROVIDES key
+	    "label"	: _("Resolvables provided"),
+	    // help text for 'PROVIDES' key
+	    "help"	: _("Capabilities this product provides. They can be used to match <b>REQUIRES</b> from others. Every resolvable has a provides by default- its own name and edition. For example, package <i>bar-1.42-1</i> provides the capability <tt>bar = 1.42-1</tt>."),
+    ],
+    "CONFLICTS"		: $[
+	    "key"	: "CONFLICTS",
+	    // label of 'CONFLICTS' key
+	    "label"	: _("Conflicting resolvables"),
+	    // help text for 'CONFLICTS' key
+	    "help"	: _("This resolvable cannot be installed if the specified resolvable or one that provides the capability is installed."),
+    ],
+    "OBSOLETES"		: $[
+	    "key"	: "OBSOLETES",
+	    // label of 'OBSOLETES' key
+	    "label"	: _("Resolvables made obsolete"),
+	    // help text for 'OBSOLETES' key
+	    "help"	: _("When this resolvable is installed, it uninstalls any other resolvable with a name matching this keyword."),
+    ],
+    "RECOMMENDS"	: $[
+	    "key"	: "RECOMMENDS",
+	    // label of 'RECOMMENDS' key
+	    "label"	: _("Recommended resolvables"),
+	    // help text for 'RECOMMENDS' key
+	    "help"	: _("A weak version of <b>REQUIRES</b>. An attempt is made to fulfill <b>RECOMMENDS</b>, but they are silently ignored if no match is possible."),
+    ],
+    "SUGGESTS"		: $[
+	    "key"	: "SUGGESTS",
+	    // label of 'SUGGESTS' key
+	    "label"	: _("Suggested resolvables"),
+	    // help text for 'SUGGESTS' key
+	    "help"	: _("These are just hints for an application and not handled during dependency resolution."),
+    ],
+    "SUPPLEMENTS"	: $[
+	    "key"	: "SUPPLEMENTS",
+	    // label of 'SUPPLEMENTS' key
+	    "label"	: _("Supplemented resolvables"),
+	    // help text for 'SUPPLEMENTS' key
+	    "help"	: _("A reverse <b>RECOMMENDS</b>. This product is installed if the specified capability is provided by an installed resolvable. The dependency resolver installs it. Uninstalling it is silently accepted."),
+    ],
+    "ENHANCES"		: $[
+	    "key"	: "ENHANCES",
+	    // label of 'ENHANCES' key
+	    "label"	: _("Enhanced resolvables"),
+	    // help text for 'ENHANCES' key
+	    "help"	: _("A reverse <b>SUGGESTS</b>. This product can be installed if this capability is provided by an installed resolvable. It is just a hint for an application. For example, <i>SuSEplugger</i> can suggest packages for installation if specific hardware is found."),
+    ],
+    "release"		: $[
+	    "key"	: "release",
+	    // table item label
+	    "label"	: _("The release number"),
+    ],
+    "releasenotes"		: $[
+	    "key"	: "releasenotes",
+	    // table item label
+	    "label"	: _("The URL for release notes rpm"),
+    ],
+    "description"		: $[
+	    "key"	: "description",
+	    // table item label
+	    "label"	: _("Product description"),
+    ],
+    "summary"		: $[
+	    "key"	: "summary",
+	    // table item label
+	    "label"	: _("Product summary"),
+    ],
+];
+
+// the content of .prod file, as read using any_xml agent
+map product_xml	= $[];
 
 
 /**
@@ -762,15 +845,6 @@ global boolean compress_package_descriptions	= false;
  */
 global boolean modified = false;
 
-/**
- * Data was modified?
- * @return true if modified
- */
-global boolean Modified() {
-    y2debug("modified=%1",modified);
-    return modified;
-}
-
 boolean gzip_is_installed	= nil;
 
 boolean gzip_installed () {
@@ -783,6 +857,55 @@ map lang_codes = $[
     "languages"		: nil,
     "with_country"	: nil,
 ];
+
+/**
+ * argument for any_xml agent: key indicating content of element without
+ * attributes
+ */
+global string content_key	= "__yast_content__";
+
+// data for .prod file (dependencies..., part will be copied from content file)
+global map prod_file		= $[];
+
+/**
+ * Data was modified?
+ * @return true if modified
+ */
+global boolean Modified() {
+    y2debug("modified=%1",modified);
+    return modified;
+}
+
+
+/**
+ * import the data from given xml file
+ * @param path to .prod file
+ * @ret map of imported data
+ */
+global map<string,any> ReadProductXML (string prod_file_path) {
+
+    map<string,any> ret	= $[];
+    if (!FileUtils::Exists (prod_file_path))
+    {
+	y2warning ("no such file %1", prod_file_path);
+	return ret;
+    }
+
+    // read rest of config.xml using more generic agent
+    map anyxml		= (map) SCR::Read (.anyxml, $[
+	"file"	: prod_file_path,
+	"args"	: $[
+	    "ForceArray"	: 1,
+            "KeepRoot"		: 1,
+	    "KeyAttr"		: [],
+	    "ForceContent"	: 1,
+	    "ContentKey"	: content_key,
+	]
+    ]);
+//    ret		= anyxml["products",0]:$[];
+    ret		= (map<string,any>) anyxml;
+    return ret;
+}
 
 /**
  * Take list of content-file data and update global content_map.
@@ -935,6 +1058,11 @@ global boolean Read() {
 	== "yes")
 	compress_package_descriptions	= true;
 
+    // FIXME importing existing product: read product_xml from the release
+    // package and create product_info map from it
+    if (product_xml == $[])
+	// read the template file
+	product_xml	= ReadProductXML ("/home/jsuchome/buildservice/template.prod");
     return true;
 }
 
@@ -1227,8 +1355,6 @@ global boolean ImportExistingProduct (string dir_path) {
 	    current_product["copyright_files",name]	= cont;
     });
 
-    // FIXME autorun
-
     // read the info.txt
     string info_path	= dir_path + "/media.1/info.txt";
     if (FileUtils::Exists (info_path))
@@ -1449,16 +1575,13 @@ global void FillContentDefaults () {
 			);
 		    entry["value"]	= archs;
 		}
+		if (key == "DISTRIBUTION" && content_map[key]:"" == "")
+		{
+		    entry["value"]	=
+			content_map["NAME"]:"" + " "+ content_map["VERSION"]:"";
+		}
 		content	= add (content, entry);
 	    });
-	    /*
-	    map arch_skel	= content_specials["ARCH"]:$[];
-	    foreach (string key, string val, arch_map, {
-		arch_skel["key"]	= key;
-		arch_skel["value"]	= val;
-		content = add (content, arch_skel);
-	    });
-	    */
 	}
 	string required_rpm_path = current_product["required_rpm_path"]:"";
 	// 4. read the list of packages, not present on AddOn
@@ -1593,7 +1716,7 @@ global boolean WriteStringFiles (string base_path, map<string,string> files) {
 global void GenerateDirectories (string base_path) {
 
     integer i = 1;
-    integer no_of_medias	= 1; // FIXME layout is different for more media
+    integer no_of_medias	= 1;
     while (i <= no_of_medias)
     {
 	string media_path	= sformat ("%1/media.%2", base_path, i);
@@ -1754,7 +1877,7 @@ global boolean WritePatchesFiles (string base_path, list<string> p_files)
     return true;
 }
 /**
- * Create the products file FIXME editor - see ExpertSettingsDialog3
+ * Create the products file TODO editor - see ExpertSettingsDialog3
  * @param base_path path to base output directory
  * @return success
  */
@@ -2007,6 +2130,68 @@ global boolean CopyRPMs (string in_path, string base_path) {
 	    }
 	});
     }
+    return true;
+}
+
+
+/**
+ * Use BuildService tools to create -release package with product info
+ */
+global boolean GenerateReleasePackage (string base_path) {
+
+    /*
+    string contents = "";
+
+//    contents	= MapAny2XML ("description", config["description",0]:$[], 1);
+
+
+    contents	= sformat ("<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<productdefinition xmlns:xi=\"http://www.w3.org/2001/XInclude\">
+<products>
+%1
+</products>
+</productdefinition>", contents);
+
+    SCR::Write (.target.string, tmpdir + "/add-on.prod.xml", contents);
+    */
+
+    // 1. update product_xml map using product_info and content,
+    // write the result into temporary .prod file
+    string name	= content_map["NAME"]:"add-on";
+
+    product_xml["product",0,"id"]			= name;
+    product_xml["product",0,"name",0, content_key]	= name;
+    product_xml["product",0,"version",0, content_key]	= content_map["VERSION"]:"1.0";
+
+    foreach (string key, ["release", "summary", "description"], {
+	product_xml["product",0,key,0,content_key]=product_info[key,"value"]:"";
+    });
+    if (product_info["releasenotes","value"]:"" != "")
+	product_xml["product",0,"urls"]	= [ $[
+	    "url"	: [ $[
+		content_key	: product_info["releasenotes","value"]:"",
+	    ]],
+	]];
+
+
+    SCR::Write (.anyxml, $[
+        "file"  : sformat ("%1/%2.prod", tmpdir, content_map["NAME"]:"add-on"),
+	"xml"	: product_xml,
+	"args"	:	$[
+	    "XMLDecl"		: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
+	    "ForceContent"	: 1,
+	    "ForceArray"	: 1,
+	    "KeepRoot"		: 1,
+	    "ContentKey"	: content_key,
+	    "KeyAttr"		: [],
+	]
+    ]);
+
+    // 2. FIXME call bs_productconvert to generate a packgae/spec file
+    // (is the call of rpmbuild needed?)
+
+    // 3. FIXME copy package into the place
+
     return true;
 }
 
@@ -2483,6 +2668,7 @@ global void CommitCurrentProduct () {
 
     map modified_product	= union (current_product, $[
 	"content_map"		: content_map,
+	"product_info"		: product_info,
 	"available_packages"	: available_packages,
 	"arch_directories"	: arch_directories,
 	"package2filename"	: package2filename,
@@ -2503,10 +2689,13 @@ global void CommitCurrentProduct () {
     modified	= true;
 }
 
+// select the given product:
+// fill in the global variables specific for the given product
 global void SelectProduct (map product) {
 
     current_product	= product;
     content_map		= product["content_map"]:$[];
+    product_info	= product["product_info"]:$[];
 
     // generate content from content_map
     content	= [];
@@ -2706,6 +2895,8 @@ global boolean BuildAddOn () {
 	Progress::NextStage();
 
 	CopyRPMs (current_product["rpm_path"]:"", base_output_path);
+
+	GenerateReleasePackage (base_output_path);
 
 	WritePackageDescriptions (
 	    full_descr_path,

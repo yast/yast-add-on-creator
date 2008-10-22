@@ -2,6 +2,8 @@
 
 yncludedir = @yncludedir@/add-on-creator
 
+ydatadir = @ydatadir@/add-on-creator
+
 client_DATA =			\
 	add-on-creator.ycp
 
@@ -19,11 +21,14 @@ module_DATA =			\
 	AddOnCreator.ycp	\
 	PackagesDescr.pm
 
+ydata_DATA = \
+	template.prod
+
 # create a symlink for local build, #145327
 add-on-creator:
 	ln -sf . $@
 ycpchook = add-on-creator
 
-EXTRA_DIST = $(client_DATA) $(ynclude_DATA) $(module_DATA) $(desktop_DATA)
+EXTRA_DIST = $(client_DATA) $(ynclude_DATA) $(module_DATA) $(desktop_DATA) $(ydata_DATA)
 
 include $(top_srcdir)/Makefile.am.common

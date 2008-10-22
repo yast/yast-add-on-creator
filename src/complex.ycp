@@ -376,20 +376,20 @@ any SourcesDialog() {
 
     map current_product		= AddOnCreator::current_product;
 
-// FIXME handle REQUIRES in new product-specific package
-    string requires	= AddOnCreator::product_info["REQUIRES"]:"";
+    string requires	= AddOnCreator::product_info["REQUIRES","value"]:"";
     if (requires == "")
-	requires	= "product:openSUSE = 11.0"; // FIXME different values
+	requires	= "openSUSE-release = 11.1";
 
     string old_dir	= current_product["rpm_path"]:"";
     if (old_dir == nil)
 	current_product["rpm_path"]	= "";
     string old_requires	= requires;
 
-    string product	= AddOnCreator::content_map["NAME"]:"";
+    map content_map	= AddOnCreator::content_map;
+    string product	= content_map["NAME"]:content_map["PRODUCT"]:"";
     string old_product	= product == "" ? nil : product;
 
-    string version	= AddOnCreator::content_map["VERSION"]:"";
+    string version	= content_map["VERSION"]:"";
     string old_version	= version;
 
     // dialog caption
@@ -409,34 +409,22 @@ any SourcesDialog() {
 	    `VSpacing (0.4),
 	    `RadioButtonGroup (`id(`rd),
 		`Left(`HVSquash(`VBox (
-		    `Left (`RadioButton(`id(`sles10sp1), `opt (`notify),
+		    `Left (`RadioButton(`id(`sles11), `opt (`notify),
 			// radio button label
-			_("SUSE &Linux Enterprise Server 10 SP1"),
-			requires == "product:SUSE_SLES = 10.1")),
-		    `Left (`RadioButton(`id(`sles10sp2), `opt (`notify),
+			_("SUSE &Linux Enterprise Server 11"),
+			requires == "sles-release = 11")),//FIXME
+		    `Left (`RadioButton(`id(`sled11), `opt (`notify),
 			// radio button label
-			_("SUSE &Linux Enterprise Server 10 SP2"),
-			requires == "product:SUSE_SLES = 10.2")),
-		    `Left (`RadioButton(`id(`sled10sp1), `opt (`notify),
+			_("SUSE L&inux Enterprise Desktop 11"),
+			requires == "sled-release = 11")),//FIXME
+		    `Left (`RadioButton(`id(`sle11), `opt (`notify),
 			// radio button label
-			_("SUSE L&inux Enterprise Desktop 10 SP1"),
-			requires == "product:SUSE_SLED = 10.1")),
-		    `Left (`RadioButton(`id(`sled10sp2), `opt (`notify),
+			_("S&USE Linux Enterprise 11"),//FIXME
+			requires == "sle-release-11")),
+		    `Left (`RadioButton(`id(`opensuse111), `opt (`notify),
 			// radio button label
-			_("SUSE L&inux Enterprise Desktop 10 SP2"),
-			requires == "product:SUSE_SLED = 10.2")),
-		    `Left (`RadioButton(`id(`sle10sp1), `opt (`notify),
-			// radio button label
-			_("S&USE Linux Enterprise 10 SP1"),
-			requires == "product:SUSE_SLE = 10.1")),
-		    `Left (`RadioButton(`id(`sle10sp2), `opt (`notify),
-			// radio button label
-			_("S&USE Linux Enterprise 10 SP2"),
-			requires == "product:SUSE_SLE = 10.2")),
-		    `Left (`RadioButton(`id(`opensuse11), `opt (`notify),
-			// radio button label
-			_("OpenSUSE &11.0"),
-			requires == "product:openSUSE = 11.0")),
+			_("OpenSUSE &11.1"),
+			requires == "openSUSE-release = 11.1")),
 		    `HBox (
 			`Left(`RadioButton(`id(`other), `opt (`notify),
 			    // radio button label
@@ -517,32 +505,20 @@ any SourcesDialog() {
 	{
 	    UI::SetFocus (`id(`other_val));
 	}
-	else if (ret == `sles10sp1) {
-	    requires	= "product:SUSE_SLES = 10.1";
+	else if (ret == `sles11) {
+	    requires	= ""; // FIXME...
 	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
 	}
-	else if (ret == `sles10sp2) {
-	    requires	= "product:SUSE_SLES = 10.2";
+	else if (ret == `sled11) {
+	    requires	= "";
 	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
 	}
-	else if (ret == `sled10sp1) {
-	    requires	= "product:SUSE_SLED = 10.1";
+	else if (ret == `sle11) {
+	    requires	= "";
 	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
 	}
-	else if (ret == `sled10sp2) {
-	    requires	= "product:SUSE_SLED = 10.2";
-	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
-	}
-	else if (ret == `sle10sp1) {
-	    requires = "product:SUSE_SLE = 10.1";
-	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
-	}
-	else if (ret == `sle10sp2) {
-	    requires = "product:SUSE_SLE = 10.2";
-	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
-	}
-	else if (ret == `opensuse11) {
-	    requires    = "product:openSUSE = 11.0";
+	else if (ret == `opensuse111) {
+	    requires	= "openSUSE-release = 11.1";
 	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
 	}
 	else if (ret == `other) {
@@ -573,7 +549,7 @@ any SourcesDialog() {
 	    AddOnCreator::current_product["required_rpm_path"]	= req_dir;
 	    if (requires == "")
 		requires = (string) UI::QueryWidget (`id(`other_val), `Value);
-	    AddOnCreator::product_info["REQUIRES"]	= requires;
+	    AddOnCreator::product_info["REQUIRES","value"]	= requires;
 
 	    AddOnCreator::content_map["NAME"]		= product;
 	    AddOnCreator::content_map["VERSION"]	= version;
@@ -736,10 +712,11 @@ map AddContentValue (list conflicts) {
 any ContentFileDialog() {
 
     // dialog caption - 'content' is file name
-    string caption = _("Product Definition (content File)");
+    string caption = _("Product Definition");
 
     map current_product		= AddOnCreator::current_product;
     list<map> content		= AddOnCreator::content;
+    map<string,map>product_info	= AddOnCreator::product_info;
 
     integer linguas_entry	= -1;
 
@@ -760,7 +737,20 @@ any ContentFileDialog() {
 	return ret;
     }
 
+    // generate items for prod file table
+    list get_prod_items () {
+	list ret	= [];
+	foreach (string key, map entry, product_info, {
+	    ret	= add (ret, `item (`id (key),
+		key, entry["value"]:"", entry["label"]:"")
+	    );
+	});
+	return ret;
+    }
+
     term contents = `HBox (`HSpacing (), `VBox (
+	// label
+	`Left (`Label (_("content File"))),
 	`Table (`id(`content_table), `opt(`notify), `header (
 	    // table header
 	    _("Key"),
@@ -782,7 +772,26 @@ any ContentFileDialog() {
 		_("Show &Only Required Keywords"), true
 	    )
 	),
-	`VSpacing ()
+	`VSpacing (0.4),
+	// label
+	`Left (`Label (_("Product File"))),
+	`Table (`id(`prod_table), `opt(`notify), `header (
+	    // table header
+	    _("Key"),
+	    // table header
+	    _("Value"),
+	    // table header
+	    _("Description")
+	    ),
+	    get_prod_items ()
+	),
+        `HBox (
+	    `PushButton (`id (`edit_prod), Label::EditButton ()),
+	    // push button label
+	    `PushButton (`id(`import_prod), _("I&mport")),
+	    `HStretch()
+	),
+	`VSpacing (0.2)
     ),`HSpacing ());
 
     Wizard::SetContentsButtons(caption, contents, HELPS["content"]:"",
@@ -853,6 +862,18 @@ any ContentFileDialog() {
 	    }
 	    UI::SetFocus (`id (`content_table));
 	}
+	else if (ret == `edit_prod || ret == `prod_table) {
+	    string key	= (string)
+		UI::QueryWidget (`id (`prod_table), `CurrentItem);
+	    any val	= (string) EditValue (product_info[key]:$[], "prod");
+	    if (val != nil)
+	    {
+		product_info[key,"value"]	= val;
+		UI::ChangeWidget (`id (`prod_table),`Item (key,1), val);
+	    }
+	    UI::SetFocus (`id (`prod_table));
+	}
+	// FIXME `import_prod
         else if (ret == `next) {
 	    list<string> missing	= [];
 	    foreach (map entry, content, {
@@ -872,7 +893,6 @@ any ContentFileDialog() {
 	    foreach (map entry, content, {
 		if (entry["key"]:"" == "LABEL" && entry["value"]:"" == "")
 		    index	= i;
-// FIXME fill default value of DISTRIBUTION and BASEARCHS (and not only in UI)
 		if (entry["key"]:"" == "NAME")
 		    product		= entry["value"]:"";
 		i = i + 1;
@@ -881,6 +901,7 @@ any ContentFileDialog() {
 		content[index,"value"]	= product;
 	    AddOnCreator::content	= content;
 	    AddOnCreator::UpdateContentMap (content);
+	    AddOnCreator::product_info	= product_info;
 	    break;
 	}
 	else if(ret == `abort || ret == `cancel) {
@@ -938,7 +959,7 @@ any EditValue (map entry, string table_type) {
     any value		= entry["value"]:nil;
     if (value == nil)
     {
-	if (table_type == "content")
+	if (table_type == "content" || table_type == "prod")
 	    value = "";
 	if (type == "package-list")
 	    value = [];
