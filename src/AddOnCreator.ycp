@@ -166,6 +166,13 @@ map<string,map> content_descr	= $[
 	    "value"	: "1",
 	    "mandatory"	: true,
     ],
+    "RELEASE"		: $[
+	    "key"	: "RELEASE",
+	    // table item label
+	    "label"	: _("The release number"),
+	    "value"	: "0",
+	    "mandatory"	: true,
+    ],
     "DISTRIBUTION"	: $[
 	    "key"	: "DISTRIBUTION",
 	    // label of content file key
@@ -768,6 +775,13 @@ global map<string,map> product_info	= $[
 	    // table item label
 	    "label"	: _("Product summary"),
     ],
+    "productline"	: $[
+	    "key"	: "productline",
+	    // table item label
+	    "label"	: _("Product line"),
+	    // help text for 'productline' key
+	    "help"	: _("A short name of the product which do not change between service packs and versions."),
+    ],
 ];
 
 // the content of .prod file, as read using any_xml agent
@@ -840,6 +854,9 @@ global boolean merge_patterns			= false;
 // if package description files should be compressed
 global boolean compress_package_descriptions	= false;
 
+// if we should generate -release package containing .prod file
+global boolean generate_release_package		= true;
+
 /**
  * Data was modified?
  */
@@ -863,9 +880,6 @@ map lang_codes = $[
  * attributes
  */
 global string content_key	= "__yast_content__";
-
-// data for .prod file (dependencies..., part will be copied from content file)
-global map prod_file		= $[];
 
 /**
  * Data was modified?
@@ -1007,9 +1021,7 @@ global boolean Read() {
     if (out["stdout"]:"" != "0\n" && out["stdout"]:"" != "")
     {
 	out	= (map) SCR::Execute (.target.bash_output, "echo $HOME");
-	string home	= deletechars (out["stdout"]:"", "\n");
-// FIXME update to new yast2-core
-//	string home	= getenv ("HOME");
+	string home	= getenv ("HOME");
 	if (home != "" && home != nil)
 	    add_on_products_file	= home + "/add_on_products.ycp";
     }
@@ -1058,11 +1070,10 @@ global boolean Read() {
 	== "yes")
 	compress_package_descriptions	= true;
 
-    // FIXME importing existing product: read product_xml from the release
-    // package and create product_info map from it
     if (product_xml == $[])
 	// read the template file
-	product_xml	= ReadProductXML ("/home/jsuchome/buildservice/template.prod");
+	product_xml	= ReadProductXML (
+	    Directory::datadir + "/add-on-creator/template.prod");
     return true;
 }
 
@@ -1512,11 +1523,13 @@ global void FillContentDefaults () {
 	string arch_dir	= splitdir[1]:"";
 	if (contains (allowed_archs, arch_dir))
 	{
-//	    arch_map["ARCH." + arch_dir ] = ValueForArchitecture (arch_dir);
 	    arch_directories	= add (arch_directories, arch_dir);
 	}
     });
     Progress::NextStage();
+
+    // name of -release package, if found
+    string release_package			= "";
 
     if (!clone)
     {
@@ -1553,6 +1566,14 @@ global void FillContentDefaults () {
 		}
 		else
 		    srcpackage2filename[arch,name]      = f;
+	    }
+	    if (name != "" && release_package == "" && size (name) > 8)
+	    {
+		if (substring (name, size (name) - 8) == "-release")
+		{
+		    y2milestone ("release package found: %1, %2", name, f);
+		    release_package	= f;
+		}
 	    }
 	});
 	y2milestone ("... done");
@@ -1610,9 +1631,63 @@ global void FillContentDefaults () {
 	Progress::Finish ();
 	return;
     }
+    // read the product info contained in release package
+    if (release_package != "")
+    {
+	string reldir	= tmpdir + "/release";
+	if (SCR::Execute (.target.mkdir, reldir) == true)
+	{
+	    SCR::Execute (.target.bash,
+		sformat ("cp %1 %2", release_package, reldir));
+	    SCR::Execute (.target.bash,
+		sformat ("cd %1; rpm2cpio %2 | cpio -imud 2>/dev/null",
+		reldir,
+		substring (release_package, findlastof(release_package, "/")+1))
+	    );
+	    out = (map) SCR::Execute (.target.bash_output, sformat (
+		"ls -A1 %1/release/etc/products.d/*.prod 2>/dev/null", tmpdir));
+	    list out_l	= splitstring (out["stdout"]:"", "\n");
+	    string prod_file	= out_l[0]:""; // we care about the first one
+
+	    // when release package is present, do not offer to change it
+	    generate_release_package	= false;
+
+	    y2milestone ("reading product info from %1", prod_file);
+	    // read the prod file info and add it into the template
+	    product_xml	= ReadProductXML (prod_file);
+	    // translate product_xml map into product_info... huh
+	    map prod_map	= product_xml["product",0]:$[];
+	    // only simple values are supported here, something nested
+	    // deeper (e.g. linguas) will not work
+	    foreach (string key, map desc, product_info, {
+		if (haskey (prod_map, key))
+		{
+		    string val	= prod_map[key,0,content_key]:"";
+		    if (val != "")
+		    {
+			// set the value from rpm only when there is nothing
+			// present in product_info[key]:
+			// in case we are editing existing add-on product
+			// configuration, there can be some modifications
+			// saved, and they are preferred
+			if (product_info[key,"value"]:"" == "")
+			    product_info[key,"value"]	= val;
+			else
+			    // manual modifications present -> generate
+			    generate_release_package	= true;
+		    }
+		}
+	    });
+	    // ok, let's try to read at least release notes url
+	    foreach (map url, prod_map["urls",0,"url"]:[], {
+		if (url["name"]:"" == "releasenotes")
+		    product_info["releasenotes","value"]= url[content_key]:"";
+	    });
+	    y2milestone ("product_info: %1", product_info);
+	}
+    }
 
     // generate tmp package descriptions...
-    // TODO move to other function?
     if ((generate_descriptions || !clone) &&
 	FileUtils::Exists ("/usr/bin/create_package_descr"))
     {
@@ -2098,7 +2173,7 @@ global boolean CopyRPMs (string in_path, string base_path) {
 	    if (arch != "ZZZ_imported" && arch != "ZZZ_required" &&
 		FileUtils::Exists (out_dir))
 	    {
-		y2milestone ("copying packages of '%1' arhitecture", arch);
+		y2milestone ("copying packages of '%1' architecture", arch);
 		// arch_directories will be needed later for CreateMD5SUMS and
 		// resign_packages
 		arch_directories	= (list<string>)
@@ -2139,43 +2214,65 @@ global boolean CopyRPMs (string in_path, string base_path) {
  */
 global boolean GenerateReleasePackage (string base_path) {
 
-    /*
-    string contents = "";
+    if (!generate_release_package)
+    {
+	y2milestone ("release package should not be generated");
+	return true;
+    }
+    if (!Package::Install ("obs-productconverter"))
+    {
+	y2error ("obs-productconverter not installed, not generating -release");
+	return false;
+    }
+    if (!FileUtils::Exists (base_path))
+	return false;
 
-//    contents	= MapAny2XML ("description", config["description",0]:$[], 1);
-
-
-    contents	= sformat ("<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-<productdefinition xmlns:xi=\"http://www.w3.org/2001/XInclude\">
-<products>
-%1
-</products>
-</productdefinition>", contents);
-
-    SCR::Write (.target.string, tmpdir + "/add-on.prod.xml", contents);
-    */
+    // release package name and architecture
+    string release_package	= "";
+    string arch			= "";
 
     // 1. update product_xml map using product_info and content,
     // write the result into temporary .prod file
     string name	= content_map["NAME"]:"add-on";
 
-    product_xml["product",0,"id"]			= name;
-    product_xml["product",0,"name",0, content_key]	= name;
-    product_xml["product",0,"version",0, content_key]	= content_map["VERSION"]:"1.0";
+    map submap= product_xml["productdefinition",0,"products",0,"product",0]:$[];
+
+    submap["id"]			= name;
+    submap["name",0, content_key]	= name;
+    submap["version",0, content_key]	= content_map["VERSION"]:"1.0";
+    submap["vendor",0, content_key]	= content_map["VENDOR"]:"";
 
     foreach (string key, ["release", "summary", "description"], {
-	product_xml["product",0,key,0,content_key]=product_info[key,"value"]:"";
+	submap[key,0,content_key]=product_info[key,"value"]:"";
     });
-    if (product_info["releasenotes","value"]:"" != "")
-	product_xml["product",0,"urls"]	= [ $[
-	    "url"	: [ $[
-		content_key	: product_info["releasenotes","value"]:"",
-	    ]],
-	]];
 
+    if (product_info["releasenotes","value"]:"" != "")
+    {
+	integer i	= -1;
+	foreach (map url, submap["urls",0,"url"]:[], {
+	    i	= i + 1;
+	    if (url["name"]:"" == "releasenotes")
+	    {
+		submap["urls",0,"url",i,content_key]	= product_info["releasenotes","value"]:"";
+	    }
+	});
+	if (i == -1)
+	{
+	    submap["urls"]	= [ $[
+		"url"	: [ $[
+		    "name"		: "releasenotes",
+		    content_key	: product_info["releasenotes","value"]:"",
+		]],
+	    ]];
+	}
+    }
+
+    product_xml["productdefinition",0,"products",0,"product"]	= [ submap ];
+
+    string prod_file_path	= sformat ("%1/%2.product", tmpdir, name);
 
     SCR::Write (.anyxml, $[
-        "file"  : sformat ("%1/%2.prod", tmpdir, content_map["NAME"]:"add-on"),
+        "file"  : prod_file_path,
 	"xml"	: product_xml,
 	"args"	:	$[
 	    "XMLDecl"		: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
@@ -2187,11 +2284,57 @@ global boolean GenerateReleasePackage (string base_path) {
 	]
     ]);
 
-    // 2. FIXME call bs_productconvert to generate a packgae/spec file
-    // (is the call of rpmbuild needed?)
+    string product_dir	= tmpdir + "/" + name;
+    SCR::Execute (.target.mkdir, product_dir);
 
-    // 3. FIXME copy package into the place
+    // 2. call bs_productconvert to generate a spec file for -release package
+    map out	= (map) SCR::Execute (.target.bash_output, sformat (
+	"bs_productconvert %1 %2 %3", prod_file_path, product_dir, name));
 
+    // 3. build the release package from generated .spec file
+    string cmd	= sformat (
+	"rpmbuild -bb `find -L %1 -name %2-release.spec`", tmpdir, name);
+
+    out     = (map) SCR::Execute (.target.bash_output, cmd, $["LANG":"C"]);
+    if (out["exit"]:0 != 0)
+    {
+	y2error ("command '%1' failed with: \n%2", cmd, out["stderr"]:"");
+    }
+    else
+    {
+	foreach (string line, splitstring (out["stdout"]:"", "\n"), {
+	    if (size (line) > 8 && substring (line, 0, 7)  == "Wrote: ")
+	    {
+		list ll = splitstring (line, " \t\n");
+		string package	= ll[1]:"";
+		if (package != "" && FileUtils::Exists (package))
+		{
+		    y2milestone ("release package: %1", package);
+		    out = (map) SCR::Execute (.target.bash_output,
+			sformat ("rpm -q -p %1 --qf \"%%{ARCH}\"", package));
+		    release_package	= package;
+		    arch		= out["stdout"]:"";
+		}
+		break;
+	    }
+	});
+    }
+    // 4. copy the release package to the correct place
+    if (release_package != "")
+    {
+	// create arch directory if it does not exist
+	if (!contains (arch_directories, arch))
+	{
+	    arch_directories	= add (arch_directories, arch);
+	    SCR::Execute (.target.mkdir, full_data_path + "/" + arch);
+	}
+	SCR::Execute (.target.bash, sformat ("/bin/cp -r %1 '%2/%3'",
+	    release_package, full_data_path, arch));
+    }
+
+    // 5. delete the tmp files, so it doesn't mess possible next builds
+    SCR::Execute (.target.remove, prod_file_path);
+    SCR::Execute (.target.bash, sformat ("rm -rf '%1'", product_dir));
     return true;
 }
 
@@ -2669,6 +2812,7 @@ global void CommitCurrentProduct () {
     map modified_product	= union (current_product, $[
 	"content_map"		: content_map,
 	"product_info"		: product_info,
+	"generate_release_package"	: generate_release_package,
 	"available_packages"	: available_packages,
 	"arch_directories"	: arch_directories,
 	"package2filename"	: package2filename,
@@ -2696,6 +2840,7 @@ global void SelectProduct (map product) {
     current_product	= product;
     content_map		= product["content_map"]:$[];
     product_info	= product["product_info"]:$[];
+    generate_release_package	= product["generate_release_package"]:false;
 
     // generate content from content_map
     content	= [];
@@ -2793,6 +2938,8 @@ global boolean BuildAddOn () {
 	    // Progress stage
 	    _("Copy the packages"),
 	    // Progress stage
+	    _("Generate the release package"),
+	    // Progress stage
 	    _("Create MD5 sums"),
 	    // Progress stage
 	    _("Sign resulting product"),
@@ -2806,6 +2953,8 @@ global boolean BuildAddOn () {
 	    _("Writing the patterns..."),
 	    // Progress step
 	    _("Copying the packages..."),
+	    // Progress stage
+	    _("Generating the release package..."),
 	    // Progress step
 	    _("Creating MD5 sums..."),
 	    // Progress stage
@@ -2895,6 +3044,8 @@ global boolean BuildAddOn () {
 	Progress::NextStage();
 
 	CopyRPMs (current_product["rpm_path"]:"", base_output_path);
+
+	Progress::NextStage();
 
 	GenerateReleasePackage (base_output_path);
 

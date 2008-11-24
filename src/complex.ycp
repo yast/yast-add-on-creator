@@ -717,7 +717,7 @@ any ContentFileDialog() {
     map current_product		= AddOnCreator::current_product;
     list<map> content		= AddOnCreator::content;
     map<string,map>product_info	= AddOnCreator::product_info;
-
+    boolean generate_release_package	=AddOnCreator::generate_release_package;
     integer linguas_entry	= -1;
 
     // generate items for content file table
@@ -773,6 +773,10 @@ any ContentFileDialog() {
 	    )
 	),
 	`VSpacing (0.4),
+	`Left (`CheckBox (`id (`release_package), `opt (`notify),
+	    // check box label
+	    ("Generate Release Package"), generate_release_package)
+	),
 	// label
 	`Left (`Label (_("Product File"))),
 	`Table (`id(`prod_table), `opt(`notify), `header (
@@ -798,6 +802,9 @@ any ContentFileDialog() {
 	    Label::BackButton(), Label::NextButton());
     UI::SetFocus (`id(`content_table));
 
+    foreach (symbol w, [ `prod_table, `edit_prod, `import_prod ], {
+	UI::ChangeWidget (`id (w), `Enabled , generate_release_package);
+    });
     any ret = nil;
     boolean mandatory	= true;
     while(true) {
@@ -862,6 +869,14 @@ any ContentFileDialog() {
 	    }
 	    UI::SetFocus (`id (`content_table));
 	}
+	if (ret == `release_package)
+	{
+	    generate_release_package	= (boolean)
+		UI::QueryWidget (`id (ret), `Value);
+	    foreach (symbol w, [ `prod_table, `edit_prod, `import_prod ], {
+		UI::ChangeWidget (`id (w), `Enabled , generate_release_package);
+	    });
+	}
 	else if (ret == `edit_prod || ret == `prod_table) {
 	    string key	= (string)
 		UI::QueryWidget (`id (`prod_table), `CurrentItem);
@@ -887,6 +902,8 @@ any ContentFileDialog() {
 %1"), mergestring (missing, "\n")));
 		continue;
 	    }
+	    // FIXME some data are both in prod file and content file
+	    // (vendor, version, release, id (=name) ... -> popup
 	    integer i		= 0;
 	    integer index	= -1;
 	    string product		= "";
@@ -902,6 +919,7 @@ any ContentFileDialog() {
 	    AddOnCreator::content	= content;
 	    AddOnCreator::UpdateContentMap (content);
 	    AddOnCreator::product_info	= product_info;
+	    AddOnCreator::generate_release_package = generate_release_package;
 	    break;
 	}
 	else if(ret == `abort || ret == `cancel) {

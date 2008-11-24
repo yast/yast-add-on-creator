@@ -1,4 +1,13 @@
 -------------------------------------------------------------------
+Mon Nov 24 14:35:01 CET 2008 - jsuchome@suse.cz
+
+- really include the template in the package
+- read info from possible existing release package
+- call bs_productconvert to build a spec file for release package
+- build release package using rpmbuild (fate#305172)
+- 2.17.6
+
+-------------------------------------------------------------------
 Wed Oct 22 15:57:06 CEST 2008 - jsuchome@suse.cz
 
 - added template for .prod files 
