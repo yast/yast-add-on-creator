@@ -376,14 +376,39 @@ any SourcesDialog() {
 
     map current_product		= AddOnCreator::current_product;
 
-    string requires	= AddOnCreator::product_info["REQUIRES","value"]:"";
+    /*
+    string requires	= AddOnCreator::product_info["requires","value"]:"";
     if (requires == "")
 	requires	= "openSUSE-release = 11.1";
+    */
+
+    // try to read existing product dependency and transform it to one string
+    // easily understanable
+    list requres_l	= AddOnCreator::product_info["requires","value"]:[];
+    map requires_m	= requres_l[0]:$[];
+    // this is just internal string used to decide between predefined options
+    string requires	= "";
+    if (requires_m["name"]:"" != "")
+	requires	= sformat ("%1-%2", requires_m["name"]:"", requires_m["version"]:"");
+    else
+    {
+	/* TODO read current product infow:
+jsuchome@rivendell:~> more /etc/SuSE-release
+openSUSE 11.1 Beta 3 (i586)
+VERSION = 11.1
+
+dhcp86:~ # more /etc/SuSE-release
+SUSE Linux Enterprise Server 11 (x86_64)
+VERSION = 11
+PATCHLEVEL = 0
+	*/
+
+    }
+    string requires_orig	= requires;
 
     string old_dir	= current_product["rpm_path"]:"";
     if (old_dir == nil)
 	current_product["rpm_path"]	= "";
-    string old_requires	= requires;
 
     map content_map	= AddOnCreator::content_map;
     string product	= content_map["NAME"]:content_map["PRODUCT"]:"";
@@ -409,27 +434,27 @@ any SourcesDialog() {
 	    `VSpacing (0.4),
 	    `RadioButtonGroup (`id(`rd),
 		`Left(`HVSquash(`VBox (
-		    `Left (`RadioButton(`id(`sles11), `opt (`notify),
+		    `Left (`RadioButton(`id ("SUSE_SLES-11"), `opt (`notify),
 			// radio button label
 			_("SUSE &Linux Enterprise Server 11"),
-			requires == "sles-release = 11")),//FIXME
-		    `Left (`RadioButton(`id(`sled11), `opt (`notify),
+			requires == "SUSE_SLES-11")),
+		    `Left (`RadioButton(`id ("SUSE_SLED-11"), `opt (`notify),
 			// radio button label
 			_("SUSE L&inux Enterprise Desktop 11"),
-			requires == "sled-release = 11")),//FIXME
-		    `Left (`RadioButton(`id(`sle11), `opt (`notify),
+			requires == "SUSE_SLED-11")),
+		    `Left (`RadioButton(`id ("SUSE_SLE-11"), `opt (`notify),
 			// radio button label
-			_("S&USE Linux Enterprise 11"),//FIXME
-			requires == "sle-release-11")),
-		    `Left (`RadioButton(`id(`opensuse111), `opt (`notify),
+			_("S&USE Linux Enterprise 11"),
+			requires == "SUSE_SLE-11")),
+		    `Left (`RadioButton(`id("openSUSE-11.1"), `opt (`notify),
 			// radio button label
 			_("OpenSUSE &11.1"),
-			requires == "openSUSE-release = 11.1")),
+			requires == "openSUSE-11.1")),
 		    `HBox (
 			`Left(`RadioButton(`id(`other), `opt (`notify),
 			    // radio button label
-			    _("&Other"))),
-			`InputField (`id(`other_val), "")
+			    _("&Other")))
+//			`InputField (`id(`other_val), "")
 		    )
 		)))
 	    ),
@@ -467,10 +492,13 @@ any SourcesDialog() {
     if (UI::QueryWidget (`id(`rd), `Value) == nil)
     {
 	UI::ChangeWidget (`id(`rd), `Value, `other);
-	UI::ChangeWidget (`id(`other_val), `Value, requires);
+	requires	= ""; // empty string means other than predefined values
+//	UI::ChangeWidget (`id(`other_val), `Value, requires);
     }
+    /*
     UI::ChangeWidget (`id(`other_val), `Enabled,
 	UI::QueryWidget (`id(`rd), `Value) == `other);
+    */
 
     any ret = nil;
 
@@ -503,23 +531,10 @@ any SourcesDialog() {
 	}
 	else if (ret == `other)
 	{
-	    UI::SetFocus (`id(`other_val));
-	}
-	else if (ret == `sles11) {
-	    requires	= ""; // FIXME...
-	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
-	}
-	else if (ret == `sled11) {
 	    requires	= "";
-	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
 	}
-	else if (ret == `sle11) {
-	    requires	= "";
-	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
-	}
-	else if (ret == `opensuse111) {
-	    requires	= "openSUSE-release = 11.1";
-	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
+	else if (is (ret, string)) {
+	    requires	= (string) ret;
 	}
 	else if (ret == `other) {
 	    requires	= "";
@@ -547,9 +562,18 @@ any SourcesDialog() {
 	    if (req_dir != "" && substring (req_dir, size (req_dir) - 1, 1) != "/")
 		req_dir	=	req_dir + "/";
 	    AddOnCreator::current_product["required_rpm_path"]	= req_dir;
-	    if (requires == "")
-		requires = (string) UI::QueryWidget (`id(`other_val), `Value);
-	    AddOnCreator::product_info["REQUIRES","value"]	= requires;
+	    if (requires != "" && requires != requires_orig)
+	    {
+		list<string> req_l	= splitstring (requires, "-");
+		AddOnCreator::product_info["requires","value"]	= [
+		    // with predefined values, use only one required product
+		    $[
+			"name"		: req_l[0]:"",
+			"version"	: req_l[1]:"",
+			"flag"		: "EQ",
+		    ]
+		];
+	    }
 
 	    AddOnCreator::content_map["NAME"]		= product;
 	    AddOnCreator::content_map["VERSION"]	= version;
@@ -603,15 +627,9 @@ letters, numbers, and the characters \".~_-\".");
 map AddContentValue (list conflicts) {
 
     map ret		= $[];
-    /*
-    list allowed_archs	= filter (string arch, AddOnCreator::allowed_archs, {
-	return !contains (conflicts, "ARCH." + arch);
-    });
-    */
     list allowed_langs	= filter (string l, AddOnCreator::GetLangCodes (true),{
 	return !contains (conflicts, "LABEL." + l);
     });
-//    string help	= mergestring (maplist (string k, ["ARCH", "LABEL"], {
     string help	= sformat ("<p><b>%1</b></p>%2<br>",
 		AddOnCreator::content_specials["LABEL","helplabel"]:"",
 		AddOnCreator::content_specials["LABEL","help"]:"");
@@ -620,30 +638,11 @@ map AddContentValue (list conflicts) {
 	`HSpacing(1),
 	`VBox(
 	    `VSpacing (0.5),
-	    /*
-	    `RadioButtonGroup (`id(`rd), `Left(`VBox (
-	      `Left (`RadioButton(`id("ARCH"), `opt (`notify),_("&ARCH"),true)),
-	      allowed_archs == [] ? `VSpacing (0) :
-	      `HBox (
-		`HSpacing (),
-		// combo label
-		`Left (`ComboBox (`id(`base), _("&Base Architecture"),
-		    allowed_archs))
-	      ),
-	      `Left (`RadioButton (`id("LABEL"), `opt (`notify), _("&LABEL"))),
-	      `HBox (
-		`HSpacing (),
-		// combo label
-		`Left (`ComboBox (`id(`lang), _("La&nguage Code"),
-		    allowed_langs))
-	      )
-	    ))),
-	    */
 	    `Label (_("LABEL")),
 	    // combo label
 	    `Left (`ComboBox (`id(`lang), _("La&nguage Code"), allowed_langs)),
 	    // textentry label
-	    `TextEntry (`id(`val), _("&Value"), ""),
+	    `InputField (`id(`val),`opt (`hstretch), _("&Value"), ""),
 	    `HBox(
 		`PushButton(`id(`ok),`opt(`default,`key_F10),Label::OKButton()),
 		`PushButton(`id(`cancel),`opt (`key_F9), Label::CancelButton()),
@@ -652,17 +651,6 @@ map AddContentValue (list conflicts) {
 	),
 	`HSpacing(1)
     ));
-    /*
-    if (allowed_archs != [])
-    {
-	UI::ChangeWidget (`id(`lang), `Enabled, false);
-    }
-    else
-    {
-	UI::ChangeWidget (`id("ARCH"), `Enabled, false);
-	UI::ChangeWidget (`id(`rd), `Value, "LABEL");
-    }
-    */
     UI::SetFocus (`id(`val));
     while (true)
     {
@@ -672,14 +660,6 @@ map AddContentValue (list conflicts) {
 	    ret	= $[];
 	    break;
 	}
-	/*
-	string but = (string) UI::QueryWidget (`id(`rd), `Value);
-	if (result == "ARCH" || result == "LABEL")
-	{
-	    UI::ChangeWidget (`id(`lang), `Enabled, result == "LABEL");
-	    UI::ChangeWidget (`id(`base), `Enabled, result == "ARCH");
-	}
-	*/
 	if (result == `help)
 	{
 	    // Heading for help popup window
@@ -687,11 +667,6 @@ map AddContentValue (list conflicts) {
 	}
 	if (result == `ok)
 	{
-	    /*
-	    string key	= sformat ("%1.%2", but, but == "ARCH" ?
-		UI::QueryWidget (`id(`base), `Value) :
-		UI::QueryWidget (`id(`lang), `Value));
-	    */
 	    ret	= union (AddOnCreator::content_specials["LABEL"]:$[], $[
 		"key"	: sformat ("LABEL.%1",
 		    UI::QueryWidget (`id(`lang), `Value)),
@@ -716,6 +691,7 @@ any ContentFileDialog() {
 
     map current_product		= AddOnCreator::current_product;
     list<map> content		= AddOnCreator::content;
+    map product_xml		= $[]; // used only when imported
     map<string,map>product_info	= AddOnCreator::product_info;
     boolean generate_release_package	=AddOnCreator::generate_release_package;
     integer linguas_entry	= -1;
@@ -741,9 +717,32 @@ any ContentFileDialog() {
     list get_prod_items () {
 	list ret	= [];
 	foreach (string key, map entry, product_info, {
-	    ret	= add (ret, `item (`id (key),
-		key, entry["value"]:"", entry["label"]:"")
-	    );
+	    if (entry["type"]:"" == "dependency")
+	    {
+		string value	= "";
+		foreach (map dep, entry["value"]:[], {
+		    string prod = sformat ("%1-%2-%3",
+			dep["name"]:"", dep["version"]:"1", dep["flag"]:"EQ");
+		    if (dep["release"]:"" != "")
+			prod	= prod + "-" + dep["release"]:"";
+		    if (dep["flavor"]:"" != "")
+			prod	= prod + "-" + dep["flavor"]:"";
+		    if (dep["patchlevel"]:"" != "")
+			prod	= prod + "-" + dep["patchlevel"]:"";
+		    if (value != "")
+			value	= value + ",";
+		    value	= value + prod;
+		});
+		ret     = add (ret, `item (`id (key),
+		    key, value , entry["label"]:"")
+		);
+	    }
+	    else
+	    {
+		ret	= add (ret, `item (`id (key),
+		    key, entry["value"]:"", entry["label"]:"")
+		);
+	    }
 	});
 	return ret;
     }
@@ -880,16 +879,33 @@ any ContentFileDialog() {
 	else if (ret == `edit_prod || ret == `prod_table) {
 	    string key	= (string)
 		UI::QueryWidget (`id (`prod_table), `CurrentItem);
-	    any val	= (string) EditValue (product_info[key]:$[], "prod");
+	    any val	= EditValue (product_info[key]:$[], "prod");
 	    if (val != nil)
 	    {
 		product_info[key,"value"]	= val;
-		UI::ChangeWidget (`id (`prod_table),`Item (key,1), val);
+		if (product_info[key,"type"]:"" == "dependency")
+		    UI::ChangeWidget (`id (`prod_table), `Items,
+			get_prod_items ());
+		else
+		    UI::ChangeWidget (`id (`prod_table),`Item (key,1), val);
 	    }
 	    UI::SetFocus (`id (`prod_table));
 	}
-	// FIXME `import_prod
-        else if (ret == `next) {
+	else if (ret == `import_prod) {
+	    string file = UI::AskForExistingFile (
+		current_product["base_output_path"]:"", "",
+		// popup for file selection dialog
+		_("Choose the Existing Product File")
+	    );
+	    if (file != nil)
+	    {
+		product_xml	= AddOnCreator::ReadProductXML (file);
+		product_info	=
+		    AddOnCreator::GetProductInfo (product_xml, false);
+		UI::ChangeWidget (`id (`prod_table), `Items, get_prod_items ());
+	    }
+	}
+	else if (ret == `next) {
 	    list<string> missing	= [];
 	    foreach (map entry, content, {
 		if (entry["value"]:"" == "" && entry["mandatory"]:false)
@@ -918,6 +934,8 @@ any ContentFileDialog() {
 		content[index,"value"]	= product;
 	    AddOnCreator::content	= content;
 	    AddOnCreator::UpdateContentMap (content);
+	    if (product_xml != $[])
+		AddOnCreator::product_xml	= product_xml;
 	    AddOnCreator::product_info	= product_info;
 	    AddOnCreator::generate_release_package = generate_release_package;
 	    break;
@@ -972,19 +990,21 @@ any EditValue (map entry, string table_type) {
     string type		= entry["type"]:"string";
     // textentry label
     string label	= sformat (_("Value of \"%1\""),
-	table_type == "content" ? entry["key"]:"" : entry["label"]:"");
+	table_type == "content" ?  entry["key"]:"" : entry["label"]:"");
 
     any value		= entry["value"]:nil;
     if (value == nil)
     {
 	if (table_type == "content" || table_type == "prod")
 	    value = "";
-	if (type == "package-list")
+	if (type == "package-list" || type == "dependency")
 	    value = [];
     }
+    list<map> lvalues	= []; // list of maps for "dependency" type
 
-    term cont		= `TextEntry (`id (`main), label, sformat("%1", value));
-    symbol w_id		= `main;
+    term cont		=
+	`InputField (`id (`main), `opt (`hstretch), label, sformat("%1",value));
+    any w_id		= `main;
     integer height	= 5;
 
     string help		= table_type == "content" ?
@@ -1009,7 +1029,84 @@ any EditValue (map entry, string table_type) {
 	return ret;
     }
 
-    if (type == "boolean")
+    // helper function, generate widget id distinguished by numbers
+    string get_id (string key, integer number) {
+	return sformat ("%1-%2", key, number);
+    }
+
+    // number of products reffered in the dependency tags
+    integer products	= 0;
+
+    list<string> dependency_attrs =
+	["name", "version", "flag", "release", "patchlevel", "flavor"];
+
+    // generate a term for one product present in dependency tags
+    term get_dependency_term (integer number, map value_map) {
+	string flag	= value_map["flag"]:"";
+	return `Frame ("", `VBox (
+		`HBox (
+		    `HWeight (1,
+			// input field label
+			`InputField (`id (get_id ("name", number)),
+			    // input field label
+			    _("Name"), value_map["name"]:"")
+		    ),
+		    `HSpacing (0.8),
+		    `HWeight (1, `InputField (`id (get_id ("version", number)),
+			// input field label
+			 _("Version"),value_map["version"]:"")
+		    ),
+		    `HSpacing (0.8),
+		    // combo box label
+		    `HWeight (1,
+		      `ComboBox (`id (get_id ("flag", number)),_("Flag"), [
+			// combo box item
+			`item (`id ("EQ"), _("Equal"), flag=="EQ" || flag==""),
+			// combo box item
+			`item (`id ("GT"), _("Greater than"), flag == "GT"),
+			// combo box item
+			`item (`id ("LT"), _("Lower than"), flag == "LT"),
+		      ]
+		    ))
+		),
+		`HBox (
+		    `HWeight (1, `InputField (`id (get_id ("release",number)),
+			// input field label
+			_("Release"), value_map["release"]:"")
+		    ),
+		    `HSpacing (0.8),
+		    `HWeight (1,
+			`InputField (`id (get_id ("flavor", number)),
+			    // input field label
+			    _("Flavor"), value_map["flavor"]:"")
+		    ),
+		    `HSpacing (0.8),
+		    `HWeight (1,
+			`InputField (`id (get_id ("patchlevel", number)),
+			    // input field label
+			    _("Patch level"), value_map["patchlevel"]:"")
+		    )
+		)
+	));
+    }
+
+    if (type == "dependency")
+    {
+	lvalues		= (list<map>) value;
+	if (lvalues == []) lvalues = [ $[] ];
+	term dep_term	= `VBox ();
+	foreach (map valmap, lvalues, {
+	    products	= products + 1;
+	    dep_term	= add (dep_term,get_dependency_term (products, valmap));
+	});
+	cont		= `VBox (
+	    `Label (entry["label"]:label),
+	    `ReplacePoint (`id (`rp_dep), dep_term),
+	    `Right (`PushButton (`id (`add_dep), Label::AddButton ()))
+	);
+	w_id    = "name-1";
+    }
+    else if (type == "boolean")
     {
 	cont	= `VBox (
 	    `Label (label),
@@ -1037,7 +1134,7 @@ any EditValue (map entry, string table_type) {
 	cont	= `VBox (
 	    `HSpacing (54),
 	    rt,
-	    `MultiLineEdit(`id(`main), label, sval)
+	`MultiLineEdit(`id(`main), label, sval)
 	);
 	if (height < 9) height = 9;
     }
@@ -1117,10 +1214,54 @@ any EditValue (map entry, string table_type) {
 		all_checked	= ch;
 	    }
 	}
+	if (result == `add_dep)
+	{
+	    term dep_term	= `VBox ();
+	    integer i	= 1;
+	    integer y	= 1; // counts the non-empty parts
+	    do {
+		map valmap		= $[];
+		foreach (string key, dependency_attrs, {
+		    string val = (string)
+			UI::QueryWidget (`id (get_id (key, i)), `Value);
+		    if (val != "")
+			valmap[key]	= val;
+		});
+		if (size (valmap) > 1) // there's always at least the flag
+		{
+		    dep_term	= add (dep_term,get_dependency_term(y, valmap));
+		    y	= y + 1;
+		}
+		i	= i + 1;
+	    } while (i <= products);
+	    // if there were empty products, product number could be lower now
+	    products	= y;
+	    dep_term    = add (dep_term, get_dependency_term (products, $[]));
+	    UI::ReplaceWidget (`id (`rp_dep), dep_term);
+	}
 	if (result == `ok)
 	{
 	    if (type == "package-list")
 		ret	= UI::QueryWidget (`id(w_id),`SelectedItems);
+	    else if (type == "dependency")
+	    {
+		list<map> retlist	= [];
+		integer i		= 1;
+		do {
+		    map retmap		= $[];
+		    foreach (string key, dependency_attrs, {
+			string val = (string)
+			    UI::QueryWidget (`id (get_id (key, i)), `Value);
+			if (val != "")
+			    retmap[key]	= val;
+		    });
+		    if (size (retmap) > 1) // there's always at least the flag
+			retlist	= add (retlist, retmap);
+		    i	= i + 1;
+		} while (i <= products);
+		ret	= retlist;
+
+	    }
 	    else
 		ret	= UI::QueryWidget (`id(w_id),`Value);
 	    string error	= "";
@@ -1342,8 +1483,10 @@ any PackagesDialog() {
 	),
 	`VSpacing (0.4),
 	`HBox (
-	    // textentry label
-	    `TextEntry (`id (`extra_prov), _("Location of the File with Additional &Dependencies"), current_product["extra_prov_file"]:""),
+	    `InputField (`id (`extra_prov), `opt (`hstretch),
+		// textentry label
+		("Location of the File with Additional &Dependencies"),
+		current_product["extra_prov_file"]:""),
 	    `VBox (
 		`Label (""),
 		`PushButton (`id (`browse), Label::BrowseButton ())
@@ -1581,14 +1724,16 @@ string GenerateKeyDialog () {
 	    `VSpacing (0.5),
 	    // textentry label
 	    `IntField (`id("Key-Length"), _("Key &Size"), 1024, 4096, 2048),
+	    `InputField (`id("Expire-Date"), `opt (`hstretch),
+		// textentry label
+		_("E&xpiration Date")),
 	    // textentry label
-	    `TextEntry (`id("Expire-Date"), _("E&xpiration Date")),
+	    `InputField (`id("Name-Real"), `opt (`hstretch), _("&Name")),
 	    // textentry label
-	    `TextEntry (`id("Name-Real"), _("&Name")),
-	    // textentry label
-	    `TextEntry (`id("Name-Comment"), _("Commen&t")),
-	    // textentry label
-	    `TextEntry (`id("Name-Email"), _("E-&Mail Address")),
+	    `InputField (`id("Name-Comment"), `opt (`hstretch), _("Commen&t")),
+	    `InputField (`id("Name-Email"), `opt (`hstretch),
+		// textentry label
+		_("E-&Mail Address")),
 	    // password widget label
 	    `Password (`id ("Passphrase"), `opt (`hstretch), _("&Passphrase"))
 	),

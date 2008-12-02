@@ -1,4 +1,14 @@
 -------------------------------------------------------------------
+Tue Dec  2 15:52:25 CET 2008 - jsuchome@suse.cz
+
+- created UI for product dependency (fate#305172)
+- write product dependency into input prod file
+- ask for media type and flavor
+- bs_productconvert produces 2 packages, take them both
+- template has only product section
+- 2.17.7
+
+-------------------------------------------------------------------
 Mon Nov 24 14:35:01 CET 2008 - jsuchome@suse.cz
 
 - really include the template in the package
