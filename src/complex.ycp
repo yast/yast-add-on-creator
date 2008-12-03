@@ -1063,7 +1063,7 @@ any EditValue (map entry, string table_type) {
 			// combo box item
 			`item (`id ("EQ"), _("Equal"), flag=="EQ" || flag==""),
 			// combo box item
-			`item (`id ("GT"), _("Greater than"), flag == "GT"),
+			`item (`id ("GE"), _("Greater than"), flag == "GE"),
 			// combo box item
 			`item (`id ("LT"), _("Lower than"), flag == "LT"),
 		      ]

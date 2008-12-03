@@ -823,7 +823,12 @@ global map<string,map> GetProductInfo (map xml, boolean merge_with_current) {
     // be used as global variable, reflecting current state)
     map<string,map> retmap	=
 	merge_with_current ? product_info : product_info_descr;
-    map prod_map		= xml["product",0]:$[]; // maso, ze?
+    map prod_map	= $[];
+    if (size (xml["productdefinition",0,"products"]:[]) > 0)
+    {
+	prod_map	= xml["productdefinition",0,"products",0]:$[];
+    }
+    prod_map		= xml["product",0]:$[]; // maso, ze?
 
     // only simple values are supported here, something nested
     // deeper (e.g. linguas) will not work
@@ -860,10 +865,9 @@ global map<string,map> GetProductInfo (map xml, boolean merge_with_current) {
 		retmap["releasenotes","value"]	= url[content_key]:"";
 	}
     });
-    // read the product dependencies FIXME they are not here
-    // either in mediasets, or we must for rpm
-    // rpm -qp --requires `path to rpm` | grep product
-    foreach (map dep, prod_map["productdependency"]:[], {
+    // read the product dependencies which may be in mediasets section
+    map mediamap = xml["productdefinition",0,"mediasets",0,"media",0]:$[];
+    foreach (map dep, mediamap["productdependency"]:[], {
 	string key	= dep["relationship"]:"";
 	if (retmap[key,"value"]:[] == [])
 	    retmap[key,"value"]	= [];
@@ -1484,8 +1488,8 @@ global void FillContentDefaults () {
     });
     Progress::NextStage();
 
-    // name of -release package, if found
-    string release_package			= "";
+    // name of -release packages, if found
+    list<string> release_packages			= [];
 
     if (!clone)
     {
@@ -1523,14 +1527,10 @@ global void FillContentDefaults () {
 		else
 		    srcpackage2filename[arch,name]      = f;
 	    }
-	    if (name != "" && release_package == "" && size (name) > 8)
+	    if (name != "" && size (name) > 8 && issubstring (name, "-release"))
 	    {
-		if (substring (name, size (name) - 8) == "-release")
-		{
-		    y2milestone ("release package found: %1, %2", name, f);
-		    // FIXME beware, there may be flavor release package
-		    release_package	= f;
-		}
+		y2milestone ("release package found: %1, %2", name, f);
+		release_packages	= add (release_packages, f);
 	    }
 	});
 	y2milestone ("... done");
@@ -1587,34 +1587,76 @@ global void FillContentDefaults () {
 	Progress::Finish ();
 	return;
     }
-    // read the product info contained in release package
-    if (release_package != "")
+    string reldir   = tmpdir + "/release";
+    if (release_packages != [])
     {
-	string reldir	= tmpdir + "/release";
-	if (SCR::Execute (.target.mkdir, reldir) == true)
+	SCR::Execute (.target.mkdir, reldir);
+	// when release package is present, do not offer to change it
+	generate_release_package	= false;
+    }
+    list requireslist	= [];
+
+    // read the product info contained in release package
+    foreach (string release_package, release_packages, {
+	SCR::Execute (.target.bash,
+	    sformat ("cp %1 %2", release_package, reldir));
+	SCR::Execute (.target.bash,
+	    sformat ("cd %1; rpm2cpio %2 | cpio -imud 2>/dev/null", reldir,
+	    substring (release_package, findlastof(release_package, "/")+1))
+	);
+	out = (map) SCR::Execute (.target.bash_output, sformat (
+	    "ls -A1 %1/release/etc/products.d/*.prod 2>/dev/null", tmpdir));
+	list out_l	= splitstring (out["stdout"]:"", "\n");
+	string prod_file	= out_l[0]:""; // we care about the first one
+	if (prod_file == "")
 	{
-	    SCR::Execute (.target.bash,
-		sformat ("cp %1 %2", release_package, reldir));
-	    SCR::Execute (.target.bash,
-		sformat ("cd %1; rpm2cpio %2 | cpio -imud 2>/dev/null",
-		reldir,
-		substring (release_package, findlastof(release_package, "/")+1))
-	    );
+	    // release package does not contain .prod, it may be flavor package:
+	    // check for product dependencies
+	    // rpm -qp --requires `path to rpm` | grep product
 	    out = (map) SCR::Execute (.target.bash_output, sformat (
-		"ls -A1 %1/release/etc/products.d/*.prod 2>/dev/null", tmpdir));
-	    list out_l	= splitstring (out["stdout"]:"", "\n");
-	    string prod_file	= out_l[0]:""; // we care about the first one
-
-	    // when release package is present, do not offer to change it
-	    generate_release_package	= false;
-
-	    y2milestone ("reading product info from %1", prod_file);
-	    // read the prod file info and add it into the template
-	    product_xml	= ReadProductXML (prod_file);
-
-	    // translate product_xml map into product_info
-	    product_info	= GetProductInfo (product_xml, true);
+		"rpm -qp --requires %1 | grep \"product(.*)\"",
+		release_package));
+	    // line is e.g. 'product(SUSE_SLED-SP3-dvd5) = 11-2', which means
+	    // name-SPpatchlevel-flavor flag version-release, where
+	    // only name, flag and version are mandatory
+	    string re	= "^product[\(]+([^-]*)[-]*(SP[0-9]*)*[-]*([^-]*)[\)]+[ \t]*([<=>]+)[ \t]*([0-9]*)[-]*(.*)$";
+	    foreach (string prodline, splitstring (out["stdout"]:"", "\n"), {
+		if (prodline == "") return;
+		list tokens	= regexptokenize (prodline, re);
+		// = ["SUSE_SLED","SP3","dvd5","=","11","2"] for above example
+		string flag	= "EQ";
+		if (tokens[3]:"" == ">")
+		    flag	= "GE";
+		else if (tokens[3]:"" == "<")
+		    flag	= "LT";
+		map requiremap	= $[
+		    "name"	: tokens[0]:"",
+		    "version"	: tokens[4]:"",
+		    "flag"	: flag
+		];
+		if (tokens[1]:"" != "")
+		    requiremap["patchlevel"]	= substring (tokens[1]:"", 2);
+		if (tokens[2]:"" != "")
+		    requiremap["flavor"]	= tokens[2]:"";
+		if (tokens[5]:"" != "")
+		    requiremap["release"]	= tokens[5]:"";
+		y2debug ("requiremap: %1", requiremap);
+		requireslist	= add (requireslist, requiremap);
+	    });
+	    return;
 	}
+
+	y2milestone ("reading product info from %1", prod_file);
+	// read the prod file info and add it into the template
+	product_xml	= ReadProductXML (prod_file);
+
+	// translate product_xml map into product_info
+	product_info	= GetProductInfo (product_xml, true);
+    });
+    if (requireslist != [])
+    {
+	product_info["requires"]	= product_info_descr["requires"]:$[];
+	product_info["requires","value"]= requireslist;
     }
 
     // generate tmp package descriptions...
@@ -2171,13 +2213,9 @@ global boolean GenerateReleasePackage (string base_path) {
     submap["version",0, content_key]	= content_map["VERSION"]:"1.0";
     submap["vendor",0, content_key]	= content_map["VENDOR"]:"";
 
-    if (product_info["summary","value"]:"" == "")
-	product_info["summary","value"]	= name;
-
-    if (product_info["release","value"]:"" == "")
-	product_info["release","value"]	= "0";
-
     foreach (string key, ["release", "summary", "description"], {
+	if (product_info[key,"value"]:"" == "")
+	    product_info[key,"value"]	= (key == "release") ? "0" : name;
 	submap[key,0,content_key]=product_info[key,"value"]:"";
     });
 
@@ -2302,6 +2340,8 @@ global boolean GenerateReleasePackage (string base_path) {
 	SCR::Execute (.target.bash, sformat ("/bin/cp -r %1 '%2/%3'",
 	    package_path, full_data_path, arch));
     });
+import "Popup";
+Popup::Message ("built");
     // 5. delete the tmp files, so it doesn't mess possible next builds
     SCR::Execute (.target.remove, prod_file_path);
     SCR::Execute (.target.bash, sformat ("rm -rf '%1'", product_dir));
@@ -2779,9 +2819,16 @@ global void CommitCurrentProduct () {
 
     y2milestone ("saving current product to the global list");
 
+    map product_info_values	= $[];
+    foreach (string key, map desc, product_info, {
+	if (desc["value"]:nil != nil)
+	    product_info_values[key]	= $[
+		"value"	: desc["value"]:nil,
+	    ];
+    });
     map modified_product	= union (current_product, $[
 	"content_map"		: content_map,
-	"product_info"		: product_info,
+	"product_info_values"	: product_info_values,
 	"generate_release_package"	: generate_release_package,
 	"available_packages"	: available_packages,
 	"arch_directories"	: arch_directories,
@@ -2809,7 +2856,16 @@ global void SelectProduct (map product) {
 
     current_product	= product;
     content_map		= product["content_map"]:$[];
-    product_info	= product["product_info"]:$[];
+    map product_info_values	= product["product_info_values"]:$[];
+
+    foreach (string key, map desc, product_info_descr, {
+	if (product_info_values[key,"value"]:nil != nil)
+	{
+	    desc["value"]	= product_info_values[key,"value"]:nil;
+	}
+	product_info[key]	= desc;
+    });
+
     generate_release_package	= product["generate_release_package"]:false;
 
     // generate content from content_map
