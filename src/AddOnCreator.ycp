@@ -1582,6 +1582,25 @@ global void FillContentDefaults () {
 	}
 	Progress::NextStage();
     }
+    // we want to find and read release packages for cloned product
+    else {
+	out	= (map) SCR::Execute (.target.bash_output,
+	    sformat ("find %1 -name '*-release*'", rpm_path));
+	foreach (string f, splitstring (out["stdout"]:"", "\n"), {
+	    if (f == "") return;
+	    out = (map) SCR::Execute (.target.bash_output,
+	        sformat ("rpm -q -p %1 --qf \"%%{NAME}\n%%|SOURCERPM?{bin}:{src}|\"",f));
+	    list lines		= splitstring (out["stdout"]:"", "\n");
+	    string name		= lines[0]:"";
+	    string sourcerpm	= lines[1]:"";
+	    if (sourcerpm != "src" && name != "" &&
+		size (name) > 8 && issubstring (name, "-release"))
+	    {
+		y2milestone ("release package found: %1, %2", name, f);
+		release_packages	= add (release_packages, f);
+	    }
+	});
+    }
     if (rpm_path == "")
     {
 	Progress::Finish ();
@@ -1590,7 +1609,6 @@ global void FillContentDefaults () {
     string reldir   = tmpdir + "/release";
     if (release_packages != [])
     {
-	SCR::Execute (.target.mkdir, reldir);
 	// when release package is present, do not offer to change it
 	generate_release_package	= false;
     }
@@ -1598,6 +1616,9 @@ global void FillContentDefaults () {
 
     // read the product info contained in release package
     foreach (string release_package, release_packages, {
+	// use 'reldir' only for one package
+	SCR::Execute (.target.bash, "rm -rf " + reldir);
+	SCR::Execute (.target.mkdir, reldir);
 	SCR::Execute (.target.bash,
 	    sformat ("cp %1 %2", release_package, reldir));
 	SCR::Execute (.target.bash,
@@ -1640,7 +1661,7 @@ global void FillContentDefaults () {
 		    requiremap["flavor"]	= tokens[2]:"";
 		if (tokens[5]:"" != "")
 		    requiremap["release"]	= tokens[5]:"";
-		y2debug ("requiremap: %1", requiremap);
+		y2milestone ("requiremap: %1", requiremap);
 		requireslist	= add (requireslist, requiremap);
 	    });
 	    return;
@@ -2293,7 +2314,8 @@ global boolean GenerateReleasePackage (string base_path) {
 
     // 2. call bs_productconvert to generate a spec file for -release package
     map out	= (map) SCR::Execute (.target.bash_output, sformat (
-	"bs_productconvert %1 %2 %3", prod_file_path, product_dir, name));
+	"/usr/lib/obs/server/bs_productconvert %1 %2 %3",
+	prod_file_path, product_dir, name));
 
     // 3. build the release package from generated .spec file
     string cmd	= sformat (
