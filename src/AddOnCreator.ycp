@@ -116,6 +116,8 @@ global map current_product		= $[
     "resign_packages"	: false,
     // current GPG key
     "gpg_key"		: "",
+    // if we should generate -release package containing .prod file
+    "generate_release_package"	: true,
 ];
 
 // skeleton for current_product map (with keys and default values)
@@ -745,9 +747,6 @@ global boolean merge_patterns			= false;
 // if package description files should be compressed
 global boolean compress_package_descriptions	= false;
 
-// if we should generate -release package containing .prod file
-global boolean generate_release_package		= true;
-
 /**
  * Data was modified?
  */
@@ -850,7 +849,7 @@ global map<string,map> GetProductInfo (map xml, boolean merge_with_current) {
 		    else
 			// manual modifications present -> generate
 			// this is used when product xml was read from rpm
-			generate_release_package	= true;
+			current_product["generate_release_package"]	= true;
 		}
 		else
 		    retmap[key,"value"]       = val;
@@ -1610,7 +1609,7 @@ global void FillContentDefaults () {
     if (release_packages != [])
     {
 	// when release package is present, do not offer to change it
-	generate_release_package	= false;
+	current_product["generate_release_package"]	= false;
     }
     list requireslist	= [];
 
@@ -2207,7 +2206,7 @@ global boolean CopyRPMs (string in_path, string base_path) {
  */
 global boolean GenerateReleasePackage (string base_path) {
 
-    if (!generate_release_package)
+    if (!current_product["generate_release_package"]:false)
     {
 	y2milestone ("release package should not be generated");
 	return true;
@@ -2227,7 +2226,12 @@ global boolean GenerateReleasePackage (string base_path) {
     // write the result into temporary .prod file
     string name	= content_map["NAME"]:"add-on";
 
-    map submap	= product_xml["product",0]:$[];
+    map submap		= product_xml;
+    if (size (product_xml["productdefinition",0,"products"]:[]) > 0)
+    {
+	submap		= product_xml["productdefinition",0,"products",0]:$[];
+    }
+    submap		= submap["product",0]:$[];
 
     submap["id"]			= name;
     submap["name",0, content_key]	= name;
@@ -2362,8 +2366,6 @@ global boolean GenerateReleasePackage (string base_path) {
 	SCR::Execute (.target.bash, sformat ("/bin/cp -r %1 '%2/%3'",
 	    package_path, full_data_path, arch));
     });
-import "Popup";
-Popup::Message ("built");
     // 5. delete the tmp files, so it doesn't mess possible next builds
     SCR::Execute (.target.remove, prod_file_path);
     SCR::Execute (.target.bash, sformat ("rm -rf '%1'", product_dir));
@@ -2851,7 +2853,6 @@ global void CommitCurrentProduct () {
     map modified_product	= union (current_product, $[
 	"content_map"		: content_map,
 	"product_info_values"	: product_info_values,
-	"generate_release_package"	: generate_release_package,
 	"available_packages"	: available_packages,
 	"arch_directories"	: arch_directories,
 	"package2filename"	: package2filename,
@@ -2887,8 +2888,6 @@ global void SelectProduct (map product) {
 	}
 	product_info[key]	= desc;
     });
-
-    generate_release_package	= product["generate_release_package"]:false;
 
     // generate content from content_map
     content	= [];

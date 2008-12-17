@@ -693,7 +693,8 @@ any ContentFileDialog() {
     list<map> content		= AddOnCreator::content;
     map product_xml		= $[]; // used only when imported
     map<string,map>product_info	= AddOnCreator::product_info;
-    boolean generate_release_package	=AddOnCreator::generate_release_package;
+    boolean generate_release_package	=
+	current_product["generate_release_package"]:false;
     integer linguas_entry	= -1;
 
     // generate items for content file table
@@ -937,7 +938,8 @@ any ContentFileDialog() {
 	    if (product_xml != $[])
 		AddOnCreator::product_xml	= product_xml;
 	    AddOnCreator::product_info	= product_info;
-	    AddOnCreator::generate_release_package = generate_release_package;
+	    AddOnCreator::current_product["generate_release_package"] =
+		generate_release_package;
 	    break;
 	}
 	else if(ret == `abort || ret == `cancel) {
