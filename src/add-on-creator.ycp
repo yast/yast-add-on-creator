@@ -146,6 +146,22 @@ boolean Create (map<string,any> options ) {
 		return false;
 	}
     }
+    if (haskey (options, "product_file"))
+    {
+	string file	= options["product_file"]:"";
+	if (FileUtils::Exists (file))
+	{
+	    AddOnCreator::product_xml	=
+		AddOnCreator::ReadProductXML (file);
+	    AddOnCreator::product_info	=
+		AddOnCreator::GetProductInfo (AddOnCreator::product_xml, false);
+	}
+	else
+	{
+	    ReportMissingFile (file);
+	    return false;
+	}
+    }
     if (haskey (options, "package_descriptions_dir"))
     {
 	string dir	= options["package_descriptions_dir"]:"";
@@ -320,6 +336,11 @@ boolean Create (map<string,any> options ) {
     }
     current_product["changelog"]	= haskey (options, "changelog");
 
+    current_product["generate_release_package"]		= true;
+    if (haskey (options, "no_release_package"))
+    {
+	current_product["generate_release_package"]	= false;
+    }
     if (!haskey (options, "do_not_sign"))
     {
 	current_product     = union (current_product, ParseGPGData (options));
@@ -495,7 +516,12 @@ boolean BuildAddOnHandler (map<string,any> options) {
     if (haskey (options, "changelog"))
 	product["changelog"]	= true;
 
+    // CLI option could replace the saved one
+    if (haskey (options, "no_release_package"))
+	product["generate_release_package"]	= false;
+
     AddOnCreator::SelectProduct (product);
+
     AddOnCreator::PrepareBuild ();
     AddOnCreator::BuildAddOn ();
     return false;
@@ -686,6 +712,15 @@ map cmdline_description = $[
 	    // command line help text for 'changelog' option
 	    "help"	: _("Generate a Changelog file."),
 	],
+	"no_release_package"	: $[
+	    // command line help text for 'no_release_package' option
+	    "help"	: _("Do not generate the release package"),
+	],
+	"product_file"	: $[
+	    // command line help text for 'product_file' option
+	    "help"	: _("Path to file with the product description (*.prod)"),
+	    "type"	: "string",
+	],
     ],
     "mappings"		: $[
 	"create"	: [ "content", "rpm_dir", "package_descriptions_dir",
@@ -693,7 +728,7 @@ map cmdline_description = $[
 	    "passphrase", "passphrase_file", "workflow", "y2update",
 	    "y2update_packages_dir", "license", "do_not_sign", "iso_output_dir",
 	    "resign_packages", "info", "extra_prov", "do_not_build",
-	    "changelog",
+	    "changelog", "no_release_package", "product_file",
 	],
 	"clone"		: [ "existing", "generate_descriptions", "content",
 	    "package_descriptions_dir", "patterns_dir", "output_dir",
@@ -701,7 +736,7 @@ map cmdline_description = $[
 	    "gpg_key", "passphrase", "passphrase_file", "workflow", "y2update",
 	    "y2update_packages_dir", "license", "do_not_sign", "iso_output_dir",
 	    "resign_packages", "info", "extra_prov", "do_not_build",
-	    "changelog",
+	    "changelog", "no_release_package", "product_file",
 	],
 	"sign"		: [ "addon_dir", "gpg_key", "passphrase",
 	    "passphrase_file", "create_iso", "iso_name", "iso_output_dir",
@@ -710,7 +745,7 @@ map cmdline_description = $[
 	"build"		: [
 	    "number", "gpg_key", "passphrase", "passphrase_file",
 	    "resign_packages", "create_iso", "iso_name", "iso_output_dir",
-	    "changelog",
+	    "changelog", "no_release_package",
 	],
 	"delete"	: [
 	    "number"
