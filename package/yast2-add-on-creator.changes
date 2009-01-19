@@ -1,4 +1,14 @@
 -------------------------------------------------------------------
+Mon Jan 19 15:52:12 CET 2009 - jsuchome@suse.cz
+
+- generate package metadata for -release packages (bnc#466327)
+
+-------------------------------------------------------------------
+Wed Jan 14 09:02:42 CET 2009 - jsuchome@suse.cz
+
+- fixed missing translation mark (bnc#464479)
+
+-------------------------------------------------------------------
 Wed Dec 17 21:21:18 CET 2008 - jsuchome@suse.cz
 
 - added CLI support for product file (disable generating, offer
