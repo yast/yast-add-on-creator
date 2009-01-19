@@ -2216,9 +2216,11 @@ global boolean GenerateReleasePackage (string base_path) {
 	y2error ("obs-productconverter not installed, not generating -release");
 	return false;
     }
-    if (!FileUtils::Exists (base_path))
+    if (!FileUtils::Exists (full_data_path))
+    {
+	y2error ("path '%1' does not exist", full_data_path);
 	return false;
-
+    }
     // release packages names and architectures
     map<string,string> release_packages	= $[];
 
@@ -2321,17 +2323,17 @@ global boolean GenerateReleasePackage (string base_path) {
 	"/usr/lib/obs/server/bs_productconvert %1 %2 %3",
 	prod_file_path, product_dir, name));
 
-    // 3. build the release package from generated .spec file
-    string cmd	= sformat (
-	"rpmbuild -bb `find -L %1 -name %2-release.spec`", tmpdir, name);
-
     if (out["exit"]:0 != 0)
     {
-	y2error ("rpmbuild failed with %1", out["stderr"]:"");
+	y2error ("bs_productconvert failed with %1", out["stderr"]:"");
 	SCR::Execute (.target.remove, prod_file_path);
 	SCR::Execute (.target.bash, sformat ("rm -rf '%1'", product_dir));
 	return false;
     }
+
+    // 3. build the release package from generated .spec file
+    string cmd	= sformat (
+	"rpmbuild -bb `find -L %1 -name %2-release.spec`", tmpdir, name);
 
     out     = (map) SCR::Execute (.target.bash_output, cmd, $["LANG":"C"]);
     if (out["exit"]:0 != 0)
@@ -2366,7 +2368,15 @@ global boolean GenerateReleasePackage (string base_path) {
 	SCR::Execute (.target.bash, sformat ("/bin/cp -r %1 '%2/%3'",
 	    package_path, full_data_path, arch));
     });
-    // 5. delete the tmp files, so it doesn't mess possible next builds
+    // 5. generate metadata for new package
+    y2milestone("updating packages descriptions after adding release packages");
+    cmd = sformat("/usr/bin/create_package_descr -d %1 -C -F -o %2",
+	full_data_path, tmpdir);
+    if (SCR::Execute (.target.bash, cmd, $["LANG":"C"]) != 0)
+    {
+	y2error ("'%1' failed", cmd);
+    }
+    // 6. delete the tmp files, so it doesn't mess possible next builds
     SCR::Execute (.target.remove, prod_file_path);
     SCR::Execute (.target.bash, sformat ("rm -rf '%1'", product_dir));
     return true;

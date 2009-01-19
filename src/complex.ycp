@@ -1487,7 +1487,7 @@ any PackagesDialog() {
 	`HBox (
 	    `InputField (`id (`extra_prov), `opt (`hstretch),
 		// textentry label
-		("Location of the File with Additional &Dependencies"),
+		_("Location of the File with Additional &Dependencies"),
 		current_product["extra_prov_file"]:""),
 	    `VBox (
 		`Label (""),
