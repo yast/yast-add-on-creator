@@ -775,7 +775,7 @@ any ContentFileDialog() {
 	`VSpacing (0.4),
 	`Left (`CheckBox (`id (`release_package), `opt (`notify),
 	    // check box label
-	    ("Generate Release Package"), generate_release_package)
+	    _("Generate Release Package"), generate_release_package)
 	),
 	// label
 	`Left (`Label (_("Product File"))),
