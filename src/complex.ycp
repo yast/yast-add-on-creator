@@ -215,18 +215,10 @@ any SourcesDialog() {
 			// radio button label
 			_("SUSE Linux &Enterprise Server 10"),
 			requires == "sles-release-10")),
-		    `Left (`RadioButton(`id(`sles10sp1), `opt (`notify),
-			// radio button label
-			_("SUSE &Linux Enterprise Server 10 SP1"),
-			requires == "product:SUSE_SLES = 10.1")),
 		    `Left (`RadioButton(`id(`sled10), `opt (`notify),
 			// radio button label
 			_("SUSE Linux Enterprise &Desktop 10"),
 			requires == "sled-release-10")),
-		    `Left (`RadioButton(`id(`sled10sp1), `opt (`notify),
-			// radio button label
-			_("SUSE L&inux Enterprise &Desktop 10 SP1"),
-			requires == "product:SUSE_SLED = 10.1")),
 		    `Left (`RadioButton(`id(`sle10sp1), `opt (`notify),
 			// radio button label
 			_("S&USE Linux Enterprise 10 SP1"),
@@ -235,6 +227,10 @@ any SourcesDialog() {
 			// radio button label
 			_("S&USE Linux Enterprise 10 SP2"),
 			requires == "product:SUSE_SLE = 10.2")),
+		    `Left (`RadioButton(`id(`sle10sp3), `opt (`notify),
+			// radio button label
+			_("S&USE Linux Enterprise 10 SP3"),
+			requires == "product:SUSE_SLE = 10.3")),
 		    `HBox (
 			`Left(`RadioButton(`id(`other), `opt (`notify),
 			    // radio button label
@@ -313,16 +309,8 @@ any SourcesDialog() {
 	    requires	= "sles-release-10";
 	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
 	}
-	else if (ret == `sles10sp1) {
-	    requires	= "product:SUSE_SLES = 10.1";
-	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
-	}
 	else if (ret == `sled10) {
 	    requires	= "sled-release-10";
-	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
-	}
-	else if (ret == `sled10sp1) {
-	    requires	= "product:SUSE_SLED = 10.1";
 	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
 	}
 	else if (ret == `sle10sp1) {
@@ -331,6 +319,10 @@ any SourcesDialog() {
 	}
 	else if (ret == `sle10sp2) {
 	    requires = "product:SUSE_SLE = 10.2";
+	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
+	}
+	else if (ret == `sle10sp3) {
+	    requires = "product:SUSE_SLE = 10.3";
 	    UI::ChangeWidget (`id(`other_val), `Enabled, false);
 	}
 	else if (ret == `suse101) {

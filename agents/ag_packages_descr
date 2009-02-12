@@ -30,6 +30,7 @@ sub parse_file {
     my $multiline_key	= "";
     my $multiline_val	= "";
     %description	= ();
+    $version            = "";
 
     foreach my $line (<PACKAGES>) {
 	chomp $line;
@@ -47,7 +48,9 @@ sub parse_file {
 		if ($key eq "Ver") {
 		    $version	= $val;
 		}
-		$description{$pkg_name}{$key}	= $val;
+		else {
+		    $description{$pkg_name}{$key}	= $val;
+		}
 	    }
 	}
 	elsif ($line =~ /^\+([\w]+):.*/) {
@@ -88,9 +91,11 @@ sub write_file {
 	$err_no	= 11;
         return 0;
     }
+    my $cont    = "";
+    # version must be on top (bnc#384835)
+    $cont       = "=Ver: $version\n" if $version;
     # sort order: system items go before local ones
     foreach my $pkg_name (sort keys %{$descr}) {
-	my $cont	= "";
 	my $data	= $descr->{$pkg_name};
 	next if (ref $data ne "HASH");
 	if ($pkg_name ne "___global___") {
@@ -111,8 +116,8 @@ sub write_file {
 		$cont	= $cont."=$key: $val\n";
 	    }
 	}
-	print PACKAGES $cont;
     }
+    print PACKAGES $cont;
     close PACKAGES;
     return 1;
 }

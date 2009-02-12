@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Thu Feb 12 11:10:16 CET 2009 - jsuchome@suse.cz
+
+- version tag must be at first place in package description file
+  (bnc#384835)
+- offered SLE10SP3 products as a base for new AddOn, removed SP1
+- 2.13.30
+
+-------------------------------------------------------------------
 Fri Apr  4 09:45:21 CEST 2008 - jsuchome@suse.cz
 
 - offered SLE10SP2 products as a base for new AddOn
