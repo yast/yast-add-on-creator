@@ -156,7 +156,7 @@ map<string,map> content_descr	= $[
 	    // label of content file BASEARCHS key
 	    "label"	: _("Product architectures"),
 	    // help text for content file 'BASEARCHS' key
-	    "help"	: _("Space-separated list of product architectures for. Matches the available product-release packages architectures. "),
+	    "help"	: _("Space-separated list of product architectures. Matches the available product-release packages architectures. "),
 	    "mandatory"	: true
     ],
     "VERSION"	: $[
