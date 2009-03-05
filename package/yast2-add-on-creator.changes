@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu Mar  5 13:40:08 CET 2009 - jsuchome@suse.cz
+
+- fixed distribution name: OpenSUSE -> openSUSE (bnc#479737)
+- 2.18.1
+
+-------------------------------------------------------------------
 Mon Jan 19 15:52:12 CET 2009 - jsuchome@suse.cz
 
 - generate package metadata for -release packages (bnc#466327)

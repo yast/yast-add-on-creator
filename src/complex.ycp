@@ -376,12 +376,6 @@ any SourcesDialog() {
 
     map current_product		= AddOnCreator::current_product;
 
-    /*
-    string requires	= AddOnCreator::product_info["requires","value"]:"";
-    if (requires == "")
-	requires	= "openSUSE-release = 11.1";
-    */
-
     // try to read existing product dependency and transform it to one string
     // easily understanable
     list requres_l	= AddOnCreator::product_info["requires","value"]:[];
@@ -390,20 +384,7 @@ any SourcesDialog() {
     string requires	= "";
     if (requires_m["name"]:"" != "")
 	requires	= sformat ("%1-%2", requires_m["name"]:"", requires_m["version"]:"");
-    else
-    {
-	/* TODO read current product infow:
-jsuchome@rivendell:~> more /etc/SuSE-release
-openSUSE 11.1 Beta 3 (i586)
-VERSION = 11.1
 
-dhcp86:~ # more /etc/SuSE-release
-SUSE Linux Enterprise Server 11 (x86_64)
-VERSION = 11
-PATCHLEVEL = 0
-	*/
-
-    }
     string requires_orig	= requires;
 
     string old_dir	= current_product["rpm_path"]:"";
@@ -446,15 +427,14 @@ PATCHLEVEL = 0
 			// radio button label
 			_("S&USE Linux Enterprise 11"),
 			requires == "SUSE_SLE-11")),
-		    `Left (`RadioButton(`id("openSUSE-11.1"), `opt (`notify),
+		    `Left (`RadioButton(`id("openSUSE-11.2"), `opt (`notify),
 			// radio button label
-			_("OpenSUSE &11.1"),
-			requires == "openSUSE-11.1")),
+			_("openSUSE &11.2"),
+			requires == "openSUSE-11.2")),
 		    `HBox (
 			`Left(`RadioButton(`id(`other), `opt (`notify),
 			    // radio button label
 			    _("&Other")))
-//			`InputField (`id(`other_val), "")
 		    )
 		)))
 	    ),
@@ -493,12 +473,7 @@ PATCHLEVEL = 0
     {
 	UI::ChangeWidget (`id(`rd), `Value, `other);
 	requires	= ""; // empty string means other than predefined values
-//	UI::ChangeWidget (`id(`other_val), `Value, requires);
     }
-    /*
-    UI::ChangeWidget (`id(`other_val), `Enabled,
-	UI::QueryWidget (`id(`rd), `Value) == `other);
-    */
 
     any ret = nil;
 
