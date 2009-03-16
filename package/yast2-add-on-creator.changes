@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Mon Mar 16 14:27:06 CET 2009 - jsuchome@suse.cz
+
+- create new checksum of package metadata after signing packages
+  (bnc#484695) 
+- 2.18.2
+
+-------------------------------------------------------------------
 Thu Mar  5 13:40:08 CET 2009 - jsuchome@suse.cz
 
 - fixed distribution name: OpenSUSE -> openSUSE (bnc#479737)
