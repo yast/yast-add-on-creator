@@ -2554,7 +2554,7 @@ global boolean CreateMD5SUMS (string base_path) {
     // sha1sums of descriptions
     map out = (map) SCR::Execute (.target.bash_output, sformat ("ls -A1 '%1'", full_descr_path));
     foreach (string file, splitstring (out["stdout"]:"", "\n"), {
-	if (file == "") return;
+	if (file == "" || file == "MD5SUMS") return;
 	y2milestone ("creating sha1sum of %1", file);
 	out = (map) SCR::Execute (.target.bash_output,
 	    sformat ("cd '%1' && sha1sum -- %2", full_descr_path, String::Quote (file)),
@@ -2706,6 +2706,7 @@ global boolean SignAddOn (string base_path, string key) {
 		}
 	    }
 	    SCR::Execute (.target.remove, pw_path);
+	    y2milestone ("correct passphrase not provided");
 	    return false;
 	}
 	else break;
@@ -2734,7 +2735,7 @@ global boolean SignAddOn (string base_path, string key) {
 	});
 	y2milestone ("... done");
 	SCR::Execute (.target.bash, sformat ("rm %1", expect));
-	// after signing packages checksums have changed:
+	// after signing packages checksums have been changed:
 	// run create_package_descr again and take new 'packages' file
 	y2milestone ("updating packages descriptions...");
 	string cmd = sformat("/usr/bin/create_package_descr -d %1 -C -F -o %2",
@@ -2748,12 +2749,47 @@ global boolean SignAddOn (string base_path, string key) {
 		SCR::Execute (.target.bash,
 		    sformat ("gzip %1/packages", full_descr_path));
 	    }
+	    // ... don't forget to update checksums of new packages file (bnc#484695)
+	    // 1. MD5SUMS in DESCR directory (probably obsolete anyway)
+	    SCR::Execute (.target.bash, sformat ("rm -f %1/MD5SUMS", full_descr_path));
+	    cmd	= sformat("cd '%1'; md5sum -- * > MD5SUMS", full_descr_path);
+	    out = (map)SCR::Execute (.target.bash_output, cmd, $["LANG":"C"]);
+	    if (out["exit"]:0 != 0)
+		y2error ("'%1' failed: %2", cmd, out);
+	    // 2. SHA1SUM of 'packages' belongs to content file
+	    string file	= compress_package_descriptions ? "packages.gz" : "packages";
+	    out = (map) SCR::Execute (.target.bash_output,
+		sformat ("cd '%1' && sha1sum -- %2", full_descr_path, String::Quote (file)),
+		$["LANG" : "C"]);
+	    string sha1sum	= deletechars (out["stdout"]:"", "\n");
+	    cmd	= sformat ("sed --in-place 's/^META SHA1 .* %1$/META SHA1 %2/' %3/content",
+		file, sha1sum, base_path);
+	    out	= (map) SCR::Execute (.target.bash_output, cmd, $["LANG" : "C"]);
+	    if (out["exit"]:0 != 0)
+		y2error ("'%1' failed: %2", cmd, out);
+	    else
+	    {
+		y2milestone ("'content' modified, signing it again...");
+		// 3. finally, sign the content file again...
+		// (alternatively, content could be signed as the last step,
+		// but there's some nice functionality to really ask for correct password
+		// at the beginning of the function...)
+		SCR::Execute (.target.bash, sformat ("rm -f '%1/content.asc'",
+		    base_path));
+		cmd	= sformat (
+		    "gpg --batch --no-tty --passphrase-fd 0 --detach-sign -u %1 -a '%2/content' < %3",
+		    local_key, base_path, pw_path);
+		out	= (map) SCR::Execute (.target.bash_output, cmd, $["LANG" : "C"]);
+		if (out["exit"]:0 != 0)
+		    y2error ("'%1' failed: %2", cmd, out);
+		y2milestone ("... done");
+	    }
 	}
 	else
 	{
 	    y2warning ("'%1' failed", cmd);
 	}
-	y2milestone ("... done");
+	y2milestone ("... done (packages descriptions)");
     }
 
     // sign products file
