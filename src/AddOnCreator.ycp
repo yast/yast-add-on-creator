@@ -1210,15 +1210,15 @@ global boolean ImportExistingProduct (string dir_path) {
 	foreach (map pat, ReadPatternsFile (f), {
 	    if (pat != $[])
 	    {
-		list<string> pt	= splitstring (pat["Pat"]:"", " ");
-		string name	= pt[0]:"";
-		if (name != "")
+		string full_name	= pat["Pat"]:"";
+		list<string> pt		= splitstring (full_name, " ");
+		if (full_name != "")
 		{
-		    pat["name"]		= name;
+		    pat["name"]		= pt[0]:"";
 		    pat["version"]	= pt[1]:"";
 		    pat["release"]	= pt[2]:"";
 		    pat["arch"]		= pt[3]:"";
-		    patterns[name]	= pat;
+		    patterns[full_name]	= pat;
 		}
 	    }
 	});
@@ -2083,7 +2083,7 @@ global boolean WritePatterns (string descr_path, string base_path) {
 
     boolean ret		= true;
     list<string> names	= [];
-    foreach (string name, map pattern, current_product["patterns"]:$[], {
+    foreach (string full_name, map pattern, current_product["patterns"]:$[], {
 	string filename	= CreatePatternFullName (pattern, true);
 	if (filename == "")
 	    return;
@@ -2322,7 +2322,6 @@ global boolean GenerateReleasePackage (string base_path) {
     map out	= (map) SCR::Execute (.target.bash_output, sformat (
 	"/usr/lib/obs/server/bs_productconvert %1 %2 %3",
 	prod_file_path, product_dir, name));
-
     if (out["exit"]:0 != 0)
     {
 	y2error ("bs_productconvert failed with %1", out["stderr"]:"");
@@ -2334,7 +2333,6 @@ global boolean GenerateReleasePackage (string base_path) {
     // 3. build the release package from generated .spec file
     string cmd	= sformat (
 	"rpmbuild -bb `find -L %1 -name %2-release.spec`", tmpdir, name);
-
     out     = (map) SCR::Execute (.target.bash_output, cmd, $["LANG":"C"]);
     if (out["exit"]:0 != 0)
     {

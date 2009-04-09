@@ -28,7 +28,7 @@ string create_full_name (map pattern) {
 
 
 // new pattern map - maybe add default values to pattern_descr map?
-map new_pattern (string name) {
+map new_pattern_old (string name) {
     map ret = mapmap (string key, map descr, (map<string,map>)pattern_descr, {
 	return $[ key : haskey (descr, "defval") ? descr["defval"]:nil : "" ];
     });
@@ -37,45 +37,74 @@ map new_pattern (string name) {
     return ret;
 }
 
+// new pattern map - maybe add default values to pattern_descr map?
+map new_pattern (map pattern) {
+    map ret = mapmap (string key, map descr, (map<string,map>)pattern_descr, {
+	return $[ key : haskey (descr, "defval") ? descr["defval"]:nil : "" ];
+    });
+    foreach (string key, any val, (map<string,any>) pattern, {
+	ret[key]	= val;
+    });
+    ret["Pat"]	= create_full_name (ret);
+    return ret;
+}
+
 // add new pattern: get the identification (currently only name)
 // return its name
-string AddPattern (list<string> conflicts) {
+//string AddPattern (list<string> conflicts) {
+map AddPattern (map<string,list> conflicts) {
 
-    string ret	= nil;
+    map ret	= $[];
 
-    UI::OpenDialog( `opt(`decorated), `HBox(
-	`HSpacing(1),
-	`VBox(
+    UI::OpenDialog( `opt(`decorated), `HBox (`HSpacing(1), `VBox (
+	`HBox (
 	    // text entry label
-	    `TextEntry (`id (`patname), _("&Name of the New Pattern")),
-	    `HBox(
-		`PushButton(`id(`ok),`opt(`default,`key_F10),Label::OKButton()),
-		`PushButton(`id(`cancel),`opt (`key_F9), Label::CancelButton())
+	    `InputField (`id ("name"), `opt (`hstretch), _("&Name of the New Pattern")),
+	    // combo box label
+	    `ComboBox (`id ("arch"), _("&Architecture"),
+		maplist (string v, pattern_descr["arch","allowed_values"]:[], ``(v))
 	    )
 	),
-	`HSpacing(1)
-    ));
-    UI::SetFocus (`id(`patname));
-    UI::ChangeWidget (`id (`patname), `ValidChars, String::CAlnum () + "-_=.");
+	`HBox (
+	    // text entry label
+	    `InputField (`id ("version"), `opt (`hstretch), _("&Version")),
+	    // text entry label
+	    `InputField (`id ("release"), `opt (`hstretch), _("&Release"))
+	),
+	`ButtonBox (
+	    `PushButton(`id(`ok),`opt(`default,`key_F10),Label::OKButton()),
+	    `PushButton(`id(`cancel),`opt (`key_F9), Label::CancelButton())
+	)
+    ), `HSpacing(1)));
+    UI::SetFocus (`id("name"));
+    UI::ChangeWidget (`id ("name"), `ValidChars, String::CAlnum () + "-_=.");
     while (true)
     {
 	any result = UI::UserInput ();
 	if (result == `cancel)
 	{
-	    ret	= nil;
 	    break;
 	}
 	if (result == `ok)
 	{
-	    ret	= (string)UI::QueryWidget (`id(`patname),`Value);
-	    if (contains (conflicts, ret))
+	    string name	= (string) UI::QueryWidget (`id ("name"), `Value);
+	    string arch	= (string) UI::QueryWidget (`id ("arch"), `Value);
+	    if (name == "")
+	    {
+		break;
+	    }
+	    if (contains (conflicts[name]:[], arch))
 	    {
 		// popup message
-		Popup::Error (_("A pattern with this name already exists.
-Choose a different one."));
-		ret	= nil;
+		Popup::Error (_("Such pattern already exists.
+Choose a different name or architecture."));
 		continue;
 	    }
+	    foreach (string key, ["name", "version", "release", "arch"], {
+		string val = (string) UI::QueryWidget (`id (key), `Value);
+		if (val != "")
+		    ret[key]	= val;
+	    });
 	    break;
 	}
     }
@@ -207,9 +236,10 @@ any PatternsDialog() {
     }
 
     list get_patterns_items () {
-	return maplist (string name, map pattern, patterns, ``(
-	    `item (`id(name), name, create_full_name (pattern))
-	));
+	return maplist (string name, map pattern, patterns, {
+	    string full_name	= create_full_name (pattern);
+	    return `item (`id (full_name), name, full_name);
+	});
     }
 
 
@@ -255,12 +285,13 @@ any PatternsDialog() {
     UI::SetFocus (`id(`patterns));
     string current_pattern =
 	(string)UI::QueryWidget (`id(`patterns),`CurrentItem);
+    map current_pattern_map	= patterns[current_pattern]:$[];
     if (patterns[current_pattern]:nil != nil)
     {
 	UI::ChangeWidget (`id(`pattern), `Items,
 	    get_pattern_items (patterns[current_pattern]:$[]));
 	UI::ChangeWidget (`id(`required), `Value,
-	    contains (proposed_patterns, current_pattern));
+	    contains (proposed_patterns, current_pattern_map["name"]:""));
     }
     foreach (symbol w, [ `delete_pt, `edit, `add, `delete, `required ], {
 	UI::ChangeWidget (`id (w), `Enabled, patterns != $[]);
@@ -271,14 +302,26 @@ any PatternsDialog() {
 
 	ret	= (symbol) UI::UserInput();
 
+	map<string,list> conflicts	= $[];
+	if (ret == `new_pt || ret == `edit || ret == `pattern)
+	{
+	    foreach (string pat, map p, patterns, {
+		string name	= p["name"]:"";
+		if (haskey (conflicts, name))
+		    conflicts[name]	= add (conflicts[name]:[], p["arch"]:"");
+		else
+		    conflicts[name]     = [ p["arch"]:"" ];
+	    });
+	}
 	if (ret == `new_pt) {
-	    string new_pt	= AddPattern (
-		maplist (string name, map p, patterns, ``(name)));
-	    if (new_pt != nil && new_pt != "")
+	    map new_pt	= AddPattern (conflicts);
+	    if (new_pt != $[])
 	    {
-		patterns[new_pt]	= new_pattern (new_pt);
+		new_pt			= new_pattern (new_pt);
+		string full_name	= new_pt["Pat"]:"";
+		patterns[full_name]	= new_pt;
 		UI::ChangeWidget(`id(`patterns),`Items, get_patterns_items());
-		UI::ChangeWidget(`id(`patterns),`CurrentItem, new_pt);
+		UI::ChangeWidget(`id(`patterns),`CurrentItem, full_name);
 	    }
 	}
 	else if (ret == `import_pt) {
@@ -289,22 +332,23 @@ any PatternsDialog() {
 	    if (file != nil)
 	    {
 		list<map> pats	= AddOnCreator::ReadPatternsFile (file);
-		string name	= "";
+		string full_name	= "";
 		foreach (map pat, pats, {
-		    list<string> pt	= splitstring (pat["Pat"]:"", " ");
-		    name	= pt[0]:"";
-		    if (name != "")
+		    full_name		= pat["Pat"]:"";
+		    list<string> pt	= splitstring (full_name, " ");
+		    if (full_name != "")
 		    {
-			pat["name"]		= name;
+			pat["name"]	= pt[0]:"";
 			pat["version"]	= pt[1]:"";
 			pat["release"]	= pt[2]:"";
-			pat["arch"]		= pt[3]:"";
-			patterns[name]	= pat;
+			pat["arch"]	= pt[3]:"";
+			patterns[full_name]	= pat;
+// FIXME if there is existing, with only release or version different, replace it
 		    }
 		});
 		UI::ChangeWidget(`id(`patterns), `Items, get_patterns_items());
-		if (name != "")
-		    UI::ChangeWidget(`id(`patterns), `CurrentItem, name);
+		if (full_name != "")
+		    UI::ChangeWidget(`id(`patterns), `CurrentItem, full_name);
 		import_path	= file;
 	    }
 	}
@@ -331,11 +375,12 @@ any PatternsDialog() {
 	    if (sel != current_pattern)
 	    {
 		current_pattern	= sel;
+		current_pattern_map	= patterns[current_pattern]:$[];
 		UI::ChangeWidget (`id(`pattern), `Items,
-		    get_pattern_items (patterns[current_pattern]:$[]));
+		    get_pattern_items (current_pattern_map));
 		UI::ChangeWidget (`id(`required), `Value,
 		    size (patterns) > 0 &&
-		    contains (proposed_patterns, sel));
+		    contains (proposed_patterns, current_pattern_map["name"]:""));
 	    }
 	}
 	else if (ret == `add) {
@@ -370,34 +415,62 @@ any PatternsDialog() {
 		pat["help"]	= pat["lang_help"]:pat["help"]:"";
 	    }
 
+	    map pattern		= patterns[sel]:$[];
+
 	    any val = EditValue (
-		union (pat, $[ "value" : patterns[sel,key]:nil ]),
+		union (pat, $[ "value" : pattern[key]:nil ]),
 		"pattern"
 	    );
 	    if (val != nil)
 	    {
-		patterns[sel,key]	= val;
+		if (key == "arch")
+		{
+		    boolean conflict	= false;
+		    foreach (string p, list archs, conflicts, {
+			if (contains (archs, val))
+			{
+			    conflict	= true;
+			    break;
+			}
+		    });
+		    if (conflict)
+		    {
+			// error message
+			Popup::Error (_("Such pattern already exists.
+Choose a different architecture."));
+			continue;
+		    }
+		}
+		else if (!pattern_descr[key,"adapt_name"]:false)
+		{
+		    patterns[sel,key]	= val;
+		}
 		UI::ChangeWidget(`id(`pattern),`Item(key,1),value2string (val));
 	    }
 	    if (pattern_descr[key,"adapt_name"]:false)
 	    {
-		string full_name	= create_full_name (patterns[sel]:$[]);
-		patterns[sel,"Pat"]	= full_name;
-		UI::ChangeWidget (`id(`patterns), `Item (sel,1), full_name);
+		// key in the map was changed, generate affected items again
+		pattern[key]		= val;
+		string full_name	= create_full_name (pattern);
+		pattern["Pat"]		= full_name;
+		patterns		= remove (patterns, sel);
+		patterns[full_name]	= pattern;
+		UI::ChangeWidget(`id(`patterns),`Items, get_patterns_items());
 	    }
 	    UI::SetFocus (`id(`pattern));
 	}
 	else if (ret == `required)
 	{
+	    string name	= patterns[sel,"name"]:"";
 	    if (UI::QueryWidget (`id (`required), `Value) == true)
 	    {
-		if (!contains (proposed_patterns, sel))
-		    proposed_patterns	= add (proposed_patterns, sel);
+		if (!contains (proposed_patterns, name))
+		    proposed_patterns	= add (proposed_patterns, name);
 	    }
-	    else if (contains (proposed_patterns, sel))
+	    else if (contains (proposed_patterns, name))
 	    {
 		proposed_patterns = filter (string p, proposed_patterns,
-		    ``(sel != p));
+		    ``(name != p));
 	    }
 	}
         else if (ret == `next) {

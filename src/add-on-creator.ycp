@@ -203,15 +203,15 @@ boolean Create (map<string,any> options ) {
 		foreach (map pat, AddOnCreator::ReadPatternsFile (f), {
 		    if (pat != $[])
 		    {
-			list<string> pt	= splitstring (pat["Pat"]:"", " ");
-			string name	= pt[0]:"";
-			if (name != "")
+			string full_name	= pat["Pat"]:"";
+			list<string> pt		= splitstring (full_name, " ");
+			if (full_name != "")
 			{
-			    pat["name"]		= name;
+			    pat["name"]		= pt[0]:"";
 			    pat["version"]	= pt[1]:"";
 			    pat["release"]	= pt[2]:"";
 			    pat["arch"]		= pt[3]:"";
-			    patterns[name]	= pat;
+			    patterns[full_name]	= pat;
 			}
 		    }
 		});

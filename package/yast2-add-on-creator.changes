@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Mar 25 13:18:40 CET 2009 - jsuchome@suse.cz
+
+- support patterns with same name but different architectures
+  (bnc#484762)
+- 2.18.3
+
+-------------------------------------------------------------------
 Mon Mar 16 14:27:06 CET 2009 - jsuchome@suse.cz
 
 - create new checksum of package metadata after signing packages
