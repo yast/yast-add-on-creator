@@ -236,8 +236,8 @@ any PatternsDialog() {
     }
 
     list get_patterns_items () {
-	return maplist (string name, map pattern, patterns, {
-	    string full_name	= create_full_name (pattern);
+	return maplist (string full_name, map pattern, patterns, {
+	    string name	= pattern["name"]:"";
 	    return `item (`id (full_name), name, full_name);
 	});
     }
@@ -331,6 +331,11 @@ any PatternsDialog() {
 	    );
 	    if (file != nil)
 	    {
+		map short2full	= mapmap (string full, map p, patterns, {
+		    return $[
+			p["name"]:"" + " " + p["arch"]:"" : full
+		    ];
+		});
 		list<map> pats	= AddOnCreator::ReadPatternsFile (file);
 		string full_name	= "";
 		foreach (map pat, pats, {
@@ -342,8 +347,14 @@ any PatternsDialog() {
 			pat["version"]	= pt[1]:"";
 			pat["release"]	= pt[2]:"";
 			pat["arch"]	= pt[3]:"";
+			string short	= pt[0]:"" + " " + pt[3]:"";
+			// replace existing pattern with same name and arch
+			if (haskey (short2full, short))
+			{
+			    y2internal ("replacing pattern %1", short2full[short]:"");
+			    patterns	= remove (patterns, short2full[short]:"");
+			}
 			patterns[full_name]	= pat;
-// FIXME if there is existing, with only release or version different, replace it
 		    }
 		});
 		UI::ChangeWidget(`id(`patterns), `Items, get_patterns_items());

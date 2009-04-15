@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Apr 15 13:48:12 CEST 2009 - jsuchome@suse.cz
+
+- when importing pattern, replace existing with same name and arch
+  (bnc#484762)
+- 2.18.4 
+
+-------------------------------------------------------------------
 Wed Mar 25 13:18:40 CET 2009 - jsuchome@suse.cz
 
 - support patterns with same name but different architectures

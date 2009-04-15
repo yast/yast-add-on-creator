@@ -1171,7 +1171,10 @@ global list<map> ReadPatternsFile (string file_path) {
 		y2debug ("adding empty key '%1'...", key);
 		// do not add default values - maybe imported pattern
 		// ignored them intentionally
-		ret[key]	= "";
+		if (pattern_descr[key,"type"]:"" == "package-list")
+		    ret[key]	= [];
+		else
+		    ret[key]	= "";
 	    }
 	});
 	if (ret != $[])
