@@ -7,7 +7,7 @@ BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-t
 
 BuildArchitectures:	noarch
 
-Summary:	YaST module for creating Add-On product
+Summary:	YaST2 - module for creating Add-On product
 
 %description
 -
