@@ -1483,7 +1483,7 @@ global void FillContentDefaults () {
     foreach(string d, splitstring(out["stdout"]:"", "\n"), {
 	list splitdir = splitstring (d, "/");
 	string arch_dir	= splitdir[1]:"";
-	if (contains (allowed_archs, arch_dir))
+	if (contains (allowed_archs, arch_dir) || arch_dir == "src")
 	{
 	    arch_directories	= add (arch_directories, arch_dir);
 	}

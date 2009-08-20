@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu Aug 20 09:35:25 CEST 2009 - jsuchome@suse.cz
+
+- check for 'src' directory with input rpm packages
+- 2.18.5
+
+-------------------------------------------------------------------
 Wed Apr 15 13:48:12 CEST 2009 - jsuchome@suse.cz
 
 - when importing pattern, replace existing with same name and arch
