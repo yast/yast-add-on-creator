@@ -15,6 +15,7 @@ X-SuSE-YaST-AutoInst=
 X-SuSE-YaST-Geometry=
 X-SuSE-YaST-SortKey=
 X-SuSE-YaST-AutoInstResource=add-on-creator
+X-SuSE-YaST-Keywords=product,appliance,add-on
 
 Icon=yast-addon
 Exec=/sbin/yast2 add-on-creator 
