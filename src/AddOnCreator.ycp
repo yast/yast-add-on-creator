@@ -2216,7 +2216,9 @@ global boolean GenerateReleasePackage (string base_path) {
     }
     if (!Package::Install ("obs-productconverter"))
     {
-	y2error ("obs-productconverter not installed, not generating -release");
+	// error report
+	Report::Error (_("Failed to install obs-productconverter package.
+Release package will not be generated."));
 	return false;
     }
     if (!FileUtils::Exists (full_data_path))
@@ -2339,7 +2341,10 @@ global boolean GenerateReleasePackage (string base_path) {
     out     = (map) SCR::Execute (.target.bash_output, cmd, $["LANG":"C"]);
     if (out["exit"]:0 != 0)
     {
-	y2error ("command '%1' failed with: \n%2", cmd, out["stderr"]:"");
+	// error popup
+	Report::Error (sformat (_("Build of release package failed with
+'%1'."), out["stderr"]:""));
+	y2error ("command '%1' failed with: \n%2", cmd, out);
     }
     else
     {
