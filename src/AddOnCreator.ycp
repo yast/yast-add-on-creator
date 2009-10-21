@@ -825,9 +825,10 @@ global map<string,map> GetProductInfo (map xml, boolean merge_with_current) {
     map prod_map	= $[];
     if (size (xml["productdefinition",0,"products"]:[]) > 0)
     {
-	prod_map	= xml["productdefinition",0,"products",0]:$[];
+	prod_map	= xml["productdefinition",0,"products",0,"product",0]:$[];
     }
-    prod_map		= xml["product",0]:$[]; // maso, ze?
+    else
+	prod_map	= xml["product",0]:$[]; // maso, ze?
 
     // only simple values are supported here, something nested
     // deeper (e.g. linguas) will not work
@@ -873,6 +874,12 @@ global map<string,map> GetProductInfo (map xml, boolean merge_with_current) {
 	retmap[key,"value"]	= add (retmap[key,"value"]:[],
 	    remove (dep, "relationship"));
     });
+    // flavor may be in mediasets section
+    if (!merge_with_current && retmap["flavor","value"]:"" == "")
+    {
+	if (mediamap["flavor"]:"" != "")
+	    retmap["flavor","value"]	= mediamap["flavor"]:"";
+    }
     y2milestone ("product_info: %1", retmap);
     return retmap;
 }

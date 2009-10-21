@@ -320,7 +320,7 @@ boolean Create (map<string,any> options ) {
     }
     else if (haskey (options, "y2update_packages_dir"))
     {
-	string dir = options["y2update"]:"";
+	string dir = options["y2update_packages_dir"]:"";
 	if (FileUtils::Exists (dir))
 	{
 	    map out = (map) SCR::Execute (.target.bash_output,

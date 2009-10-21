@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Oct 21 09:03:39 CEST 2009 - jsuchome@suse.cz
+
+- fixed importing product file (bnc#548637)
+- fixed CLI handling of y2update_packages_dir option (bnc#548637)
+- 2.18.8
+
+-------------------------------------------------------------------
 Thu Oct  1 16:46:55 CEST 2009 - jsuchome@suse.cz
 
 - added more error reporting popups (bnc#542088)
