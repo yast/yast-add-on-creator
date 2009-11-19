@@ -156,7 +156,7 @@ map<string,map> content_descr	= $[
 	    // label of content file BASEARCHS key
 	    "label"	: _("Product architectures"),
 	    // help text for content file 'BASEARCHS' key
-	    "help"	: _("Space-separated list of product architectures for. Matches the available product-release packages architectures. "),
+	    "help"	: _("Space-separated list of product architectures. Matches the available product-release packages architectures. "),
 	    "mandatory"	: true
     ],
     "VERSION"	: $[
@@ -825,9 +825,10 @@ global map<string,map> GetProductInfo (map xml, boolean merge_with_current) {
     map prod_map	= $[];
     if (size (xml["productdefinition",0,"products"]:[]) > 0)
     {
-	prod_map	= xml["productdefinition",0,"products",0]:$[];
+	prod_map	= xml["productdefinition",0,"products",0,"product",0]:$[];
     }
-    prod_map		= xml["product",0]:$[]; // maso, ze?
+    else
+	prod_map	= xml["product",0]:$[]; // maso, ze?
 
     // only simple values are supported here, something nested
     // deeper (e.g. linguas) will not work
@@ -873,6 +874,12 @@ global map<string,map> GetProductInfo (map xml, boolean merge_with_current) {
 	retmap[key,"value"]	= add (retmap[key,"value"]:[],
 	    remove (dep, "relationship"));
     });
+    // flavor may be in mediasets section
+    if (!merge_with_current && retmap["flavor","value"]:"" == "")
+    {
+	if (mediamap["flavor"]:"" != "")
+	    retmap["flavor","value"]	= mediamap["flavor"]:"";
+    }
     y2milestone ("product_info: %1", retmap);
     return retmap;
 }
@@ -1171,7 +1178,10 @@ global list<map> ReadPatternsFile (string file_path) {
 		y2debug ("adding empty key '%1'...", key);
 		// do not add default values - maybe imported pattern
 		// ignored them intentionally
-		ret[key]	= "";
+		if (pattern_descr[key,"type"]:"" == "package-list")
+		    ret[key]	= [];
+		else
+		    ret[key]	= "";
 	    }
 	});
 	if (ret != $[])
@@ -1210,15 +1220,15 @@ global boolean ImportExistingProduct (string dir_path) {
 	foreach (map pat, ReadPatternsFile (f), {
 	    if (pat != $[])
 	    {
-		list<string> pt	= splitstring (pat["Pat"]:"", " ");
-		string name	= pt[0]:"";
-		if (name != "")
+		string full_name	= pat["Pat"]:"";
+		list<string> pt		= splitstring (full_name, " ");
+		if (full_name != "")
 		{
-		    pat["name"]		= name;
+		    pat["name"]		= pt[0]:"";
 		    pat["version"]	= pt[1]:"";
 		    pat["release"]	= pt[2]:"";
 		    pat["arch"]		= pt[3]:"";
-		    patterns[name]	= pat;
+		    patterns[full_name]	= pat;
 		}
 	    }
 	});
@@ -1480,7 +1490,7 @@ global void FillContentDefaults () {
     foreach(string d, splitstring(out["stdout"]:"", "\n"), {
 	list splitdir = splitstring (d, "/");
 	string arch_dir	= splitdir[1]:"";
-	if (contains (allowed_archs, arch_dir))
+	if (contains (allowed_archs, arch_dir) || arch_dir == "src")
 	{
 	    arch_directories	= add (arch_directories, arch_dir);
 	}
@@ -2083,7 +2093,7 @@ global boolean WritePatterns (string descr_path, string base_path) {
 
     boolean ret		= true;
     list<string> names	= [];
-    foreach (string name, map pattern, current_product["patterns"]:$[], {
+    foreach (string full_name, map pattern, current_product["patterns"]:$[], {
 	string filename	= CreatePatternFullName (pattern, true);
 	if (filename == "")
 	    return;
@@ -2213,7 +2223,9 @@ global boolean GenerateReleasePackage (string base_path) {
     }
     if (!Package::Install ("obs-productconverter"))
     {
-	y2error ("obs-productconverter not installed, not generating -release");
+	// error report
+	Report::Error (_("Failed to install obs-productconverter package.
+Release package will not be generated."));
 	return false;
     }
     if (!FileUtils::Exists (full_data_path))
@@ -2322,7 +2334,6 @@ global boolean GenerateReleasePackage (string base_path) {
     map out	= (map) SCR::Execute (.target.bash_output, sformat (
 	"/usr/lib/obs/server/bs_productconvert %1 %2 %3",
 	prod_file_path, product_dir, name));
-
     if (out["exit"]:0 != 0)
     {
 	y2error ("bs_productconvert failed with %1", out["stderr"]:"");
@@ -2334,11 +2345,13 @@ global boolean GenerateReleasePackage (string base_path) {
     // 3. build the release package from generated .spec file
     string cmd	= sformat (
 	"rpmbuild -bb `find -L %1 -name %2-release.spec`", tmpdir, name);
-
     out     = (map) SCR::Execute (.target.bash_output, cmd, $["LANG":"C"]);
     if (out["exit"]:0 != 0)
     {
-	y2error ("command '%1' failed with: \n%2", cmd, out["stderr"]:"");
+	// error popup
+	Report::Error (sformat (_("Build of release package failed with
+'%1'."), out["stderr"]:""));
+	y2error ("command '%1' failed with: \n%2", cmd, out);
     }
     else
     {
@@ -2566,7 +2579,7 @@ global boolean CreateMD5SUMS (string base_path) {
 
     // sha1sums of the rest of interesting files
     foreach (string file, [ "installation.xml", "license.tar.gz",
-	"media.1/info.txt"],
+	"y2update.tgz",	"media.1/info.txt"],
     {
 	if (FileUtils::Exists (base_path + "/" + file))
 	{

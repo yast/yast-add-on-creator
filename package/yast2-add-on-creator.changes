@@ -1,4 +1,21 @@
 -------------------------------------------------------------------
+Thu Nov 19 14:54:25 CET 2009 - jsuchome@suse.cz
+
+- backport changes done after SLE11 release:
+- fixed distribution name: OpenSUSE -> openSUSE (bnc#479737) 
+- text not marked for translation (bnc#460843)
+- support patterns with same name but different architectures
+  (bnc#484762)
+- when importing pattern, replace existing with same name and arch
+  (bnc#484762)
+- fixed importing product file (bnc#548637)
+- fixed CLI handling of y2update_packages_dir option (bnc#548637)
+- check for 'src' directory with input rpm packages
+- added more error reporting popups (bnc#542088)
+- add checksum of y2update.tgz to content file (bnc#556630)
+- 2.17.13
+
+-------------------------------------------------------------------
 Mon Mar 16 14:25:22 CET 2009 - jsuchome@suse.cz
 
 - create new checksum of package metadata after signing packages
