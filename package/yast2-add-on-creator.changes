@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu Nov 19 14:41:09 CET 2009 - jsuchome@suse.cz
+
+- add checksum of y2update.tgz to content file (bnc#556630)
+- 2.19.0
+
+-------------------------------------------------------------------
 Wed Oct 21 09:03:39 CEST 2009 - jsuchome@suse.cz
 
 - fixed importing product file (bnc#548637)

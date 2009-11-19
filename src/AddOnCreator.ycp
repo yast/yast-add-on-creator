@@ -2579,7 +2579,7 @@ global boolean CreateMD5SUMS (string base_path) {
 
     // sha1sums of the rest of interesting files
     foreach (string file, [ "installation.xml", "license.tar.gz",
-	"media.1/info.txt"],
+	"y2update.tgz",	"media.1/info.txt"],
     {
 	if (FileUtils::Exists (base_path + "/" + file))
 	{
