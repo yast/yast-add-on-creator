@@ -1481,7 +1481,7 @@ global void FillContentDefaults () {
     string rpm_path	= current_product["rpm_path"]:"";
 
     // 1. find the used architectures
-    string cmd	= sformat ("cd %1; find -maxdepth 1 -type d", rpm_path);
+    string cmd	= sformat ("cd '%1'; find -maxdepth 1 -type d", rpm_path);
     map out	= $[];
     if (rpm_path != "")
 	out	= (map) SCR::Execute (.target.bash_output, cmd);
@@ -1505,14 +1505,14 @@ global void FillContentDefaults () {
 	// 2. get the list of architectures from RPM's
 	if (rpm_path != "")
 	    out	= (map) SCR::Execute (.target.bash_output,
-		sformat ("find %1 -name '*.rpm'", rpm_path));
+		sformat ("find '%1' -name '*.rpm'", rpm_path));
 	y2milestone ("asking the RPM's for ARCH and NAME...");
 	// for which architectures are the packages built
 	map<string,any> package_architectures	= $[];
 	foreach (string f, splitstring (out["stdout"]:"", "\n"), {
 	    if (f == "") return;
 	    out = (map) SCR::Execute (.target.bash_output,
-	        sformat ("rpm -q -p %1 --qf \"%%{ARCH}\n%%{NAME}\n%%|SOURCERPM?{bin}:{src}|\"",f));
+	        sformat ("rpm -q -p '%1' --qf \"%%{ARCH}\n%%{NAME}\n%%|SOURCERPM?{bin}:{src}|\"",f));
 	    list lines  = splitstring (out["stdout"]:"", "\n");
 	    string arch = lines[0]:"";
 	    string name = lines[1]:"";
@@ -1574,12 +1574,12 @@ global void FillContentDefaults () {
 	if (required_rpm_path != "" && required_rpm_path != rpm_path)
 	{
 	    out	= (map) SCR::Execute (.target.bash_output,
-		sformat ("cd %1; find -name '*.rpm'", required_rpm_path));
+		sformat ("cd '%1'; find -name '*.rpm'", required_rpm_path));
 	    y2milestone ("asking the RPM's for NAME...");
 	    list<string> inputs		= create_argument_lists (out["stdout"]:"");
 	    string output	= "";
 	    foreach (string input, inputs, {
-		string cmd	= sformat ("cd %1; rpm --qf \"%%{NAME}\n\" -qp %2",
+		string cmd	= sformat ("cd '%1'; rpm --qf \"%%{NAME}\n\" -qp %2",
 		    required_rpm_path, input);
 		out	= (map) SCR::Execute (.target.bash_output, cmd);
 		output	= output + out["stdout"]:"" + "\n";
@@ -1718,6 +1718,7 @@ global void FillContentDefaults () {
 	    packages_descr[lang]    = ReadPackagesFile (file);
 	    return;
 	}
+	map package_names = mapmap (string p, map d, packages_descr[lang]:$[], ``($[ splitstring (p, " ")[0]:p : p]));
 	// now, we need to merge old data from packages_descr with currently
 	// generated ones (TODO this works only for packages.en)
 	foreach (string p, map d, (map<string,map>) ReadPackagesFile (file), {
@@ -1725,6 +1726,12 @@ global void FillContentDefaults () {
 	    {
 		y2debug ("new package %1", d);
 		packages_descr[lang,p]	= d;
+		string name	= splitstring (p, " ")[0]:p;
+		if (package_names[name]:"" != "")
+		{
+		    y2milestone ("replacing saved '%1' with present '%2'", package_names[name]:"", p);
+		    packages_descr[lang]	= remove (packages_descr[lang]:$[], package_names[name]:"");
+		}
 	    }
 	});
     });

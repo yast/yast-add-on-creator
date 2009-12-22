@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Tue Dec 22 14:16:06 CET 2009 - jsuchome@suse.cz
+
+- added some path escaping 
+- when generating new package descriptions, delete save entries of
+  packages with same name (bnc#486041)
+- 2.17.14
+
+-------------------------------------------------------------------
 Thu Nov 19 14:54:25 CET 2009 - jsuchome@suse.cz
 
 - backport changes done after SLE11 release:
