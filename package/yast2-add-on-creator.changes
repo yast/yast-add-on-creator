@@ -1,4 +1,12 @@
 -------------------------------------------------------------------
+Tue Dec 22 14:17:04 CET 2009 - jsuchome@suse.cz
+
+- added some path escaping
+- when generating new package descriptions, delete save entries of
+  packages with same name (bnc#486041)
+- 2.19.1
+
+-------------------------------------------------------------------
 Thu Nov 19 14:41:09 CET 2009 - jsuchome@suse.cz
 
 - add checksum of y2update.tgz to content file (bnc#556630)
