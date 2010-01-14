@@ -18,9 +18,8 @@ X-SuSE-YaST-AutoInstResource=add-on-creator
 X-SuSE-YaST-Keywords=product,appliance,add-on
 
 Icon=yast-addon
-Exec=/sbin/yast2 add-on-creator 
+Exec=xdg-su -c "/sbin/yast2 add-on-creator"
 
 Name=Add-On Creator
 GenericName=Create Add-On product
-X-KDE-SubstituteUID=true
 StartupNotify=true
