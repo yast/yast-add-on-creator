@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Wed Aug  4 14:55:45 CEST 2010 - jsuchome@suse.cz
+
+- cleanup the preparation directory for building iso image
+  (bnc#623036)
+- 2.18.9
+
+-------------------------------------------------------------------
 Wed Oct 21 09:03:39 CEST 2009 - jsuchome@suse.cz
 
 - fixed importing product file (bnc#548637)
