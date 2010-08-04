@@ -1,3 +1,10 @@
+-------------------------------------------------------------------
+Tue Jul 27 13:48:15 CEST 2010 - jsuchome@suse.cz
+
+- cleanup the preparation directory for building iso image
+  (bnc#623036)
+- 2.19.2
+
 ------------------------------------------------------------------
 Wed Jan 13 18:56:03 CET 2010 - kmachalkova@suse.cz
 
