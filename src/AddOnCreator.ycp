@@ -2678,16 +2678,21 @@ global boolean SignAddOn (string base_path, string key) {
     map out = (map)SCR::Execute (.target.bash_output, command, $["LANG" : "C"]);
     string local_key	= deletechars (out["stdout"]:"0","\n");
 
-    out = (map)SCR::Execute (.target.bash_output, sformat ("gpg --list-secret-keys --with-colons %1| grep %2 | gawk -F: '{print $5}'| sed 's/........$//g'", key, local_key));
-    string big_key	= deletechars (out["stdout"]:"0","\n");
+    // see /usr/share/doc/packages/gpg2/DETAILS for gpg --list-secret-keys --with-colons
+    // file name of exported key: keyid-creation date of the selfsignature (ie. e85fc3fc-4c1b74be)
+
+    out = (map)SCR::Execute (.target.bash_output, sformat ("gpg --list-secret-keys --with-colons %1| grep %2 | gawk -F: '{print $6}'", key, local_key));
+
+    integer creation_date	= tointeger (deletechars (out["stdout"]:"0","\n"));
+    string creation_date_s	= substring (tohexstring (creation_date), 2); // use hex string without leading 0x
 
     // save the passphrase
     string pw_path	= tmpdir + "/pw";
     SCR::Write (.target.string, pw_path, passphrase);
 
     // export the key:
-    command = sformat ("gpg --export -a %1 > '%2/gpg-pubkey-%3-%1.asc'",
-	local_key, base_path, big_key);
+    command = sformat ("gpg --export -a %1 > '%2/gpg-pubkey-%1-%3.asc'",
+	tolower (local_key), base_path, creation_date_s);
     SCR::Execute (.target.bash, command, $["LANG" : "C"]);
 
     // make a sha1 sum of that key (content file is modified last time)

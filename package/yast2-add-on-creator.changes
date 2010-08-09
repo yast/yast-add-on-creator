@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Aug  9 10:31:21 CEST 2010 - jsuchome@suse.cz
+
+- correct file name of exported keys (bnc#622569)
+- 2.20.0 
+
+-------------------------------------------------------------------
 Tue Jul 27 13:48:15 CEST 2010 - jsuchome@suse.cz
 
 - cleanup the preparation directory for building iso image
