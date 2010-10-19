@@ -118,7 +118,7 @@ any SummaryDialog () {
 	    map content_map	= add_on["content_map"]:$[];
 	    i		= i + 1;
 	    return `item (`id (i),
-		content_map["NAME"]:content_map["PRODUCT"]:"",
+		content_map["LABEL"]:content_map["NAME"]:"",
 		content_map["VERSION"]:"");
 	});
     }
@@ -392,7 +392,7 @@ any SourcesDialog() {
 	current_product["rpm_path"]	= "";
 
     map content_map	= AddOnCreator::content_map;
-    string product	= content_map["NAME"]:content_map["PRODUCT"]:"";
+    string product	= content_map["LABEL"]:"";
     string old_product	= product == "" ? nil : product;
 
     string version	= content_map["VERSION"]:"";
@@ -405,7 +405,7 @@ any SourcesDialog() {
 	`HBox (
 	    `InputField (`id (`product), `opt (`hstretch),
 		// textentry label
-		_("&Add-On Product Name"), product),
+		_("&Add-On Product Label"), product),
 	    // textentry label
 	    `InputField (`id (`version), `opt (`hstretch), _("&Version"),
 		version)
@@ -550,7 +550,9 @@ any SourcesDialog() {
 		];
 	    }
 
-	    AddOnCreator::content_map["NAME"]		= product;
+	    AddOnCreator::content_map["LABEL"]		= product;
+	    // proposal for NAME: replace spaces with underscores
+	    AddOnCreator::content_map["NAME"]		= mergestring (splitstring (product, " "), "_");
 	    AddOnCreator::content_map["VERSION"]	= version;
 // FIXME propose DISTRIBUTION as NAME - VERSION?
 
