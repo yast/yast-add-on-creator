@@ -427,10 +427,18 @@ any SourcesDialog() {
 			// radio button label
 			_("S&USE Linux Enterprise 11"),
 			requires == "SUSE_SLE-11")),
-		    `Left (`RadioButton(`id("openSUSE-11.2"), `opt (`notify),
+		    `Left (`RadioButton(`id ("SUSE_SLE-11.1"), `opt (`notify),
 			// radio button label
-			_("openSUSE &11.2"),
-			requires == "openSUSE-11.2")),
+			_("SUSE Linux Enterprise 11 SP1"),
+			requires == "SUSE_SLE-11.1")),
+		    `Left (`RadioButton(`id("openSUSE-11.4"), `opt (`notify),
+			// radio button label
+			_("openSUSE 11.&4"),
+			requires == "openSUSE-11.4")),
+		    `Left (`RadioButton(`id("openSUSE-12.1"), `opt (`notify),
+			// radio button label
+			_("openSUSE 12.1"),
+			requires == "openSUSE-12.1")),
 		    `HBox (
 			`Left(`RadioButton(`id(`other), `opt (`notify),
 			    // radio button label

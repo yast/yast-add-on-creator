@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu Sep  1 12:00:05 CEST 2011 - jsuchome@suse.cz
+
+- update products list (bnc#715220)
+- 2.21.0
+
+-------------------------------------------------------------------
 Tue Oct 19 10:33:41 CEST 2010 - jsuchome@suse.cz
 
 - do not allow spaces in NAME entry (bnc#646060)
