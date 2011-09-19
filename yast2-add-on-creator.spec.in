@@ -4,7 +4,7 @@
 Group:	System/YaST
 License: GPL v2 only GPL v2 or later
 PreReq:         %fillup_prereq
-Requires:	yast2
+Requires:	yast2 >= 2.21.22
 BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-testsuite
 
 BuildArchitectures:	noarch

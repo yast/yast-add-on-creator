@@ -41,7 +41,7 @@ import "Report";
 import "String";
 import "Summary";
 import "Wizard";
-import "Wizard_hw";
+import "UIHelper";
 
 
 include "add-on-creator/helps.ycp";
@@ -173,7 +173,7 @@ any SummaryDialog () {
 	)
     );
 
-    contents = Wizard_hw::SpacingAround (contents, 1.5, 1.5, 1.0, 1.0);
+    contents = UIHelper::SpacingAround (contents, 1.5, 1.5, 1.0, 1.0);
 
     Wizard::SetContentsButtons(caption, contents, help_text,
         Label::AbortButton(), Label::FinishButton());
