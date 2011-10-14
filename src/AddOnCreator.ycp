@@ -1104,7 +1104,7 @@ string uncompress_file (string file_path) {
 	list full	= splitstring (file_path, "/");
 	string file	= full[size (full) - 1]:"";
 	if (!FileUtils::Exists (tmpdir + "/" + file))
-	    SCR::Execute (.target.bash, sformat ("cp %1 %2/", file_path, tmpdir));
+	    SCR::Execute (.target.bash, sformat ("cp -- %1 %2/", file_path, tmpdir));
 	map o = (map)SCR::Execute (.target.bash_output, sformat ("cd %1; gunzip %2", tmpdir, file));
 	if (o["exit"]:1 == 0)
 	    ret = tmpdir + "/" + substring (file, 0, size (file) - 3);
@@ -1240,7 +1240,7 @@ global boolean ImportExistingProduct (string dir_path) {
 	SCR::Execute (.target.bash, sformat("/bin/rm -f %1/packages*", tmpdir));
 	// save packages* files to tmpdir, they will be imported later
 	SCR::Execute (.target.bash,
-	    sformat ("/bin/cp %1/packages* %2", descr_path, tmpdir));
+	    sformat ("/bin/cp -- %1/packages* %2", descr_path, tmpdir));
     }
     string extra	= descr_path + "/EXTRA_PROV";
     if (FileUtils::Exists (extra))
@@ -1295,7 +1295,7 @@ global boolean ImportExistingProduct (string dir_path) {
     else if (FileUtils::Exists (dir_path + "/EULA.txt"))
     {
 	SCR::Execute (.target.bash,
-	    sformat ("/bin/cp %1/EULA.txt %2/license.txt", dir_path, tmpdir));
+	    sformat ("/bin/cp -- %1/EULA.txt %2/license.txt", dir_path, tmpdir));
 	out = (map) SCR::Execute (.target.bash_output,
 	    sformat ("ls -A1 %1/license*.txt 2>/dev/null", tmpdir));
     }
@@ -1629,7 +1629,7 @@ global void FillContentDefaults () {
 	SCR::Execute (.target.bash, "rm -rf " + reldir);
 	SCR::Execute (.target.mkdir, reldir);
 	SCR::Execute (.target.bash,
-	    sformat ("cp %1 %2", release_package, reldir));
+	    sformat ("cp -- %1 %2", release_package, reldir));
 	SCR::Execute (.target.bash,
 	    sformat ("cd %1; rpm2cpio %2 | cpio -imud 2>/dev/null", reldir,
 	    substring (release_package, findlastof(release_package, "/")+1))
@@ -1694,7 +1694,7 @@ global void FillContentDefaults () {
 	FileUtils::Exists ("/usr/bin/create_package_descr"))
     {
 	y2milestone ("creating packages descriptions...");
-	cmd	= sformat("/usr/bin/create_package_descr -d %1 -C -F -o %2",
+	cmd	= sformat("/usr/bin/create_package_descr -d '%1' -C -F -o %2",
 	    rpm_path, tmpdir);
 	SCR::Execute (.target.bash, cmd, $["LANG":"C"]);
 	y2milestone ("... done");
@@ -1898,7 +1898,7 @@ global boolean WritePackageDescriptions (string descr_path, map descr) {
 		pth = pth + ".gz";
 	    else if (compress_package_descriptions)
 		compress	= true;
-	    string cmd = sformat("/bin/cp %1 '%2'", pth, descr_path);
+	    string cmd = sformat("/bin/cp -- %1 '%2'", pth, descr_path);
 	    SCR::Execute (.target.bash, cmd, $["LANG":"C"]);
 	    if (compress)
 	    {
@@ -2079,7 +2079,7 @@ global boolean WriteLicensesFiles (string descr_path, string base_path, map<stri
 	, descr_path, tmpdir));
     }
     if (FileUtils::GetSize (tmpdir + "/EULA.txt") > 0)
-	SCR::Execute (.target.bash, sformat ("cp %1/EULA.txt %2/", tmpdir,
+	SCR::Execute (.target.bash, sformat ("cp -- %1/EULA.txt %2/", tmpdir,
 	    base_path));
 
     return ret;
@@ -2170,7 +2170,7 @@ global boolean CopyRPMs (string in_path, string base_path) {
 	    {
 		y2milestone ("copying from %1 to %2...", dir, full_data_path);
 		SCR::Execute (.target.bash_output,
-		    sformat ("/bin/cp -r %1 '%2/'", dir, full_data_path));
+		    sformat ("/bin/cp -r -- '%1' '%2/'", dir, full_data_path));
 	    }
 	});
     }
@@ -2192,7 +2192,7 @@ global boolean CopyRPMs (string in_path, string base_path) {
 		    y2debug ("package names known");
 		    foreach (string p, (list<string>) pa, {
 			SCR::Execute (.target.bash, sformat (
-			    "/bin/cp %1 '%2/'", package2filename[arch,p]:"", out_dir));
+			    "/bin/cp -- '%1' '%2/'", package2filename[arch,p]:"", out_dir));
 		    });
 		}
 		else if (size (srcpackage2filename) > 0 && arch == "src")
@@ -2200,7 +2200,7 @@ global boolean CopyRPMs (string in_path, string base_path) {
 		    y2debug ("source packages, names known");
 		    foreach (string p, (list<string>) pa, {
 			SCR::Execute (.target.bash, sformat (
-			    "/bin/cp %1 '%2/'", srcpackage2filename[arch,p]:"", out_dir));
+			    "/bin/cp -- '%1' '%2/'", srcpackage2filename[arch,p]:"", out_dir));
 		    });
 		}
 		else
@@ -2208,7 +2208,7 @@ global boolean CopyRPMs (string in_path, string base_path) {
 		    y2debug ("package names not known, using wildcard");
 		    foreach (string p, (list<string>) pa, {
 			SCR::Execute (.target.bash, sformat (
-			    "/bin/cp %1/%2*.rpm '%3/'", in_path, p, out_dir));
+			    "/bin/cp -- '%1/%2*.rpm' '%3/'", in_path, p, out_dir));
 		    });
 		}
 	    }
@@ -2385,7 +2385,7 @@ Release package will not be generated."));
 	    arch_directories	= add (arch_directories, arch);
 	    SCR::Execute (.target.mkdir, full_data_path + "/" + arch);
 	}
-	SCR::Execute (.target.bash, sformat ("/bin/cp -r %1 '%2/%3'",
+	SCR::Execute (.target.bash, sformat ("/bin/cp -r -- %1 '%2/%3'",
 	    package_path, full_data_path, arch));
     });
     // 5. generate metadata for new package
@@ -2419,12 +2419,12 @@ boolean WriteWorkflow (string base_path,string desc_path, list<string> packages,
     if (desc_path != "" && FileUtils::Exists (desc_path))
     {
 	y2milestone ("writing %1 as %2/installation.xml", desc_path, base_path);
-	SCR::Execute (.target.bash, sformat ("cp '%1' '%2/installation.xml'",
+	SCR::Execute (.target.bash, sformat ("cp -- '%1' '%2/installation.xml'",
 	    desc_path, base_path));
     }
     if (y2update_p != "")
     {
-	SCR::Execute (.target.bash, sformat ("cp '%1' '%2/y2update.tgz'",
+	SCR::Execute (.target.bash, sformat ("cp -- '%1' '%2/y2update.tgz'",
 	    y2update_p, base_path));
     }
     else if (packages != [])
@@ -2495,26 +2495,26 @@ boolean WriteServicepackArchive (string base_path)
     SCR::Execute (.target.mkdir, spdir);
 
     SCR::Execute (.target.bash,
-	sformat ("cp %1/content* '%2/'", base_path, spdir));
+	sformat ("cp -- %1/content* '%2/'", base_path, spdir));
 
     SCR::Execute (.target.bash,
-	sformat ("cp %1/gpg-pubkey* '%2/'", base_path, spdir));
+	sformat ("cp -- %1/gpg-pubkey* '%2/'", base_path, spdir));
 
     SCR::Execute (.target.bash,
-	sformat ("cp -r %1/media.1 '%2/'", base_path,spdir));
+	sformat ("cp -r -- %1/media.1 '%2/'", base_path,spdir));
 
     // copy descriptions (with the stucture)
     string descr_path = sformat ("%1/%2", spdir, content_map["DESCRDIR"]:"");
     SCR::Execute (.target.mkdir, descr_path);
     SCR::Execute (.target.bash,
-	sformat("cp %1/* '%2/'", full_descr_path, descr_path));
+	sformat("cp -- %1/* '%2/'", full_descr_path, descr_path));
 
     if (current_product["workflow_path"]:"" != "")
-	SCR::Execute (.target.bash, sformat("cp '%1/installation.xml' '%2/'",
+	SCR::Execute (.target.bash, sformat("cp -- '%1/installation.xml' '%2/'",
 	    base_path, spdir));
 
     if (FileUtils::Exists (base_path + "/y2update.tgz"))
-	SCR::Execute (.target.bash, sformat("cp '%1/y2update.tgz' '%2'",
+	SCR::Execute (.target.bash, sformat("cp -- '%1/y2update.tgz' '%2'",
 	    base_path, spdir));
 
     // finally, create the archive
@@ -2767,7 +2767,7 @@ global boolean SignAddOn (string base_path, string key) {
 	    full_data_path, tmpdir);
 	if (SCR::Execute (.target.bash, cmd, $["LANG":"C"]) == 0)
 	{
-	    cmd = sformat ("/bin/cp %1/packages '%2'", tmpdir, full_descr_path);
+	    cmd = sformat ("/bin/cp -- %1/packages '%2'", tmpdir, full_descr_path);
 	    SCR::Execute (.target.bash, cmd, $["LANG":"C"]);
 	    if (compress_package_descriptions)
 	    {
