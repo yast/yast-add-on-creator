@@ -3088,6 +3088,8 @@ global boolean BuildAddOn () {
 
     Progress::NextStage();
 
+    // when building ISO, target directory is defined by iso_path:
+    // let's use base_output_path for gathering data needed for iso creation
     if (current_product["iso"]:false)
     {
 	string iso_path	= current_product["iso_path"]:"";
@@ -3097,6 +3099,10 @@ global boolean BuildAddOn () {
 	    if (!only_sign_product)
 	    {
 		base_output_path= tmpdir + "/output";
+		if (FileUtils::Exists (base_output_path))
+		{
+		    SCR::Execute (.target.bash, sformat ("/bin/rm -rf '%1'", base_output_path));
+		}
 		SCR::Execute (.target.mkdir, base_output_path);
 	    }
 	}
