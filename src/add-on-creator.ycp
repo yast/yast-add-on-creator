@@ -498,7 +498,7 @@ boolean BuildAddOnHandler (map<string,any> options) {
 	else
 	{
 	    // error message
-	    Report::Error (_("Specify the add-on product that should be built."));
+	    Report::Error (_("Specify the add-on product to build."));
 	    return false;
 	}
     }
@@ -662,7 +662,7 @@ map cmdline_description = $[
 	],
 	"resign_packages"	: $[
 	    // command line help text for 'passphrase' option
-	    "help"	: _("Resign all packages with selected key"),
+	    "help"	: _("Resign all packages with selected key."),
 	],
 	"workflow"	: $[
 	    // command line help text for 'workflow' option
@@ -701,7 +701,7 @@ map cmdline_description = $[
 	],
 	"do_not_build"	: $[
 	    // command line help text for 'do_not_build' option
-	    "help"	: _("Do not build the product, only save new configuration"),
+	    "help"	: _("Do not build the product, only save new configuration."),
 	],
 	"number"	: $[
 	    // help text for 'number' option; do not translate 'list'
@@ -714,7 +714,7 @@ map cmdline_description = $[
 	],
 	"no_release_package"	: $[
 	    // command line help text for 'no_release_package' option
-	    "help"	: _("Do not generate the release package"),
+	    "help"	: _("Do not generate the release package."),
 	],
 	"product_file"	: $[
 	    // command line help text for 'product_file' option

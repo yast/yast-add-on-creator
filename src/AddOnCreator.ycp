@@ -139,7 +139,7 @@ map<string,map> content_descr	= $[
 	    // label of content file key
 	    "label"	: _("Content file style"),
 	    // help text for content file CONTENTSTYLE key
-	    "help"	: _("Must be the first tag of the content file"),
+	    "help"	: _("Must be the first tag of the content file."),
 	    "value"	: "11",
 	    "mandatory"	: true,
     ],
@@ -171,7 +171,7 @@ map<string,map> content_descr	= $[
     "RELEASE"		: $[
 	    "key"	: "RELEASE",
 	    // table item label
-	    "label"	: _("The release number"),
+	    "label"	: _("Release number"),
 	    "value"	: "0",
 	    "mandatory"	: true,
     ],
@@ -578,7 +578,7 @@ global map<string,map> product_info_descr	= $[
 	    // label of key
 	    "label"	: _("Products that must be installed"),
 	    // help text for 'REQUIRES' key
-	    "help"	: _("<p>Resolvables that must be installed on the system to meet the needs of this product.</p>"),
+	    "help"	: _("<p>Resolvables that must be installed on the system to meet product requirements.</p>"),
 	    "type"	: "dependency",
     ],
     "provides"		: $[
@@ -624,12 +624,12 @@ global map<string,map> product_info_descr	= $[
     "release"		: $[
 	    "key"	: "release",
 	    // table item label
-	    "label"	: _("The release number"),
+	    "label"	: _("Release number"),
     ],
     "releasenotes"		: $[
 	    "key"	: "releasenotes",
 	    // table item label
-	    "label"	: _("The URL for release notes rpm"),
+	    "label"	: _("The URL for release notes RPM"),
     ],
     "description"	: $[
 	    "key"	: "description",
@@ -651,7 +651,7 @@ global map<string,map> product_info_descr	= $[
 	    // table item label
 	    "label"	: _("Product line"),
 	    // help text for 'productline' key
-	    "help"	: _("A short name of the product which do not change between service packs and versions."),
+	    "help"	: _("A short name for the product, which does not change between service packs and versions."),
     ],
     "updaterepokey"	: $[
 	    "key"	: "updaterepokey",

@@ -108,7 +108,7 @@ symbol BuildDialog() {
 any SummaryDialog () {
 
     // dialog caption
-    string caption = _("Add-On Creator Configuration Overview");
+    string caption = _("Add-on Creator Configuration Overview");
 
     list<map> add_on_products	= AddOnCreator::add_on_products;
 
@@ -151,7 +151,7 @@ any SummaryDialog () {
     _("<p>Delete the selected configuration using <b>Delete</b>.</p>") +
 
     // help text
-    _("<p>Build the fresh add-on product based on the selected configuration with <b>Build</b>.</p>");
+    _("<p>Build the new add-on product based on the selected configuration with <b>Build</b>.</p>");
 
     term contents = `VBox (
 	`VWeight (3, `Table (`id (`table), `opt (`notify, `immediate),
@@ -735,7 +735,7 @@ any ContentFileDialog() {
 
     term contents = `HBox (`HSpacing (), `VBox (
 	// label
-	`Left (`Label (_("content File"))),
+	`Left (`Label (_("Content File"))),
 	`Table (`id(`content_table), `opt(`notify), `header (
 	    // table header
 	    _("Key"),
@@ -1337,7 +1337,7 @@ map AddDescriptionValue (list existing) {
 	    string file = UI::AskForExistingFile (
 		AddOnCreator::current_product["base_output_path"]:"", "",
 		// popup for file selection dialog
-		_("Choose the file with the text to be imported")
+		_("Choose the file with the text to be imported.")
 	    );
 	    if (file != nil)
 	    {
@@ -1816,7 +1816,7 @@ any SigningDialog() {
 	    AddOnCreator::passphrases[gpg_key]:""),
 	// checkbox label
 	`Left (`CheckBox (`id (`resign),
-	    _("Re&sign all packages with selected key"),
+	    _("Re&sign all packages with selected key."),
 	    current_product["resign_packages"]:false)
 	),
 	`VSpacing (0.7)

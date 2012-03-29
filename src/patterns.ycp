@@ -116,8 +116,9 @@ map AddPattern (map<string,list> conflicts) {
 	    if (contains (conflicts[name]:[], arch))
 	    {
 		// popup message
-		Popup::Error (_("Such pattern already exists.
-Choose a different name or architecture."));
+		Popup::Error (_("Such a pattern already exists.
+Choose a different name or architecture.
+"));
 		continue;
 	    }
 	    foreach (string key, ["name", "version", "release", "arch"], {
@@ -295,7 +296,7 @@ any PatternsDialog() {
 	    `PushButton (`id(`delete), `opt(`key_F8), Label::DeleteButton ()),
             `HStretch (),
 	    // check box label
-	    `CheckBox (`id (`required), `opt (`notify, `key_F8), _("R&equired pattern"), false)
+	    `CheckBox (`id (`required), `opt (`notify, `key_F8), _("R&equired Pattern"), false)
 	),
 	`VSpacing (0.5)
     ), `HSpacing ());
@@ -467,8 +468,9 @@ any PatternsDialog() {
 		    if (conflict)
 		    {
 			// error message
-			Popup::Error (_("Such pattern already exists.
-Choose a different architecture."));
+			Popup::Error (_("Such a pattern already exists.
+Choose a different architecture.
+"));
 			continue;
 		    }
 		}

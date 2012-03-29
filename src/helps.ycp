@@ -43,7 +43,8 @@ Please wait...<br></p>
 
     // Write dialog help
     "write" : _("<p>Writing the add-on configurations<br>
-Please wait...<br></p>\n"),
+</p>
+"),
 
     // help text for start menu
     "start"	: _("<p>This module offers guidance for the creation of an add-on product.</p>") +
@@ -108,13 +109,13 @@ Please wait...<br></p>\n"),
  +
 
 	// help text for patterns, cont.
-	_("<p>Check <b>Required pattern</b> if you want to set selected pattern as required for the add-on product. Such pattern will be automatically preselected when the installation of the add-on product is started.</p>"),
+	_("<p>Check <b>Required pattern</b> to mark the selected pattern as required for\nthe add-on product. Such a pattern will be automatically preselected when the installation of the add-on product is started.</p>"),
 
     // help text for the 'various settings' dialog
     "output"	: _("<p>Specify the path to the directory in which the add-on product should be created. Select <b>Create ISO Image</b> to create the ISO image of the product in the output directory.</p>") +
 
 	// help text for the 'various settings' dialog
-	_("<p>Use <b>Generate Changelog</b> to generate a Changelog file with all the changes of packages on the add-on product made in the last two years.</p>") +
+	_("<p>Use <b>Generate Changelog</b> to generate a changelog file containing all changes of packages on the add-on product made in the last two years.</p>") +
 
 	// help text for the 'various settings' dialog
 	_("<p>Adapt the workflow of the add-on product with <b>Configure Workflow</b>. Use <b>Optional Files</b> to configure texts of <tt>README</tt> files, licenses, and other optional values.</p>"),
@@ -143,7 +144,7 @@ Please wait...<br></p>\n"),
 	_("<p>Enter the passphrase needed to unlock the secret key.</p>") +
 
 	// help text for signing dialog, cont.
-	_("<p>Select if you want to <b>Sign All Packages</b> of the add-on product with selected key. All previous package signatures will be removed.</p>"),
+	_("<p>Decide if you want to <b>Sign All Packages</b> of the add-on product with the selected key. All previous package signatures will be removed.</p>"),
 
     // help text for generating new key dialog
     "generate"	: _("<p>Enter the values necessary for generating the new primary key pair.</p>") +
