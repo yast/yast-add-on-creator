@@ -883,7 +883,7 @@ global boolean ImportExistingProduct (string dir_path) {
 	SCR::Execute (.target.bash, sformat("/bin/rm -f %1/packages*", tmpdir));
 	// save packages* files to tmpdir, they will be imported later
 	SCR::Execute (.target.bash,
-	    sformat ("/bin/cp -- %1/packages* %2", descr_path, tmpdir));
+	    sformat ("/bin/cp -- '%1/'packages* %2", descr_path, tmpdir));
     }
 
     // read README
