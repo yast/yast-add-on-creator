@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Fri Dec  7 09:09:09 CET 2012 - jsuchome@suse.cz
+
+- some more fixes for spaces in paths (bnc#790667)
+- 2.23.0
+
+-------------------------------------------------------------------
 Thu Mar 29 13:45:12 CEST 2012 - jsuchome@suse.cz
 
 - merged proofread texts 
