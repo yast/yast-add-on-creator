@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Thu Dec  6 14:04:25 CET 2012 - jsuchome@suse.cz
+
+- fix handling spaces in paths (bnc#790667, backport of #604730)
+- 2.13.31 
+
+-------------------------------------------------------------------
 Thu Feb 12 11:10:16 CET 2009 - jsuchome@suse.cz
 
 - version tag must be at first place in package description file
