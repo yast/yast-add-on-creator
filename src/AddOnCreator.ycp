@@ -1240,7 +1240,7 @@ global boolean ImportExistingProduct (string dir_path) {
 	SCR::Execute (.target.bash, sformat("/bin/rm -f %1/packages*", tmpdir));
 	// save packages* files to tmpdir, they will be imported later
 	SCR::Execute (.target.bash,
-	    sformat ("/bin/cp -- %1/packages* %2", descr_path, tmpdir));
+	    sformat ("/bin/cp -- '%1/'packages* %2", descr_path, tmpdir));
     }
     string extra	= descr_path + "/EXTRA_PROV";
     if (FileUtils::Exists (extra))
@@ -2208,7 +2208,7 @@ global boolean CopyRPMs (string in_path, string base_path) {
 		    y2debug ("package names not known, using wildcard");
 		    foreach (string p, (list<string>) pa, {
 			SCR::Execute (.target.bash, sformat (
-			    "/bin/cp -- '%1/%2*.rpm' '%3/'", in_path, p, out_dir));
+			    "/bin/cp -- '%1/%2'*.rpm '%3/'", in_path, p, out_dir));
 		    });
 		}
 	    }
@@ -2495,19 +2495,19 @@ boolean WriteServicepackArchive (string base_path)
     SCR::Execute (.target.mkdir, spdir);
 
     SCR::Execute (.target.bash,
-	sformat ("cp -- %1/content* '%2/'", base_path, spdir));
+	sformat ("cp -- '%1/content'* %2/", base_path, spdir));
 
     SCR::Execute (.target.bash,
-	sformat ("cp -- %1/gpg-pubkey* '%2/'", base_path, spdir));
+	sformat ("cp -- '%1/gpg-pubkey'* %2/", base_path, spdir));
 
     SCR::Execute (.target.bash,
-	sformat ("cp -r -- %1/media.1 '%2/'", base_path,spdir));
+	sformat ("cp -r -- '%1/media.1' %2/", base_path,spdir));
 
     // copy descriptions (with the stucture)
     string descr_path = sformat ("%1/%2", spdir, content_map["DESCRDIR"]:"");
     SCR::Execute (.target.mkdir, descr_path);
     SCR::Execute (.target.bash,
-	sformat("cp -- %1/* '%2/'", full_descr_path, descr_path));
+	sformat("cp -- '%1/'* '%2/'", full_descr_path, descr_path));
 
     if (current_product["workflow_path"]:"" != "")
 	SCR::Execute (.target.bash, sformat("cp -- '%1/installation.xml' '%2/'",
