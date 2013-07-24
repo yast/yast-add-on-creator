@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Wed Jul 24 09:53:56 CEST 2013 - jsuchome@suse.cz
+
+- updated product names and required packages
+- 2.24.0 
+
+-------------------------------------------------------------------
 Fri Dec  7 09:09:09 CET 2012 - jsuchome@suse.cz
 
 - some more fixes for spaces in paths (bnc#790667)
