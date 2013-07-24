@@ -429,16 +429,16 @@ any SourcesDialog() {
 			requires == "SUSE_SLE-11")),
 		    `Left (`RadioButton(`id ("SUSE_SLE-11.1"), `opt (`notify),
 			// radio button label
-			_("SUSE Linux Enterprise 11 SP1"),
-			requires == "SUSE_SLE-11.1")),
-		    `Left (`RadioButton(`id("openSUSE-11.4"), `opt (`notify),
+			_("SUSE Linux Enterprise 11 SP3"),
+			requires == "SUSE_SLE-11.3")),
+		    `Left (`RadioButton(`id("openSUSE-12.3"), `opt (`notify),
 			// radio button label
-			_("openSUSE 11.&4"),
-			requires == "openSUSE-11.4")),
-		    `Left (`RadioButton(`id("openSUSE-12.1"), `opt (`notify),
+			_("openSUSE 12.&3"),
+			requires == "openSUSE-12.3")),
+		    `Left (`RadioButton(`id("openSUSE-13.1"), `opt (`notify),
 			// radio button label
-			_("openSUSE 12.1"),
-			requires == "openSUSE-12.1")),
+			_("openSUSE 13.1"),
+			requires == "openSUSE-13.1")),
 		    `HBox (
 			`Left(`RadioButton(`id(`other), `opt (`notify),
 			    // radio button label
@@ -1982,7 +1982,7 @@ any OutputDialog() {
 	    AddOnCreator::current_product["iso"]		= iso;
 	    AddOnCreator::current_product["iso_name"]		= iso_name;
 	    AddOnCreator::current_product["changelog"]		= changelog;
-	    if (iso && !Package::Install ("mkisofs"))
+	    if (iso && !Package::Install ("cdrkit-cdrtools-compat"))
 	    {
 		UI::ChangeWidget (`id(`iso), `Value, false);
 		ret	= `notnext;
