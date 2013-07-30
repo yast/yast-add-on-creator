@@ -9,6 +9,8 @@ BuildRequires:	perl-XML-Writer update-desktop-files yast2 yast2-devtools yast2-t
 
 BuildArchitectures:	noarch
 
+Requires:       yast2-ruby-bindings >= 1.0.0
+
 Summary:	YaST2 - module for creating Add-On product
 
 %description
@@ -29,7 +31,7 @@ A wizard for creating your own Add-On product
 %defattr(-,root,root)
 %dir @yncludedir@/add-on-creator
 @yncludedir@/add-on-creator/*
-@clientdir@/add-on-creator*.ycp
+@clientdir@/add-on-creator*.rb
 @moduledir@/AddOnCreator.*
 @moduledir@/PackagesDescr.pm
 @desktopdir@/add-on-creator.desktop
