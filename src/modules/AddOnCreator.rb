@@ -903,7 +903,9 @@ module Yast
       xml = deep_copy(xml)
       # (because it is 'merge_with_current', product_info can
       # be used as global variable, reflecting current state)
-      retmap = merge_with_current ? @product_info : @product_info_descr
+      retmap = merge_with_current ?
+        deep_copy(@product_info) :
+        deep_copy(@product_info_descr)
       prod_map = {}
       if Ops.greater_than(
           Builtins.size(
@@ -3739,7 +3741,9 @@ module Yast
         i = -1
         @add_on_products = Builtins.maplist(@add_on_products) do |product|
           i = Ops.add(i, 1)
-          i == @selected_product ? modified_product : product
+          i == @selected_product ?
+            deep_copy(modified_product) :
+            deep_copy(product)
         end
       end
       ResetCurrentProduct()
