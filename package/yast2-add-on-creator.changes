@@ -1,4 +1,10 @@
 -------------------------------------------------------------------
+Mon Oct 21 11:11:54 CEST 2013 - jsuchome@suse.cz
+
+- Add deep_copy calls missing because of a Y2R bug
+- 3.0.1 
+
+-------------------------------------------------------------------
 Wed Jul 31 08:25:22 UTC 2013 - yast-devel@opensuse.org
 
 - converted from YCP to Ruby by YCP Killer
