@@ -634,7 +634,7 @@ module Yast
         "\teof {}\n" +
         "    }\n" +
         "    spawn -noecho rpm --define \"_signature gpg\" --define \"_gpg_name %1\" --define \"_gpgbin /usr/bin/gpg\" --resign $rpm\n" +
-        "    expect \"pass phrase:\" {send \"%2 \"}\n" +
+        "    expect \"pass phrase:\" {send \"%2\r\"}\n" +
         "    expect {\n" +
         "\t\"is good.\" {send \"\n" +
         "\"}\n" +
@@ -4036,8 +4036,6 @@ module Yast
         Progress.NextStage
 
         GenerateArchiveFiles(base_output_path)
-
-        CreateMD5SUMS(base_output_path)
       end
 
       Progress.NextStage
@@ -4054,6 +4052,8 @@ module Yast
         )
         return false
       end
+
+      CreateMD5SUMS(base_output_path)
 
       CreateDirectoryYaSTFiles(base_output_path)
 
