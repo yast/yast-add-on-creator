@@ -1,4 +1,11 @@
 -------------------------------------------------------------------
+Fri Jan 31 16:31:36 CET 2014 - jsuchome@suse.cz
+
+- fix expect script used for signing rpm's
+- generate MD5SUM files after signing packages (bnc#485825)
+- 3.1.1
+
+-------------------------------------------------------------------
 Wed Sep 18 10:03:10 UTC 2013 - lslezak@suse.cz
 
 - do not use *.spec.in template, use *.spec file with RPM macros
