@@ -1,3 +1,6 @@
+.yardoc
+doc
+
 Makefile
 Makefile.am
 Makefile.in
@@ -26,5 +29,9 @@ Makefile.am.common
 *.bz2
 .dep
 tmp.*
+raw.tmp.*
+runtest.sh
+*.exp
+*.sum
 *.log
 *.ybc
