@@ -1,5 +1,13 @@
-# YaST - The Addon Creator Module #
+Obsoleted Module
+================
 
-[![Travis Build](https://travis-ci.org/yast/yast-add-on-creator.svg?branch=master)](https://travis-ci.org/yast/yast-add-on-creator)
-[![Jenkins Build](http://img.shields.io/jenkins/s/https/ci.opensuse.org/yast-add-on-creator-master.svg)](https://ci.opensuse.org/view/Yast/job/yast-add-on-creator-master/)
+**This module is obsoleted and is not developed anymore.**
 
+The Addon Creator module was dropped, the functionality is available
+via kiwi, OBS or SUSE studio.
+
+
+GIT
+---
+
+If you want to see the last state check the [*master_old*](../master_old) branch.
